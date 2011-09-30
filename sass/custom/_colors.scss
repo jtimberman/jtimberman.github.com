@@ -5,13 +5,13 @@
 $link-color: #108040;
 $link-color-hover: $link-color;
 
-$header-bg: #004D16;
+$header-bg: #003318;
 $subtitle-color: #888;
+$nav-bg: desaturate(lighten(#8fc17a, 18), 5);
 
 //$subtitle-color: lighten($header-bg, 58);
-//$nav-bg: desaturate(lighten(#8fc17a, 18), 5);
-//$sidebar-bg: desaturate(#eceff5, 8);
 
+$sidebar-bg: desaturate(#c6cfe1, 8);
 $sidebar-link-color: $link-color;
 $sidebar-link-color-hover: $link-color;
 
@@ -38,6 +38,6 @@ $sidebar-link-color-hover: $link-color;
 
 
 /* Non highlighted code colors */
-$pre-bg: #333;
+$pre-bg: #333338;
 $pre-border: #666;
 $pre-color: #ddd;
