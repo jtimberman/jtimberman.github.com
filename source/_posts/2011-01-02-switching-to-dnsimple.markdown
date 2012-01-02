@@ -1,10 +1,13 @@
 ---
 layout: post
-title: "Switching-to-DNSimple"
+title: "Switching to DNSimple"
 date: 2012-01-02 13:03
 comments: true
 categories:
 ---
+
+<font size="-2">Reminder: this blog reflects my opinions and thoughts, and not
+those of my employer, Opscode, Inc.</font>
 
 Like any good sysadmin, I have my own domain for email and other
 purposes. I actually have had a couple, but this post is about my
@@ -124,7 +127,7 @@ compelling over the alternatives for a few reasons:
 * API for managing records (!)
 * Reputation for great service
 
-Darrin Eden
+[Darrin Eden](https://github.com/dje)
 wrote a [cookbook](http://community.opscode.com/cookbooks/dnsimple)
 for automatically creating records through the API, too, so half my
 work for automating with Chef was already done!
@@ -132,8 +135,9 @@ work for automating with Chef was already done!
 However, for various reasons I procrastinated the switchover. After
 all, my existing solution worked ok for my purposes. Then after seeing
 GoDaddy show up on the SOPA supporters list, and being one a
-contributing author to the legislation, I decided that was the last
-straw and I busted a move to finish the switch.
+contributing author to the legislation(*), I decided that was the last
+straw and I busted a move to finish the
+[switch](http://blog.dnsimple.com/godaddy-sopa-and-you/).
 
 Honestly, from the DNSimple side, it couldn't have been a better
 experience. They have one-click services for managing DNS records for
@@ -141,9 +145,11 @@ a variety of common services - including Google Apps! It took some
 time and hassle to move my domain out of GoDaddy, since their
 interface is rather clunky, and I had to unprotect things through
 Domains by Proxy to make the move, but after a couple hours everything
-was fine.
+was fine. DNSimple has some
+[tips for migrating](http://blog.dnsimple.com/things-to-know-about-transferring-a-domain/),
+no matter who your current registrar is.
 
-Then the fun part comes!
+Now for the truly fun part!
 
 # Automated DNS with Chef
 
@@ -202,7 +208,21 @@ dns = data_bag_item("dns", "int_example_com")
 end
 ```
 
-Note that the `encrypted_data_bag_item` method above is in a cookbook
+I put that recipe in my "dnsserver" role, ran Chef, and boom, all my
+DNS entries are updated on systems I don't have to manage, and all
+around the world.
+
+    % host cask.int.example.com 8.8.8.8
+    Using domain server:
+    Name: 8.8.8.8
+    Address: 8.8.8.8#53
+    Aliases:
+
+    cask.int.example.com has address 10.10.20.20
+
+What a wonderful redundant distributed key value store :-).
+
+Note that the `encrypted_data_bag_item` method used in the recipe is in a cookbook
 library. I wrote about that in an
 [earlier blog post](http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/).
 It is pretty simple:
@@ -225,20 +245,6 @@ class Chef
   end
 end
 ```
-
-I put that recipe in my "dnsserver" role, ran Chef, and boom, all my
-DNS entries are updated on systems I don't have to manage, and all
-around the world.
-
-    % host cask.int.example.com 8.8.8.8
-    Using domain server:
-    Name: 8.8.8.8
-    Address: 8.8.8.8#53
-    Aliases:
-
-    cask.int.example.com has address 10.10.20.20
-
-What a wonderful redundant distributed key value store :-).
 
 ## Drawbacks
 
@@ -271,3 +277,6 @@ which has been merged and released. Thanks Darrin!
 If you use Chef and are looking for an API driven way to manage DNS
 entries for your systems, I strongly recommend DNSimple as a provider,
 and the `dnsimple` cookbook to tie it all together.
+
+<font size="-2">(*) This isn't a political-blog-soap-box, but this
+really was the final motivator.</font>
