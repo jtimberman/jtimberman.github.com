@@ -1,0 +1,1687 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title>jtimberman&#8217;s Code Blog</title>
+  <link href="http://jtimberman.github.com/atom.xml" rel="self"/>
+  <link href="http://jtimberman.github.com/"/>
+  <updated>2012-01-02T13:15:29-07:00</updated>
+  <id>http://jtimberman.github.com/</id>
+  <author>
+    <name>Joshua Timberman</name>
+    
+  </author>
+
+  
+  <entry>
+    <title>Switching to DNSimple</title>
+    <link href="http://jtimberman.github.com/blog/2012/01/02/switching-to-dnsimple/"/>
+    <updated>2012-01-02T13:03:00-07:00</updated>
+    <id>http://jtimberman.github.com/blog/2012/01/02/switching-to-dnsimple</id>
+    <content type="html">&lt;p&gt;&lt;font size=&quot;-2&quot;&gt;Reminder: this blog reflects my opinions and thoughts, and not
+those of my employer, Opscode, Inc.&lt;/font&gt;&lt;/p&gt;
+
+&lt;p&gt;Like any good sysadmin, I have my own domain for email and other
+purposes. I actually have had a couple, but this post is about my
+current one. I originally set it up through Google Apps a couple years
+ago, including registering the new domain with Google Apps&amp;#8217; default
+registrar, GoDaddy. For the most part, it was pretty simple and
+painless to set up, including private registration via Domains by
+Proxy. Yay!&lt;/p&gt;
+
+&lt;p&gt;However, as I automated more components of my home network with Chef,
+I found the lack of API driven DNS rather frustrating. At last count,
+I had 15 distinct networked devices, counting all the computers,
+consoles, mobile devices, etc. This does not count the virtual
+machines that I manage as a part of my daily job in doing Chef
+cookbook development and testing, which should all have their own DNS
+entries, since I&amp;#8217;ll access them over the network, and remembering IPs
+is ridiculous.&lt;/p&gt;
+
+&lt;h1&gt;Internal DNS Server&lt;/h1&gt;
+
+&lt;p&gt;I use &lt;a href=&quot;http://cr.yp.to/djbdns.html&quot;&gt;DJB&amp;#8217;s tinydns&lt;/a&gt; as my DNS server,
+and it is automated with the
+&lt;a href=&quot;http://community.opscode.com/cookbooks/djbdns&quot;&gt;Opscode Chef Cookbook&lt;/a&gt;.
+The first incarnation of this setup was a single monolithic template
+file containing all the entries in my local network zone, delivered by
+the &lt;code&gt;djbdns::tinydns-internal&lt;/code&gt; recipe, like so:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;template&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:djbdns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:tinydns_internal_dir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/root/data&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;tinydns-internal-data.erb&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;mode&lt;/span&gt; &lt;span class=&quot;mo&quot;&gt;0644&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;notifies&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;resources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;execute[build-tinydns-internal-data]&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;This was great, and simple to manage for this single purpose setup. At
+some point, I wrote cookbooks for
+&lt;a href=&quot;http://community.opscode.com/cookbooks/unbound&quot;&gt;unbound&lt;/a&gt; and
+&lt;a href=&quot;http://community.opscode.com/cookbooks/pdns&quot;&gt;powerdns&lt;/a&gt;, as I was
+evaluating whether one or the other might be easier to modularize. In
+the process, I created a data bag of all my DNS entries that I could
+step through in templates, so I could use the same data without caring
+which software was going to consume it. In the end, I extended the
+djbdns cookbook with a lightweight resource and provider, and added
+usage to the &lt;code&gt;djbdns::tinydns-internal&lt;/code&gt; recipe like this:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;17&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;18&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;19&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;20&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;21&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;dns&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;data_bag_item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;djbdns&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:djbdns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gsub&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/&#46;/&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;_&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;file&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:djbdns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:tinydns_internal_dir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/root/data&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:create&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;sx&quot;&gt;%w{ ns host alias }&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;dns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;record&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;n&quot;&gt;record&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fqdn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;n&quot;&gt;djbdns_rr&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fqdn&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;domain&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;cwd&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:djbdns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:tinydns_internal_dir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/root&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;type&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:add&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;notifies&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;execute[build-tinydns-internal-data]&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;The data bag itself looks something like this:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;17&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;18&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;19&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;20&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;21&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;22&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;23&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;24&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;25&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;26&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;27&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;28&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;javascript&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;int_example_com&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;s2&quot;&gt;&amp;quot;domain&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;example.com&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;s2&quot;&gt;&amp;quot;ns&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;ns: &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;127.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; }&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;  ],&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;alias&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;: [&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;gw&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:         &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;smb&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:        &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.20&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;files&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:      &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.20&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;apt&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:        &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.120&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;yum&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:        &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.120&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; }&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;  ],&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;: [&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;tavern&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:          &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;cask&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:            &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.20&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;cider&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:           &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.101&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;merlot&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:          &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.103&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;bourbon&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:         &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.104&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;iphone&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:          &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.105&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;doppelbock&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:      &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.106&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;ipad&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:            &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.107&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;wii&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:             &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.108&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;xbox&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:            &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.109&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;htpc&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:            &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.110&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; },&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;s2&quot;&gt;    { &amp;quot;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;virt1test&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;:       &amp;quot;&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;10.10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;20.120&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;I am pretty pleased with this approach in that this data can be used
+no matter what DNS resolver software I choose. While this is great for
+the more static part of my network, as I mentioned I do have some
+dynamic usage where I create new virtual machines, and I really want
+them to register themselves in DNS automatically.&lt;/p&gt;
+
+&lt;h1&gt;Enter DNSimple&lt;/h1&gt;
+
+&lt;p&gt;A few months ago I decided to switch over to DNSimple. The service was
+compelling over the alternatives for a few reasons:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Low cost ($3/mo) for my size of account.&lt;/li&gt;
+&lt;li&gt;Very simple interface&lt;/li&gt;
+&lt;li&gt;API for managing records (!)&lt;/li&gt;
+&lt;li&gt;Reputation for great service&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/dje&quot;&gt;Darrin Eden&lt;/a&gt;
+wrote a &lt;a href=&quot;http://community.opscode.com/cookbooks/dnsimple&quot;&gt;cookbook&lt;/a&gt;
+for automatically creating records through the API, too, so half my
+work for automating with Chef was already done!&lt;/p&gt;
+
+&lt;p&gt;However, for various reasons I procrastinated the switchover. After
+all, my existing solution worked ok for my purposes. Then after seeing
+GoDaddy show up on the SOPA supporters list, and being one a
+contributing author to the legislation(*), I decided that was the last
+straw and I busted a move to finish the
+&lt;a href=&quot;http://blog.dnsimple.com/godaddy-sopa-and-you/&quot;&gt;switch&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Honestly, from the DNSimple side, it couldn&amp;#8217;t have been a better
+experience. They have one-click services for managing DNS records for
+a variety of common services - including Google Apps! It took some
+time and hassle to move my domain out of GoDaddy, since their
+interface is rather clunky, and I had to unprotect things through
+Domains by Proxy to make the move, but after a couple hours everything
+was fine. DNSimple has some
+&lt;a href=&quot;http://blog.dnsimple.com/things-to-know-about-transferring-a-domain/&quot;&gt;tips for migrating&lt;/a&gt;,
+no matter who your current registrar is.&lt;/p&gt;
+
+&lt;p&gt;Now for the truly fun part!&lt;/p&gt;
+
+&lt;h1&gt;Automated DNS with Chef&lt;/h1&gt;
+
+&lt;p&gt;Using the dnsimple cookbook is very straightforward. You create an &amp;#8220;A&amp;#8221;
+record like this:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;dnsimple_record&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cask.example.com&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cask&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;domain&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;example.com&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;content&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;10.10.20.20&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;A&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:create&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;username&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dnsimple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:username&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;password&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dnsimple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:password&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;domain&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dnsimple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Yes, that is a private network IP, and yes it is going to be
+registered in public DNS. It really doesn&amp;#8217;t matter that much in my
+(&lt;a href=&quot;http://serverfault.com/questions/4458/private-ip-address-in-public-dns&quot;&gt;and others&amp;#8217;&lt;/a&gt;)
+opinion. Especially given that zomg, I just created a DNS entry with
+Chef!&lt;/p&gt;
+
+&lt;p&gt;By default, the cookbook does assume, and use, node attributes for
+storing the username and password. This can be set by a role, but it
+means that all nodes will have the data. For my use, I decided to put
+these values in a data bag, and because they are sensitive, I used an
+&lt;a href=&quot;http://wiki.opscode.com/display/chef/Encrypted+Data+Bags&quot;&gt;encrypted data bag&lt;/a&gt;.
+I also wanted to reuse the data bag from my earlier DNS example, so I
+wrote a recipe like this:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;17&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;18&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;19&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;20&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;21&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;22&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;dnsimple&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;encrypted_data_bag_item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;secrets&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;dnsimple&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;dns&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;data_bag_item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;dns&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;int_example_com&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;sx&quot;&gt;%w{ host alias }&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;dns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;record&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;n&quot;&gt;record_type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=~&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;/^host$/&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;A&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;CNAME&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;n&quot;&gt;record&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hostname&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;n&quot;&gt;dnsimple_record&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hostname&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dns&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;domain&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;hostname&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;content&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;record_type&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:create&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;username&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dnsimple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;username&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;password&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dnsimple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;password&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;n&quot;&gt;domain&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dnsimple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;domain&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;I put that recipe in my &amp;#8220;dnsserver&amp;#8221; role, ran Chef, and boom, all my
+DNS entries are updated on systems I don&amp;#8217;t have to manage, and all
+around the world.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;% host cask.int.example.com 8.8.8.8
+Using domain server:
+Name: 8.8.8.8
+Address: 8.8.8.8#53
+Aliases:
+
+cask.int.example.com has address 10.10.20.20
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;What a wonderful redundant distributed key value store :-).&lt;/p&gt;
+
+&lt;p&gt;Note that the &lt;code&gt;encrypted_data_bag_item&lt;/code&gt; method used in the recipe is in a cookbook
+library. I wrote about that in an
+&lt;a href=&quot;http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/&quot;&gt;earlier blog post&lt;/a&gt;.
+It is pretty simple:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Chef&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Recipe&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;encrypted_data_bag_item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bag&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;secret_file&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;        &lt;span class=&quot;no&quot;&gt;Chef&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;EncryptedDataBagItem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DEFAULT_SECRET_FILE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;no&quot;&gt;DataBag&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;validate_name!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bag&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;no&quot;&gt;DataBagItem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;validate_id!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;n&quot;&gt;secret&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;EncryptedDataBagItem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;load_secret&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;secret_file&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;no&quot;&gt;EncryptedDataBagItem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;load&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bag&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;secret&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;k&quot;&gt;rescue&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Exception&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;no&quot;&gt;Log&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;Failed to load data bag item: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bag&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;item&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;      &lt;span class=&quot;k&quot;&gt;raise&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;h2&gt;Drawbacks&lt;/h2&gt;
+
+&lt;p&gt;While conveniently reusing the data I already had for my DNS entries,
+the &lt;code&gt;dnsimple_record&lt;/code&gt; provider does take about a second on my internet
+connection for each entry to check if it&amp;#8217;s there. This makes the DNS
+server&amp;#8217;s Chef client run take over a minute, where it used to be less
+than 12 seconds. Many of the entries that are in the DNS data bag are
+on systems that can add their own records, and will soon once I
+refactor things a bit.&lt;/p&gt;
+
+&lt;h1&gt;Other Uses&lt;/h1&gt;
+
+&lt;p&gt;A number of the entries in the DNS data bag are CNAMEs for services
+that run on my home LAN server. I have internal services like
+Netatalk/Time Machine, Samba, or Munin. I also have external services
+like OpenVPN, SSH and Teamspeak. I&amp;#8217;ll add DNSimple records for each of
+these so the recipes can automatically register new DNS entries,
+eliminating a step in bringing up a new service.&lt;/p&gt;
+
+&lt;h1&gt;Open Source is Awesome&lt;/h1&gt;
+
+&lt;p&gt;Chef is open source, of course, as is the
+&lt;a href=&quot;https://github.com/heavywater/chef-dnsimple/blob/master/LICENSE&quot;&gt;dnsimple cookbook&lt;/a&gt;
+that I&amp;#8217;m using. While working with the cookbook as describe above over
+the last couple days, I made some improvements and I sent a
+&lt;a href=&quot;https://github.com/heavywater/chef-dnsimple/pull/1&quot;&gt;pull request&lt;/a&gt;,
+which has been merged and released. Thanks Darrin!&lt;/p&gt;
+
+&lt;p&gt;If you use Chef and are looking for an API driven way to manage DNS
+entries for your systems, I strongly recommend DNSimple as a provider,
+and the &lt;code&gt;dnsimple&lt;/code&gt; cookbook to tie it all together.&lt;/p&gt;
+
+&lt;p&gt;&lt;font size=&quot;-2&quot;&gt;(*) This isn&amp;#8217;t a political-blog-soap-box, but this
+really was the final motivator.&lt;/font&gt;&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Ruby In Ubuntu 11.10</title>
+    <link href="http://jtimberman.github.com/blog/2011/11/24/ruby-in-ubuntu-11-dot-10/"/>
+    <updated>2011-11-24T00:16:00-07:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/11/24/ruby-in-ubuntu-11-dot-10</id>
+    <content type="html">&lt;p&gt;I was playing around with Ubuntu 11.10 the other day, to explore some of the
+changes that have happened to Ruby lately, and thought I&amp;#8217;d share my findings.&lt;/p&gt;
+
+&lt;p&gt;First off, there are still Ruby 1.8(.7p352) packages. This is the
+default you get with the &lt;code&gt;ruby&lt;/code&gt; package. However, the &lt;code&gt;ruby1.9.1&lt;/code&gt; has
+Ruby 1.9.2p290 as the default version. This isn&amp;#8217;t the absolute latest
+released (officially, 1.9.3 is the latest stable release), but it&amp;#8217;s a
+widespread release that a lot of people are using in production.&lt;/p&gt;
+
+&lt;p&gt;The main package for getting the Ruby executables is &lt;code&gt;ruby1.9.1&lt;/code&gt;. It
+is now a &amp;#8220;full&amp;#8221; installation and includes:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;/usr/bin/gem1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/rdoc1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/rake1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/erb1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/ri1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/ruby1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/irb1.9.1&lt;/li&gt;
+&lt;li&gt;/usr/bin/testrb1.9.1&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;Previous versions had these as separate packages, and you had to
+remember to install everything to have a full Ruby installation
+available.&lt;/p&gt;
+
+&lt;p&gt;In the package name and the above binaries, &lt;code&gt;1.9.1&lt;/code&gt; indicates the Ruby
+library compatibility, &lt;code&gt;1.9.2&lt;/code&gt; is compatible with &lt;code&gt;1.9.1&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;The Debian alternatives system is used to set the default ruby, gem
+and irb binaries in the $PATH as links to the 1.9.1 versions, e.g.:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8221;&gt;&lt;span class=&#8217;line&#8217;&gt;% ls -l /usr/bin/ruby /etc/alternatives/ruby
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;lrwxrwxrwx 1 root root 18 2011-11-24 00:02 /etc/alternatives/ruby -&amp;gt; /usr/bin/ruby1.9.1
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;lrwxrwxrwx 1 root root 22 2011-11-24 00:02 /usr/bin/ruby -&amp;gt; /etc/alternatives/ruby&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Users can also update RubyGems via the &lt;code&gt;gem update &#8211;system&lt;/code&gt; command,
+but a shell environment variable must be exported first.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;bash&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;REALLY_GEM_UPDATE_SYSTEM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;yes
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;sudo -E gem update &#8211;system
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;The &lt;code&gt;-E&lt;/code&gt; is significant so the variable is available via
+&lt;code&gt;sudo&lt;/code&gt;. Without this variable set, this command will warn noisily
+that you should know what you&amp;#8217;re doing, and what this is up
+to. Personally, I&amp;#8217;m fine with RubyGems 1.3.7, as that is the version
+that the Chef &lt;code&gt;gem_package&lt;/code&gt; provider uses for the API. With the
+default RubyGems, you also get binaries in &lt;code&gt;/usr/local/bin&lt;/code&gt;, rather than
+the awkward &lt;code&gt;/var/lib/ruby&lt;/code&gt; location in earlier versions.&lt;/p&gt;
+
+&lt;p&gt;These changes are a result of work that has been going in
+&lt;a href=&quot;http://wiki.debian.org/Teams/Ruby/Packaging&quot;&gt;Debian Wheezy by the Ruby packaging team&lt;/a&gt;,
+kicked off by
+&lt;a href=&quot;http://lists.debian.org/debian-devel/2011/03/msg00210.html&quot;&gt;Lucas Nussbaum&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;That said, let&amp;#8217;s put this to use so we can have Chef running under the
+Ruby 1.9.2 available via APT.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;17&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;18&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;19&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;20&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;21&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;22&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;23&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;24&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;25&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;26&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;27&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;bash&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;% sudo apt-get install ruby1.9.1 ruby1.9.1-dev build-essential
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Reading package lists&#8230; Done
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Building dependency tree
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Reading state information&#8230; Done
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;build-essential is already the newest version.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Suggested packages:
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  ruby1.9.1-examples ri1.9.1 graphviz
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;The following NEW packages will be installed:
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  libruby1.9.1 ruby1.9.1 ruby1.9.1-dev
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Need to get 0 B/5,027 kB of archives.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;After this operation, 19.5 MB of additional disk space will be used.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Selecting previously deselected package libruby1.9.1.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;Reading database &#8230; 141637 files and directories currently installed.&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Unpacking libruby1.9.1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;from &#8230;/libruby1.9.1_1.9.2.290-2_amd64.deb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Selecting previously deselected package ruby1.9.1.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Unpacking ruby1.9.1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;from &#8230;/ruby1.9.1_1.9.2.290-2_amd64.deb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Selecting previously deselected package ruby1.9.1-dev.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Unpacking ruby1.9.1-dev &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;from &#8230;/ruby1.9.1-dev_1.9.2.290-2_amd64.deb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Processing triggers &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;man-db &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Setting up libruby1.9.1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;1.9.2.290-2&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Setting up ruby1.9.1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;1.9.2.290-2&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;update-alternatives: using /usr/bin/gem1.9.1 to provide /usr/bin/gem &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gem&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; in auto mode.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;update-alternatives: using /usr/bin/ruby1.9.1 to provide /usr/bin/ruby &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;ruby&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; in auto mode.
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Setting up ruby1.9.1-dev &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;1.9.2.290-2&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Processing triggers &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;libc-bin &#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;ldconfig deferred processing now taking place
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;One of Chef&amp;#8217;s dependency gems is &lt;code&gt;json&lt;/code&gt;, which has native C
+extensions, so the development headers for Ruby, and build tools are
+required (though already installed on my system).&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;bash&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;% ruby &#8211;version
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;ruby 1.9.2p290 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;2011-07-09 revision 32553&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;x86_64-linux&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;% gem &#8211;version
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;1.3.7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Now, I can install Chef as a RubyGem.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;17&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;18&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;19&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;20&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;21&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;22&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;23&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;24&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;25&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;26&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;bash&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;% sudo gem install chef
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Building native extensions.  This could take a &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt;&#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;Version 0.7.8&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;test &lt;/span&gt;suite cleanup &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;eliminated some race conditions related to queue.message_count&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Building native extensions.  This could take a &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt;&#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed mixlib-config-1.1.2
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed mixlib-cli-1.2.2
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed mixlib-log-1.3.0
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed mixlib-authentication-1.1.4
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed yajl-ruby-1.1.0
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed systemu-2.2.0
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed ohai-0.6.10
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed mime-types-1.17.2
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed rest-client-1.6.7
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed bunny-0.7.8
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed json-1.5.2
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed polyglot-0.3.3
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed treetop-1.4.10
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed net-ssh-2.1.4
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed net-ssh-gateway-1.1.0
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed net-ssh-multi-1.1
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed erubis-2.7.0
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed moneta-0.6.0
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed highline-1.6.8
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed uuidtools-2.1.2
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;Successfully installed chef-0.10.4
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;21 gems installed
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;And running Chef just works:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;bash&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;% sudo chef-client
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;Thu, 24 Nov 2011 14:02:38 -0700&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; INFO: *** Chef 0.10.4 ***
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&#8230;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;Thu, 24 Nov 2011 14:02:50 -0700&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; INFO: Chef Run &lt;span class=&quot;nb&quot;&gt;complete &lt;/span&gt;in 9.862972181 seconds
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;The results of the node object on the Chef Server:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;8&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;9&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;10&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;11&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;12&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;13&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;14&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;15&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;16&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;17&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;bash&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;% knife node show virt1test -a languages.ruby
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;languages.ruby:
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  bin_dir:        /usr/bin
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  gem_bin:        /usr/bin/gem1.9.1
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  gems_dir:       /var/lib/gems/1.9.1
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  host:           x86_64-pc-linux-gnu
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  host_cpu:       x86_64
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  host_os:        linux-gnu
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  host_vendor:    pc
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  platform:       x86_64-linux
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  release_date:   2011-07-09
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  ruby_bin:       /usr/bin/ruby1.9.1
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  target:         x86_64-pc-linux-gnu
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  target_cpu:     x86_64
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  target_os:      linux
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  target_vendor:  pc
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  version:        1.9.2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Overall, I&amp;#8217;m happy with the changes that the Debian Ruby Packaging
+Team has made, and I&amp;#8217;m glad to see these come to Ubuntu in
+11.10+. It&amp;#8217;s not the absolute latest version available, but this is
+good forward progress for binary Linux distributions. I also like that
+the alternatives system is used, so users could choose to install and
+use other Ruby interpreters. Hopefully these changes quell some of the
+arguments about Debian and Ubuntu and their handling of Ruby.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Chef on Windows HTPC</title>
+    <link href="http://jtimberman.github.com/blog/2011/11/21/chef-on-windows-htpc/"/>
+    <updated>2011-11-21T07:15:00-07:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/11/21/chef-on-windows-htpc</id>
+    <content type="html">&lt;p&gt;Over the past 20 years, I always had a Windows (or DOS!) PC as the
+main system I use at home. The primary purpose was for gaming,
+although building my own systems is also a hobby. In 2007, I wanted to
+build a new system to use as a home theater PC. Originally, I built it
+with Windows Vista - Windows Media Center &lt;em&gt;was&lt;/em&gt; Vista&amp;#8217;s killer app! I
+painstakingly installed software, tweaked system settings and tuned
+the registry. Then Windows 7 came along with further
+improvements. After almost 20 years of reinstalling from scratch for
+new versions of Windows, I treated this upgrade as no
+different.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately, I didn&amp;#8217;t capture all the system tweaks and settings. I
+didn&amp;#8217;t get all the software reinstalled. I did what I remembered, and
+W7 did have some improvements that made extra software and tweaks
+unnecessary. The thing I was lacking in the rebuild, and up until
+recently, was configuration management for Windows.&lt;/p&gt;
+
+&lt;h2&gt;Enter Chef&lt;/h2&gt;
+
+&lt;p&gt;Recently, my employer Opscode
+&lt;a href=&quot;http://www.opscode.com/press-releases/opscode-delivers-cloud-infrastructure-automation-to-windows-environments/&quot;&gt;announced broader Windows support&lt;/a&gt;
+for Chef. The awesome Chef community, and our development team have
+added some key features to Chef in the form of core libraries and
+cookbooks. While I did get Chef running on my HTPC a few months ago, I
+had only used it to test out the
+&lt;a href=&quot;http://community.opscode.com/cookbooks/powershell&quot;&gt;powershell cookbook&lt;/a&gt;,
+and also wrote a
+&lt;a href=&quot;http://community.opscode.com/cookbooks/silverlight&quot;&gt;silverlight cookbook&lt;/a&gt;
+as a proof of concept. In the mean time, the
+&lt;a href=&quot;http://community.opscode.com/cookbooks/windows&quot;&gt;windows cookbook&lt;/a&gt;
+cookbook received some serious leveling up thanks to
+&lt;a href=&quot;http://twitter.com/schisamo&quot;&gt;Seth Chisamore&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2&gt;Windows Cookbook&lt;/h2&gt;
+
+&lt;p&gt;The Windows cookbook has a number of excellent &amp;#8220;primitives&amp;#8221; in the
+form of libraries and resources. You can read all about that on
+&lt;a href=&quot;http://wiki.opscode.com/display/chef/Opscode+LWRP+Resources#OpscodeLWRPResources-windows&quot;&gt;The Chef Wiki&lt;/a&gt;. For
+now, I&amp;#8217;ll talk about how I captured some of the configuration so I
+don&amp;#8217;t have to remember next time (Windows 8, coming soon&amp;#8230;). Of
+interest here are the &lt;code&gt;windows_registry&lt;/code&gt; and &lt;code&gt;windows_auto_run&lt;/code&gt; resources.&lt;/p&gt;
+
+&lt;h2&gt;My HTPC&amp;#8217;s cookbooks&lt;/h2&gt;
+
+&lt;p&gt;I wrote two cookbooks this weekend. First, is a general &amp;#8220;Windows Media
+Center&amp;#8221; cookbook called, aptly, &amp;#8221;&lt;code&gt;wmc&lt;/code&gt;&amp;#8221;. This will capture the
+specific registry and other configuration related to Windows Media
+Center itself. The idea with this one is it manages only Windows Media
+Center. It&amp;#8217;s not ready for release, but I&amp;#8217;ll post some snippets
+of code here as I go.&lt;/p&gt;
+
+&lt;p&gt;The second cookbook I created is specifically for the Home Theater PC
+itself, named &lt;code&gt;htpc&lt;/code&gt;. This is going to contain all my preferences and
+biases of how I want my HTPC to look like in order to provide
+entertainment in my house.&lt;/p&gt;
+
+&lt;h2&gt;Windows Media Center (wmc)&lt;/h2&gt;
+
+&lt;p&gt;First and foremost, I want to make sure that Windows Media Center is
+running at boot time, and the &lt;code&gt;windows_auto_run&lt;/code&gt; resource fits the
+bill. This resource modifies the registry to update the key
+&lt;code&gt;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run&lt;/code&gt;, using the
+&lt;code&gt;windows_registry&lt;/code&gt; resource. It does operate at the &lt;em&gt;machine&lt;/em&gt; level,
+not just the current user, but I only have one user on my HTPC, so
+it&amp;#8217;s okay. Here&amp;#8217;s the resource:&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;windows_auto_run&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Windows Media Center&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;program&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;RunDLL32.exe C:/Windows/ehome/ehuihlp.exe,BootMediaCenter&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;not_if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Registry&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value_exists?&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;AUTO_RUN_KEY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Windows Media Center&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:create&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Next, I want to tweak a few other registry settings. Some of these I
+discovered through an
+&lt;a href=&quot;http://blogs.msdn.com/b/astebner/archive/2006/04/29/586961.aspx&quot;&gt;MSDN blog post&lt;/a&gt;,
+others are from setting up WMC itself and observing the &amp;#8220;HKCU&amp;#8221;
+registry. Not the most sophisticated way, but I don&amp;#8217;t see a great
+&amp;#8220;diff&amp;#8221; tool for the registry. Because the name of the HKCU and HKLM keys for WMC are
+long, I set them to a couple local variables, via &lt;code&gt;cookbooks/attributes/default.rb&lt;/code&gt;.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;default&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;wmc&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;reg_hkcu&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;HKCU\Software\Microsoft\Windows\CurrentVersion\Media Center&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;default&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;wmc&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;reg_hklm&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Media Center&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Then in the recipe, I simply assign local variables.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;hkcu&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;wmc&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;reg_hkcu&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;hklm&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;wmc&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;reg_hklm&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Now, for the registry changes. I use a 30 second skip forward and back
+with my remote during recorded TV shows, so I can avoid commercials.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;windows_registry&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hkcu&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Settings&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;VideoSettings&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;values&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;s1&quot;&gt;&amp;#39;SkipAheadInterval&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7148&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;s1&quot;&gt;&amp;#39;InstantReplayInterval&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7148&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;I also optimize the display for LCD/Plasma (I have a RP DLP, but I
+digress).&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;windows_registry&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;hkcu&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;values&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;TVSkin&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;For now, that&amp;#8217;s all the &lt;code&gt;wmc&lt;/code&gt; cookbook has going for it. I do have
+plans to enable additional features of WMC, install useful plugins,
+and improve playback quality and performance. Mainly, I need to find
+my old notes :-).&lt;/p&gt;
+
+&lt;h2&gt;Home Theater PC (htpc)&lt;/h2&gt;
+
+&lt;p&gt;The &lt;code&gt;htpc&lt;/code&gt; cookbook will contain additional tweaks and settings for
+how I want my HTPC configured. I don&amp;#8217;t know if I&amp;#8217;ll release it
+publicly, as it is pretty specific to me, but it might be useful as
+examples for others, so stay tuned to my
+&lt;a href=&quot;https://github.com/jtimberman&quot;&gt;GitHub account&lt;/a&gt; for updates.&lt;/p&gt;
+
+&lt;p&gt;First up are some local performance tweaks. These are done to
+Explorer(.exe), and I don&amp;#8217;t remember the source.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;6&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;7&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;windows_registry&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;HKCU&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Software&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Microsoft&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Windows&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;CurrentVersion&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Policies&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;&#92;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Explorer&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;values&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;s1&quot;&gt;&amp;#39;NoLowDiskSpaceChecks&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;s1&quot;&gt;&amp;#39;NoResolveSearch&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;    &lt;span class=&quot;s1&quot;&gt;&amp;#39;NoResolveTrack&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;Second, since this system is where all my music files live, I have
+iTunes installed for
+&lt;a href=&quot;http://support.apple.com/kb/HT3819&quot;&gt;Home Sharing&lt;/a&gt;. It doesn&amp;#8217;t do much
+good if iTunes isn&amp;#8217;t running, however, so I use &lt;code&gt;windows_auto_run&lt;/code&gt; to
+start it up.&lt;/p&gt;
+
+&lt;figure class=&#8217;code&#8217;&gt;&lt;figcaption&gt;&lt;span&gt;&lt;/span&gt;&lt;/figcaption&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre class=&quot;line-numbers&quot;&gt;&lt;span class=&#8217;line-number&#8217;&gt;1&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;2&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;3&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;4&lt;/span&gt;
+&lt;span class=&#8217;line-number&#8217;&gt;5&lt;/span&gt;
+&lt;/pre&gt;&lt;/td&gt;&lt;td class=&#8217;code&#8217;&gt;&lt;pre&gt;&lt;code class=&#8217;ruby&#8217;&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;n&quot;&gt;windows_auto_run&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;iTunes&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;program&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;C:/Program\ Files/iTunes/iTunes.exe&amp;quot;&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;not_if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Registry&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value_exists?&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;AUTO_RUN_KEY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;iTunes&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;  &lt;span class=&quot;n&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:create&lt;/span&gt;
+&lt;/span&gt;&lt;span class=&#8217;line&#8217;&gt;&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/figure&gt;
+
+
+&lt;p&gt;It&amp;#8217;s pretty simple so far, but I have some plans in store for my HTPC cookbook.&lt;/p&gt;
+
+&lt;h2&gt;HTPC Cookbook Plans&lt;/h2&gt;
+
+&lt;p&gt;I do plan to add some new features to the &lt;code&gt;htpc&lt;/code&gt; cookbook. First, I
+want to make sure all the software I need is installed. While the
+system mainly sits in WMC (with iTunes in the background), I do have
+some additional software and utilities that I like to have for
+managing my media library.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;iTunes - I already have the software installed, but it would be nice
+to not have to do that during system setup (Windows 8, I say&amp;#8230;).&lt;/li&gt;
+&lt;li&gt;Google Chrome - there&amp;#8217;s no abc.com, nbc.com, etc plugins for WMC
+(yet?), so I need a browser to go to the respective web sites to
+catch up on older episodes.&lt;/li&gt;
+&lt;li&gt;CDBurnerXP - decent CD/DVD burning software, rarely used but useful
+for backups.&lt;/li&gt;
+&lt;li&gt;Logitech Harmony Remote Software - I have a
+&lt;a href=&quot;http://www.logitech.com/en-us/remotes/universal-remotes/devices/6063&quot;&gt;Harmony 700 universal remote&lt;/a&gt;
+(and it&amp;#8217;s awesome!). This one might be tricky, but really I just
+want to make sure the software is installed. Configuration profiles
+are stored in an online support account with Logitech as far as I&amp;#8217;m
+aware.&lt;/li&gt;
+&lt;li&gt;Netflix plugin for WMC - This will probably go into the &lt;code&gt;wmc&lt;/code&gt;
+cookbook, though.&lt;/li&gt;
+&lt;li&gt;Additional performance tweaks - There are a whole slew of tweaks
+that I &lt;em&gt;know&lt;/em&gt; I made, I just don&amp;#8217;t remember them all. These will be
+added with &lt;code&gt;windows_registry&lt;/code&gt; resources.&lt;/li&gt;
+&lt;li&gt;Manage services - Everyone who has a gaming PC knows about
+&lt;a href=&quot;http://www.blackviper.com/&quot;&gt;Black Viper&amp;#8217;s Windows Service Guide(s)&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;Windows Features - With the &lt;code&gt;windows_feature&lt;/code&gt; resource, Chef can
+manage core features included in Windows installations.&lt;/li&gt;
+&lt;li&gt;Logging, monitoring - What kind of system administrator would I be
+if I didn&amp;#8217;t also monitor my system for performance? :-)&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;Some of the things I want to manage on my HTPC are covered by other
+cookbooks I have, or exist on the
+&lt;a href=&quot;http://community.opscode.com&quot;&gt;Chef Community Site&lt;/a&gt;.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Steam - This system is still capable of running some games, like
+StarCraft II, TeamFortress 2 and Left 4 Dead (1 &amp;amp; 2). I have a Steam
+cookbook that works on OS X, it just isn&amp;#8217;t released (yet).&lt;/li&gt;
+&lt;li&gt;Teamspeak 3 - I already have a
+&lt;a href=&quot;http://community.opscode.com/cookbooks/teamspeak3&quot;&gt;teamspeak3 cookbook&lt;/a&gt;,
+I&amp;#8217;ll just need to add installation of the client for Windows there.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://gnu.org/s/emacs&quot;&gt;A text editor&lt;/a&gt; - Since I have games, and
+games have configuration files, it makes sense to &amp;#8230; wait, I should
+put those in Chef too! Or at least, in a Version Control System and
+check out the repository&amp;#8230;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://git-scm.org&quot;&gt;Git&lt;/a&gt; - For the above. This will likely be a
+contribution to Opscode&amp;#8217;s
+&lt;a href=&quot;http://community.opscode.com/cookbooks/git&quot;&gt;git cookbook&lt;/a&gt;. Though
+I&amp;#8217;ll still install a &lt;a href=&quot;http://notepad-plus-plus.org&quot;&gt;text editor&lt;/a&gt; of
+&lt;a href=&quot;http://www.gnome.org/projects/gedit&quot;&gt;some kind&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;These changes, updates and releases will be announced on this blog,
+ mainly through my &lt;a href=&quot;https://twitter.com/jtimberman&quot;&gt;twitter&lt;/a&gt; and
+ &lt;a href=&quot;https://plus.google.com/100567271038100401523/&quot;&gt;Google+&lt;/a&gt;
+ accounts. Stay tuned!&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Blog Moved to GitHub Pages</title>
+    <link href="http://jtimberman.github.com/blog/2011/09/29/blog-moved-to-github-pages/"/>
+    <updated>2011-09-29T22:59:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/09/29/blog-moved-to-github-pages</id>
+    <content type="html">&lt;p&gt;I moved my blog from Posterous to GitHub Pages. Posterous isn&amp;#8217;t a bad
+system and service. It just didn&amp;#8217;t fit the way I wanted to manage my
+site and the content. It was entirely adequate to get going but I was
+dissatisfied with the web form for creating new posts. It also loaded
+pages fairly slow.&lt;/p&gt;
+
+&lt;h2&gt;GitHub is awesome.&lt;/h2&gt;
+
+&lt;p&gt;Many others have migrated their technical blogs from services like
+Posterous, Wordpress, Tumblr, Blogger and so on over to GitHub
+Pages. Most often, this is because these services are database backed
+systems, use a web form for creating posts, and don&amp;#8217;t have a revision
+control system that we all know and love under the covers.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://pages.github.com&quot;&gt;GitHub Pages&lt;/a&gt; is a great service by GitHub
+that allows you to serve up static content out of a Git
+repository. You can do simple static HTML pages, or you can use a
+static page generation framework to generate the content out of
+Markdown (or Textile, or HAML) files. There&amp;#8217;s a number of options for
+this, such as &lt;a href=&quot;http://nanoc.stoneship.org/&quot;&gt;Nanoc&lt;/a&gt; or &lt;a href=&quot;http://jekyllrb.com/&quot;&gt;Jekyll&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2&gt;I chose Jekyll.&lt;/h2&gt;
+
+&lt;p&gt;&lt;em&gt;&amp;#8220;Jekyll is a blog-aware, static site generator in Ruby&amp;#8221;&lt;/em&gt; -
+&lt;a href=&quot;http://jekyllrb.com&quot;&gt;http://jekyllrb.com/&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Jekyll fits the bill for me. It supports different markup languages,
+such as Markdown or Textile, and GitHub Pages has easy instructions on
+how to get going with it. Jekyll also includes a &lt;em&gt;fantastic&lt;/em&gt; Posterous
+importer, which flawlessly imported all my
+&lt;a href=&quot;http://jtimberman.github.com/blog/archives&quot;&gt;old posts&lt;/a&gt;. Now I can start creating new posts as
+Markdown in Emacs, instead of using a web form, or editing HTML
+directly. I can also save revisions using Git, instead of saving a
+draft and monkeying with an interface to recover drafts or publish
+them.&lt;/p&gt;
+
+&lt;p&gt;I sat down a few days ago and imported my old posts. Then I ran
+through trying to get them to look alright with a decent CSS
+theme. However, I&amp;#8217;m not a front end designer/developer, and I never
+remember how do do anything useful with CSS. So I went looking for
+canned ways to build a nice interface/theme for this blog.&lt;/p&gt;
+
+&lt;p&gt;I remembered
+&lt;a href=&quot;http://github.com/twitter/bootstrap&quot;&gt;Twitter&amp;#8217;s Bootstrap&lt;/a&gt; project,
+and thought that might be interesting. After looking at it I was
+confused about what to use, since it is a very complete solution,
+including iOS mobile layouts in addition to normal web pages. After
+looking elsewhere, I saw mention of &lt;a href=&quot;http://octopress.org&quot;&gt;Octopress&lt;/a&gt;,
+a framework built on top of Jekyll. I queried
+&lt;a href=&quot;http://junglist.gen.nz&quot;&gt;some&lt;/a&gt; &lt;a href=&quot;http://likens.us/&quot;&gt;people&lt;/a&gt; that had
+experience with it, found that it would probably meet my needs, and
+gave it a whirl.&lt;/p&gt;
+
+&lt;p&gt;Naturally if you&amp;#8217;re familiar with Octopress, you can see the result of
+that evaluation. It is a really nice system for managing the
+site.&lt;/p&gt;
+
+&lt;h2&gt;I like my blogging workflow.&lt;/h2&gt;
+
+&lt;p&gt;I like my new blogging workflow. It is very natural to me as a system
+engineer, as it uses Emacs, Rake, a Web Service, and Git. I&amp;#8217;ll walk
+through the steps I took in creating this post. I&amp;#8217;m going to skip the
+setup of Octopress, as that is
+&lt;a href=&quot;http://octopress.org/docs/setup/&quot;&gt;documented elsewhere&lt;/a&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;% rake new_post&#8217;[Blog Moved to GitHub Pages]&#8217;
+Creating new post: source/_posts/2011-09-29-blog-moved-to-github-pages.markdown
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Then I load up the source file created by the rake task and enter all
+this content you see, saving my work along the way. I did, but could
+choose, to commit to the git repository as well. In order to preview
+the content, I can actually run the entire blog with Octopress&amp;#8217;s built
+in rake task:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;% rake preview
+Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
+[2011-09-29 23:06:20] INFO  WEBrick 1.3.1
+[2011-09-29 23:06:20] INFO  ruby 1.9.2 (2011-07-09) [x86_64-darwin11.1.0]
+[2011-09-29 23:06:20] INFO  WEBrick::HTTPServer#start: pid=92373 port=4000
+Configuration from /Users/jtimberman/Development/jtimberman.github.com/_config.yml
+Auto-regenerating enabled: source -&amp;gt; public
+[2011-09-29 23:06:21] regeneration: 107 files changed
+&amp;gt;&amp;gt;&amp;gt; Compass is watching for changes. Press Ctrl-C to Stop.
+127.0.0.1 - - [29/Sep/2011 23:06:24] &quot;GET / HTTP/1.1&quot; 200 50231 0.0181
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now I can browse to &lt;a href=&quot;http://localhost:4000&quot;&gt;http://localhost:4000&lt;/a&gt; and see exactly what the
+blog post will look like, and it loads lightning fast. This is of
+paramount importance for me, as I travel a lot and would really like
+to develop blog entries while I&amp;#8217;m on airplanes with no internet
+access.&lt;/p&gt;
+
+&lt;p&gt;Once I am satisfied with the content and how it looks, I commit to the
+repository and push the source branch.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;% git add source/_posts
+% git commit -m &#8216;Blog moved to github pages&#8217;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Then, it is time to deploy the blog to GitHub Pages. Octopress makes
+this easy with another rake task:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;% rake deploy
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This takes care of all the repository work required, and pushes to
+GitHub. Then I push the actual source branch.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;% git push origin source
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2&gt;Nice things about Octopress&lt;/h2&gt;
+
+&lt;p&gt;Besides the rake tasks and that works with Jekyll, Octopress has some
+really nice features.&lt;/p&gt;
+
+&lt;p&gt;First of all, the default theme is really nice. One thing I wanted out
+of CSS on top of Jekyll was something large enough that I could read
+easily. I think this theme looks pretty good and is quite readable
+with my default browser settings. It is also nice and easily readable
+on my iPhone.&lt;/p&gt;
+
+&lt;p&gt;Second, Octopress is very customizable. I can easily modify the layout
+by editing the &lt;code&gt;_config.yml&lt;/code&gt; file. Of course I can change the theme,
+but I can add JavaScript, layouts and more. I modified the footer to
+include my Creative Commons license for the content of this site.&lt;/p&gt;
+
+&lt;p&gt;Third, I really like the default layout in this theme. The recent
+posts, GitHub repo links and my last few tweets are a nice
+touch. Plus I have integrated Disqus for comments and set up Google
+Analytics easily, thanks to the ease of customizing the configuration.&lt;/p&gt;
+
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;In closing, I&amp;#8217;m very happy with this solution. I now have a blogging
+workflow that I&amp;#8217;m comfortable with, and that will hopefully result in
+more posts.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Update to Managing my Workstations</title>
+    <link href="http://jtimberman.github.com/blog/2011/09/04/update-to-managing-my-workstations/"/>
+    <updated>2011-09-04T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/09/04/update-to-managing-my-workstations</id>
+    <content type="html">&lt;p&gt;It has been a few months and several thousand page views since my original post on how I &lt;a href=&quot;http://bit.ly/guCtmD&quot; title=&quot;Managing My Workstations with Chef&quot; target=&quot;_blank&quot;&gt;manage my workstations with Chef&lt;/a&gt;. I have made some changes to my repository, and have a few additional notes for working with Mac OS X Lion. I also added a new system in my network, an iMac.&lt;/p&gt;
+&lt;h2&gt;Mac OS X Cookbook&lt;/h2&gt;
+&lt;p&gt;First, I would like to point out the cookbook I created, &lt;a href=&quot;http://ckbk.it/mac_os_x&quot; title=&quot;Mac OS X Cookbook&quot; target=&quot;_blank&quot;&gt;mac_os_x&lt;/a&gt;. In the original post, I discussed using Pivotal Lab&amp;#8217;s workstation recipes, which use the Mac OS X user defaults system to update system preferences from the command-line (with an execute resource). One of the first things I did in the mac_os_x cookbook is create a lightweight resource and provider for managing user defaults. It can be used, for example, like this:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;mac_os_x_userdefaults &amp;quot;dont show hard drives on the desktop&amp;quot; do
+  domain &amp;quot;com.apple.finder&amp;quot;
+  key &amp;quot;ShowHardDrivesOnDesktop&amp;quot;
+  value &amp;quot;false&amp;quot;
+  type &amp;quot;bool&amp;quot;
+end&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;While this does involve more typing than just entering the command, it has a couple advantages. First, it is easier to read for people not totally familiar with the defaults command. Second, behind the scenes it will check if the setting is already set and not update the resource if it isn&amp;#8217;t. This isn&amp;#8217;t a huge deal in terms of system resource usage, but depending on your Chef setup might end up with extra reporting on things that didn&amp;#8217;t need to change if you&amp;#8217;re using a report handler, which &lt;a href=&quot;http://bit.ly/pdMawh&quot; title=&quot;A Simple Report Handler&quot; target=&quot;_blank&quot;&gt;I do use&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;This cookbook also includes a lightweight resource/provider for managing plist preferences files for &lt;code&gt;~/Library/Preferences&lt;/code&gt;. All plists in OS X can be manipulated through the defaults system, but it can be cumbersome for highly customized applications such as your Adium or 1Password configuration. Usage is very simple:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;mac_os_x_plist_file &amp;quot;ws.agile.1Password.plist&amp;quot;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This is in my local &lt;a href=&quot;http://ckbk.it/1password&quot; title=&quot;1Password Cookbook&quot; target=&quot;_blank&quot;&gt;1password cookbook&lt;/a&gt;, which has the file in &lt;code&gt;files/default/ws.agile.1Password.plist&lt;/code&gt;. If I make modifications to the preferences, I do have to copy it over to the cookbook and re-upload to the Chef Server, but since I now have 4 computers to change preferences on, this is much easier than remembering everywhere I clicked. I use this for managing my preferences for &lt;a href=&quot;http://ckbk.it/ghmac&quot; title=&quot;GitHub for Mac&quot; target=&quot;_blank&quot;&gt;ghmac (GitHub for Mac)&lt;/a&gt;, &lt;a href=&quot;http://ckbk.it/iterm2&quot; target=&quot;_blank&quot;&gt;iterm2&lt;/a&gt; and alfredapp.&lt;/p&gt;
+&lt;h2&gt;Mac OS X Lion&lt;/h2&gt;
+&lt;p&gt;Lion brought a lot of changes. In particular along with Xcode 4, Apple changed the gcc compiler to llvm. I&amp;#8217;m not a C programmer, and don&amp;#8217;t really understand the differences yet, I just know that a number of things in &lt;a href=&quot;http://github.com/mxcl/homebrew&quot;&gt;Homebrew&lt;/a&gt; fail to build. The main thing I installed with Homebrew that wasn&amp;#8217;t working with Lion is &lt;a href=&quot;http://bit.ly/jIYjkc&quot;&gt;Emacs&lt;/a&gt;. I actually only have Lion on my iMac, so I haven&amp;#8217;t updated any recipes for installing it via Chef. In fact, I actually removed it from my &amp;#8220;workstation&amp;#8221; recipe and *gasp* installed it manually. The story there is enough for another post though, so stay tuned and I&amp;#8217;ll write up my experience.&lt;/p&gt;
+&lt;p&gt;Relevant to how I manage workstations with Chef, I had to make sure that on Lion, I take care of some additional new preferences using my handy-dandy &amp;#8220;mac_os_x_userdefaults&amp;#8221; LWRP. These are in the mac_os_x cookbook recipe, &amp;#8220;lion_tweaks.&amp;#8221; In my workstation recipe, I include this one only on Lion.&lt;/p&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;If you haven&amp;#8217;t read it yet, go back and read my post on how I &lt;a href=&quot;http://bit.ly/guCtmD&quot; title=&quot;Managing My Workstations with Chef&quot; target=&quot;_blank&quot;&gt;manage my workstations with Chef&lt;/a&gt;. I hope if you&amp;#8217;re using Chef to manage a Mac that the &lt;a href=&quot;http://ckbk.it/mac_os_x&quot; title=&quot;Mac OS X Cookbook&quot; target=&quot;_blank&quot;&gt;mac_os_x&lt;/a&gt; cookbook is useful to you. Also, stay tuned for an update later this week about my experiences installing Emacs on Lion.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Guide to Writing Chef Cookbooks</title>
+    <link href="http://jtimberman.github.com/blog/2011/09/03/guide-to-writing-chef-cookbooks/"/>
+    <updated>2011-09-03T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/09/03/guide-to-writing-chef-cookbooks</id>
+    <content type="html">&lt;p&gt;I wanted smartmontools installed to monitor the disk health of my LAN server at home. This is not an uncommon thing to want to do, so I thought I&amp;#8217;d write and share a Chef cookbook for it. I also took this opportunity to write up the experience so I can illustrate how easy it is to write a cookbook for Chef.&lt;/p&gt;
+&lt;p&gt;The first thing to do when writing a cookbook is to create the cookbook directory structure with &lt;code&gt;knife cookbook create&lt;/code&gt;. This command will create a README.rdoc by default, and I prefer Markdown, so I specify the &lt;code&gt;-r md&lt;/code&gt; option.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;knife cookbook create smartmontools -r md&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;By default, metadata and the default recipe are created with boilerplate content for author and copyright. I have configured the values in my knife.rb:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;cookbook_copyright &amp;quot;Joshua Timberman&amp;quot;
+cookbook_license   &amp;quot;apachev2&amp;quot;
+cookbook_email     &amp;quot;cookbooks@housepub.org&amp;quot;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The resulting directory structure will be created:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% tree cookbooks/smartmontools
+cookbooks/smartmontools
+├── README.md
+├── attributes
+├── definitions
+├── files
+│   └── default
+├── libraries
+├── metadata.rb
+├── providers
+├── recipes
+│   └── default.rb
+├── resources
+└── templates
+    └── default
+
+10 directories, 3 files&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;h2&gt;README Driven Development&lt;/h2&gt;
+&lt;p&gt;I&amp;#8217;m a big fan of Tom Preston-Werner&amp;#8217;s blog post on &lt;a href=&quot;http://tom.preston-werner.com/2010/08/23/readme-driven-development.html&quot; name=&quot;README Driven Development&quot;&gt;README driven development&lt;/a&gt;. I don&amp;#8217;t write the complete README before I start writing code for a new cookbook. I do write it as I go.&lt;/p&gt;
+&lt;p&gt;In order to write a proper README for a cookbook, and to write the cookbook itself, we&amp;#8217;ll need to know a bit more about the software we&amp;#8217;re installing. The best way to do that depends on the software, but often it is as simple as merely installing the package on a test system such as a virtual machine and explore its contents.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;apt-get install smartmontools
+dpkg -L smartmontools&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Of note for smartmontools, documentation is in &lt;code&gt;/usr/share/doc/smartmontools&lt;/code&gt; and configuration is in &lt;code&gt;/etc&lt;/code&gt;. In particular, &lt;code&gt;/etc/smartd.conf&lt;/code&gt; and &lt;code&gt;/etc/smartmontools&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;For now assume that the cookbook README.md is being written along the way.&lt;/p&gt;
+&lt;h3&gt;List of Resources&lt;/h3&gt;
+&lt;p&gt;One of the things I do when I am writing a new cookbook and exploring the contents of a package is to be mindful of &lt;a href=&quot;http://wiki.opscode.com/display/chef/Resources&quot; name=&quot;Chef Resources&quot;&gt;Chef Resources&lt;/a&gt; I want to manage in the recipe(s). In the case of smartmontools, at this point I have determined I need a few specific resources.&lt;/p&gt;
+&lt;h3&gt;Install the Package&lt;/h3&gt;
+&lt;p&gt;First, as I&amp;#8217;ve installed the package, I clearly need a package. I&amp;#8217;m pretty confident that this particular package will not break backwards compatibility, and can be safely upgraded to the latest version if necessary.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192321.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;h3&gt;Configuration files are templates&lt;/h3&gt;
+&lt;p&gt;The next resources in the recipe are the configuration files. I want to dynamically configure these, so I am going to use &lt;a href=&quot;http://wiki.opscode.com/display/chef/Resources#Resources-Template&quot; name=&quot;templates&quot;&gt;templates&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192326.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;I&amp;#8217;m not going to write these from scratch. Instead, I will copy the source files from the installed package on my test system. These will go into &lt;code&gt;templates/default&lt;/code&gt; in the cookbook.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% tree templates
+templates
+└── default
+    ├── smartd.conf.erb
+    └── smartmontools.default.erb&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Templates are dynamically generated using ERB, and they can use Node attributes. I can use the automatically detected attributes, or I can set new attributes for the node in the cookbook.&lt;/p&gt;
+&lt;h3&gt;Attributes Used in the Templates&lt;/h3&gt;
+&lt;p&gt;The attributes go in the &lt;code&gt;attributes/default.rb&lt;/code&gt; file in the cookbook. The ones I use are:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192329.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;Attributes are definitely something to document in the README.&lt;/p&gt;
+&lt;p&gt;In &lt;code&gt;templates/default/smartd.conf.erb&lt;/code&gt;, I check if there&amp;#8217;s a list of devices to monitor, and if so iterate over the list passing in the default options (&lt;code&gt;device_opts&lt;/code&gt;). The cookbook doesn&amp;#8217;t at this time support per-device options - the same ones are applied to all devices. If &lt;code&gt;devices&lt;/code&gt; is empty, then the configuration will use DEVICESCAN.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;&amp;lt;% if node[&#8216;smartmontools&#8217;][&#8216;devices&#8217;].length &amp;gt; 0 -%&amp;gt;
+&amp;lt;%   node[&#8216;smartmontools&#8217;][&#8216;devices&#8217;].each do |device| -%&amp;gt;
+&amp;lt;%=    &amp;quot;/dev/#{device} #{node[&#8216;smartmontools&#8217;][&#8216;device_opts&#8217;]}&amp;quot; %&amp;gt;
+&amp;lt;%   end -%&amp;gt;
+&amp;lt;% else -%&amp;gt;
+
+DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
+&amp;lt;% end -%&amp;gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;In &lt;code&gt;templates/default/smartmontools.default.erb&lt;/code&gt;, the smartmontools daemon will be enabled based on the &lt;code&gt;start_smartd&lt;/code&gt; attribute. Additional options will be passed per &lt;code&gt;smartd_opts&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;start_smartd=&amp;lt;%= node[&#8216;smartmontools&#8217;][&#8216;start_smartd&#8217;] %&amp;gt;
+ 
+&amp;lt;% if node[&#8216;smartmontools&#8217;][&#8216;smartd_opts&#8217;].length &amp;gt; 0 -%&amp;gt;
+smartd_opts=&amp;quot;&amp;lt;%= node[&#8216;smartmontools&#8217;][&#8216;smartd_opts&#8217;] %&amp;gt;&amp;quot;
+&amp;lt;% else -%&amp;gt;
+#smartd_opts=&amp;quot;&#8211;interval=1800&amp;quot;
+&amp;lt;% end -%&amp;gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Generally speaking when creating attributes and using them in a template, I use the default values that are found in the configuration file dropped off by the package. I also try to use the default settings over all.&lt;/p&gt;
+&lt;p&gt;However, a cookbook is a place to express opinions. I made some with this cookbook, such as enabling DEVICESCAN if there are no devices, despite the configuration file&amp;#8217;s comments indicating that the option shouldn&amp;#8217;t be used. The best thing about attributes is they allow other people using the cookbook to change the behavior based on their preferences much easier than manually modifying things dropped off by a package.&lt;/p&gt;
+&lt;p&gt;I strongly recommend documenting where a cookbook has behavior that is not default for the installed package or upstream documentation. I did this in the README for this cookbook discussing the DEVICESCAN option and otherwise where appropriate.&lt;/p&gt;
+&lt;h3&gt;Static Files&lt;/h3&gt;
+&lt;p&gt;This cookbook has only one static file which will be deployed to &lt;code&gt;/etc/smartmontools/run.d/10mail&lt;/code&gt;. The smartmontools package allows creating a number of scripts that go in the directory, and I have created an attribute for the list of scripts. These generally don&amp;#8217;t &lt;code&gt;cookbook_file&lt;/code&gt; resources. Since the list is an attribute, I iterate over that with Ruby&amp;#8217;s Array#each loop.&lt;/p&gt;
+&lt;p&gt;The attribute:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192332.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;The loop of resources:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192334.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;Each filename in the array (currently only &amp;#8216;10mail&amp;#8217;) needs to have a corresponding file in the &lt;code&gt;files/default&lt;/code&gt; directory of the cookbook.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% tree files
+files
+└── default
+    └── 10mail&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This file&amp;#8217;s contents are not particularly exciting, I used the same one that came out of the package.&lt;/p&gt;
+&lt;p&gt;Why would I want to manage a static file that came from the package? Perhaps I want to modify the script in some way that doesn&amp;#8217;t make sense in an attribute. In this case I don&amp;#8217;t, however creating the attribute and iterating over it makes it easy to extend this functonality in the cookbook.&lt;/p&gt;
+&lt;h3&gt;Manage the Service&lt;/h3&gt;
+&lt;p&gt;Smartmontools comes with a service. That is, there&amp;#8217;s an init script that can be enabled and started to monitor disk devices. This is actually the whole point of the cookbook, so I&amp;#8217;ll make sure there&amp;#8217;s a resource to manage the service.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192336.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;In this resource, I used the meta parameter &lt;code&gt;supports&lt;/code&gt; for the service. I found out what the init script can do by simply running it with no options on my test system.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% /etc/init.d/smartmontools
+Usage: /etc/init.d/smartmontools {start|stop|restart|reload|force-reload|status}&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The various options passed to the init script manage it in the familiar way. Telling Chef about it has a specific effect on the way the service provider functions when Chef manages it.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt; status: Chef will use &lt;code&gt;/etc/init.d/SERVICE_NAME status&lt;/code&gt; to determine if the service is running. If the return code is 0, its running. Otherwise, Chef checks the process table for a process running with the name of the service. &lt;/li&gt;
+&lt;li&gt; reload: Chef can only take the &lt;code&gt;reload&lt;/code&gt; action for a service if it actually supports reload. &lt;/li&gt;
+&lt;li&gt; restart: When the &lt;code&gt;restart&lt;/code&gt; action is sent to a service, if it supports restart then Chef will use &lt;code&gt;/etc/init.d/SERVICE_NAME restart&lt;/code&gt;. Otherwise, Chef will use stop and start. &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Earlier when we wrote the template resources, we notified the service to reload. Since the resource supports reload, we can do this. Also note that the resource has an array of actions. Each of these actions will be taken if necessary when Chef manages it. In this case, it will be enabled at boot time, and then started if it is not already running.&lt;/p&gt;
+&lt;h2&gt;Let&amp;#8217;s Use the Recipe&lt;/h2&gt;
+&lt;p&gt;Now that we&amp;#8217;ve written a nice recipe and understand what it&amp;#8217;s about to do, let&amp;#8217;s actually use it on a node we&amp;#8217;d like to have smartmontools. Before uploading, I remove the boilerplate directories that were created by knife. The actual cookbook contents for upload are:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% tree cookbooks/smartmontools
+cookbooks/smartmontools
+├── README.md
+├── attributes
+│   └── default.rb
+├── files
+│   └── default
+│       └── 10mail
+├── metadata.rb
+├── recipes
+│   └── default.rb
+└── templates
+    └── default
+        ├── smartd.conf.erb
+        └── smartmontools.default.erb
+
+6 directories, 7 files&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;I didn&amp;#8217;t mention the metadata yet as I haven&amp;#8217;t modified it yet. The knife command will create a default metadata.rb file as mentioned before. It will also populate it with some boilerplate content. The main thing I&amp;#8217;m going to modify is the version and the platforms supported.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1192349.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;Now it is time to actually upload the cookbook and apply it to a node.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% knife cookbook upload smartmontools
+Uploading smartmontools             [0.5.0]
+upload complete
+ 
+% knife node run list add virt1test &#8216;recipe[smartmontools]&#8217;
+run_list:
+    role[ubuntu]
+    recipe[smartmontools]&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;h2&gt;Run Chef&lt;/h2&gt;
+&lt;p&gt;I&amp;#8217;ll use &lt;a href=&quot;http://wiki.opscode.com/display/chef/Knife#Knife-SSHSubcommand&quot; name=&quot;knife ssh&quot;&gt;knife ssh&lt;/a&gt; to run chef-client on the nodes that have the smartmontools recipe applied.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1239999.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;h2&gt;Verify results&lt;/h2&gt;
+&lt;p&gt;We can verify the results of running the recipe by examining the resources on the target system(s). Chef&amp;#8217;s contract with you is that it will configure the resources in the manner specified in the recipe. You can be confident that it will completely configure every resource if it exits cleanly (which it did from the output above).&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% cat /etc/default/smartmontools
+&#8230;
+start_smartd=yes
+&#8230;
+% cat /etc/smartd.conf
+&#8230;
+DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
+&#8230;
+% sudo service smartmontools status
+ * smartd is running&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now we can take this same recipe and apply it to other systems. I tested smartmontools on an Ubuntu system. Notice earlier that I had an &lt;code&gt;ubuntu&lt;/code&gt; role on my node. I actually modified that role to include the smartmontools recipe, and then all my Ubuntu nodes were configured for smartmontools when they ran Chef again.&lt;/p&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;I hope this guide was helpful. I shared the cookbook on the &lt;a href=&quot;http://community.opscode.com/cookbooks/smartmontools&quot; name=&quot;Chef Community: Smartmontools&quot;&gt;Chef Community web site&lt;/a&gt;, and the source code is available on &lt;a href=&quot;https://github.com/jtimberman/smartmontools-cookbook&quot; name=&quot;GitHub&quot;&gt;Chef Community web site&lt;/a&gt;. Note that while I said this would be easy, it certainly isn&amp;#8217;t trivial. There are a lot of steps involved in making cookbooks that are dynamic, easily customized and shareable with others. It takes practice, but after a few you get the hang of it. End to end, this cookbook took me about 2 hours to write, test, tweak (fix bugs) and document.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Encrypted Data Bag for Postfix SASL Authentication</title>
+    <link href="http://jtimberman.github.com/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/"/>
+    <updated>2011-08-06T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication</id>
+    <content type="html">&lt;p&gt;I recently had a chance to sit down and implemented an encrypted data bag in my personal environment. This should translate nicely to anyone that wants to use encrypted data bags in their environment.&lt;/p&gt;
+&lt;h3&gt;The use case&lt;/h3&gt;
+&lt;p&gt;I send mail out through an SASL authenticated SMTP server. My local network has a postfix SMTP relay that connects to the SASL auth relay. I&amp;#8217;m using the Opscode postfix cookbook with the sasl_auth recipe, since I wrote it originally for this use case.&lt;/p&gt;
+&lt;p&gt;The &lt;a href=&quot;https://github.com/opscode/cookbooks/blob/master/postfix/recipes/sasl_auth.rb&quot;&gt;postfix::sasl_auth recipe&lt;/a&gt; is applied in an &amp;#8220;operations master&amp;#8221; role. The attributes for configuring the user and password for SASL are attributes. Relevant lines from the role:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;name &amp;quot;ops_master&amp;quot;
+run_list(&amp;quot;recipe[postfix::sasl_auth]&amp;quot;)
+override_attributes(
+  &amp;quot;postfix&amp;quot; =&amp;gt; {
+    &amp;quot;relayhost&amp;quot; =&amp;gt; &amp;quot;[smtp.example.com]:587&amp;quot;,
+    &amp;quot;smtp_sasl_auth_enable&amp;quot; =&amp;gt; &amp;quot;yes&amp;quot;,
+    &amp;quot;smtp_sasl_passwd&amp;quot; =&amp;gt; &amp;quot;AWESOME!!&amp;quot;,
+    &amp;quot;smtp_sasl_user_name&amp;quot; =&amp;gt; &amp;quot;MYUSER&amp;quot;
+  }
+)&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;h3&gt;Encrypted Secrets&lt;/h3&gt;
+&lt;p&gt;Chef&amp;#8217;s data bags are a great way to store infrastructure wide, but not role or node specific information. &lt;a href=&quot;http://wiki.opscode.com/display/chef/Encrypted+Data+Bags&quot;&gt;&lt;em&gt;Encrypted&lt;/em&gt; data bags&lt;/a&gt; are a great way to store sensitive information, like passwords. Here are the steps I followed to get the encrypted data bag set up.&lt;/p&gt;
+&lt;p&gt;First, I created the secret key file that is used to encrypt the contents of the data bag item. This file will not be stored in source control, as it is highly sensitive, and only gets copied to the systems that need it.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;openssl rand -base64 512 &amp;gt; ~/.chef/encrypted_data_bag_secret&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Next, I created the actual data bag.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;knife data bag create secrets&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Next I created the data bag item using the secret key. This is created directly on the Chef Server, rather than a plain text file.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;knife data bag create secrets postfix &#8211;secret-file ~/.chef/encrypted_data_bag_secret&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;I&amp;#8217;m not saving the plaintext data bag item, but will store the encrypted item, so I&amp;#8217;ll retrieve it from the Chef Server and redirect the output to a JSON file.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;mkdir data_bags/secrets
+knife data bag show secrets postfix -Fj &amp;gt; data_bags/secrets/postfix.json
+cat data_bags/secrets/postfix.json
+{
+  &amp;quot;id&amp;quot;: &amp;quot;postfix&amp;quot;,
+  &amp;quot;user&amp;quot;: &amp;quot;encrypted string here&amp;quot;,
+  &amp;quot;passwd&amp;quot;: &amp;quot;encrypted string here&amp;quot;
+}&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The current recipe doesn&amp;#8217;t support using an encrypted data bag item, so I had to modify it. First, load the encrypted data bag item.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;postfix_creds = Chef::EncryptedDataBagItem.load(&amp;quot;secrets&amp;quot;,&amp;quot;postfix&amp;quot;, 
+  Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This access the &amp;#8220;secrets&amp;#8221; data bag for the &amp;#8220;postfix&amp;#8221; item, and uses the default value for the secret key file (which is &amp;#8220;/etc/chef/encrypted_data_bag_secret&amp;#8221;.&lt;/p&gt;
+&lt;p&gt;Next, I update the sasl_passwd template to pass in the user and password from the data bag item.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;template &amp;quot;/etc/postfix/sasl_passwd&amp;quot; do
+  #&#8230;
+  variables(:smtp_sasl_passwd =&amp;gt; smtp_sasl[&#8216;passwd&#8217;],
+            :smtp_sasl_user_name =&amp;gt; smtp_sasl[&#8216;user&#8217;])
+  #&#8230;
+end&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Finally, the template is updated to use the new values.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;&amp;lt;%= node[:postfix][:relayhost] %&amp;gt; &amp;lt;%= @smtp_sasl_user_name %&amp;gt;:&amp;lt;%= @smtp_sasl_passwd %&amp;gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;After uploading the cookbook and the role (I removed the username and password), I copied the secret key file over to the node I needed to run Chef on, then ran Chef Client.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;sudo cat /etc/postfix/sasl_passwd
+[smtp.example.com]:587 MYUSER:AWESOME!!&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Yay!&lt;/p&gt;
+&lt;p&gt;The full recipe is:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1130006.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Specify Chef Run List at Command Line to Vagrant Up</title>
+    <link href="http://jtimberman.github.com/blog/2011/07/17/specify-chef-run-list-at-command-line-to-vagrant-up/"/>
+    <updated>2011-07-17T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/07/17/specify-chef-run-list-at-command-line-to-vagrant-up</id>
+    <content type="html">&lt;p&gt;I wanted to dynamically set my run list for testing with Vagrant without editing the Vagrantfile. Since the Vagrantfile is just Ruby, and the run list is an array, I can split a string into an array and use it.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/1088459.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;If I don&amp;#8217;t specify the run list, it will still configure the node with my base Ubuntu configuration. Then bring up a Vagrant box with a comma separated string of items in the run list.&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% CHEF_RUN_LIST=&amp;quot;role[ubuntu],recipe[apache2]&amp;quot; vagrant up&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Github for Mac cookbook</title>
+    <link href="http://jtimberman.github.com/blog/2011/06/22/github-for-mac-cookbook/"/>
+    <updated>2011-06-22T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/06/22/github-for-mac-cookbook</id>
+    <content type="html">&lt;p&gt;Earlier today, GitHub &lt;a href=&quot;https://github.com/blog/878-announcing-github-for-mac&quot; title=&quot;GitHub for Mac Announcement&quot; target=&quot;_blank&quot;&gt;released&lt;/a&gt; their native &lt;a href=&quot;http://mac.github.com&quot; title=&quot;GitHub for Mac&quot; target=&quot;_blank&quot;&gt;OS X client application&lt;/a&gt;. As I automate &lt;a href=&quot;https://twitter.com/#!/jtimberman/status/73450718429847552&quot; target=&quot;_blank&quot;&gt;everything&lt;/a&gt; on my &lt;a href=&quot;http://jtimberman.posterous.com/managing-my-workstations-with-chef&quot;&gt;Macs with Chef&lt;/a&gt;, I wrote a &lt;a href=&quot;http://ckbk.it/ghmac&quot;&gt;cookbook for Github for Mac&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;In my chef-repo I did:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;knife cookbook site install ghmac
+knife cookbook upload ghmac
+#&#8230; add &#8216;recipe[ghmac]&#8217; to my workstation role &#8230;
+knife ssh role:workstation &#8216;source .rvm/scripts/rvm &amp;amp;&amp;amp; chef-client&#8217;&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Since my Mac OS X workstations all have role[workstation], they all got GitHub for Mac installed automatically. I did have to do the configuration steps through the UI, and that made me cry a little, but I got over it. The application itself is quite nice.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Non-technical Analogy for &#8220;As a Service&#8221; Providers</title>
+    <link href="http://jtimberman.github.com/blog/2011/06/01/non-technical-analogy-for-as-a-service-providers/"/>
+    <updated>2011-06-01T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/06/01/non-technical-analogy-for-as-a-service-providers</id>
+    <content type="html">&lt;p&gt;I wrote the following as a non-technical analogy for a variety of &amp;#8220;as a service&amp;#8221; cloud type providers.&lt;/p&gt;
+&lt;p&gt;AWS gives you the entire play ground, for the most part. You can do pretty much anything you want, and they give you some really cool pre-made toys to put in it.&lt;/p&gt;
+&lt;p&gt;Engine Yard is more like a sandbox. You can come play in the sandbox, but they make the rules and you have to use their buckets and shovels.&lt;/p&gt;
+&lt;p&gt;Heroku is just the bucket. You can&amp;#8217;t look inside, you just put your sand in and they mold it into the sandcastle.&lt;/p&gt;
+&lt;p&gt;Rackspace is more like the entire park where the playground is. There&amp;#8217;s other stuff there, and you can make use of it while you visit. They have a few sandboxes, and you can build your own section.&lt;/p&gt;
+&lt;p&gt;Opscode is like the construction company. We provide the tools and materials needed to build all the sandboxes, buckets, and parks. Each of the others can use Opscode in whole or in part of building their playground or park.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Installing Virtualbox on OSX with Chef</title>
+    <link href="http://jtimberman.github.com/blog/2011/05/28/installing-virtualbox-on-osx-with-chef/"/>
+    <updated>2011-05-28T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/05/28/installing-virtualbox-on-osx-with-chef</id>
+    <content type="html">&lt;p&gt;There&amp;#8217;s a rumor floating around that I automate everything on my laptop with Chef, including &lt;a href=&quot;https://twitter.com/#!/jtimberman/status/73450718429847552&quot; target=&quot;_blank&quot;&gt;window maximizing&lt;/a&gt;. While that&amp;#8217;s not entirely true, I do automate as much as possible on my &lt;a href=&quot;http://jtimberman.posterous.com/managing-my-workstations-with-chef&quot; target=&quot;_blank&quot;&gt;workstations with Chef&lt;/a&gt;, as I have three laptops I use regularly. One application I like to have installed is VirtualBox, because I do some Chef recipe testing with it and &lt;a href=&quot;http://vagrantup.com&quot; target=&quot;_blank&quot;&gt;Vagrant&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I did the most natural thing ever, I wrote a cookbook to automate installation of VirtualBox on OS X. The disk image file that Oracle distributes for VirtualBox on OSX uses an &amp;#8220;mpkg&amp;#8221; installer package, so I couldn&amp;#8217;t just use the dmg_package LWRP I wrote to install it in /Applications. I extended the dmg_package provider to allow a type to be specified and pushed a new release of the &lt;a href=&quot;http://community.opscode.com/cookbooks/dmg&quot; target=&quot;_blank&quot;&gt;dmg cookbook (v.0.6.0)&lt;/a&gt;. The recipe in my cookbook builds the URL, which may seem convoluted (maybe it is), but it makes it more dynamic and customizable with fewer assumptions. The actual usage looks like this:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/997134.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;One thing to note about the mpkg type, is that these generally want to install in /Applications, which often requires root privileges. The dmg_package LWRP will use sudo when performing the mpkg installation, so if you&amp;#8217;re like my and want to run chef-client as a non-root user for most things, it will prompt for your password, unless you unlock sudo in the same shell. Output of VirtualBox being installed:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;INFO: Processing dmg_package[Virtualbox] action install (virtualbox::default line 41)
+INFO: Processing remote_file[/Users/jtimberman/.chef/cache/Virtualbox.dmg] action create (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 36)
+INFO: Processing execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg] action run (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 42)
+INFO: execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg] sh(hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg)
+/dev/disk1                  Apple_partition_scheme                 
+/dev/disk1s1                Apple_partition_map                    
+/dev/disk1s2                Apple_HFS                              /Volumes/VirtualBox
+INFO: execute[sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /] sh(sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /)
+Password: &amp;lt;&#8211; unlock sudo before running to avoid this prompt. &amp;quot;sudo -l&amp;quot; should be sufficient.
+installer: Package name is Oracle VM VirtualBox
+installer: Upgrading at base path /
+installer: The upgrade was successful.
+INFO: execute[hdiutil detach &#8216;/Volumes/Virtualbox&#8217;] sh(hdiutil detach &#8216;/Volumes/Virtualbox&#8217;)
+&amp;quot;disk1&amp;quot; unmounted.
+&amp;quot;disk1&amp;quot; ejected.
+INFO: Processing file[/Applications/Virtualbox.app/Contents/MacOS/Virtualbox] action create (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 55)
+ERROR: file[/Applications/Virtualbox.app/Contents/MacOS/Virtualbox] (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 55) had an error: Operation not permitted - /Applications/Virtualbox.app/Contents/MacOS/Virtualbox
+INFO: Chef Run complete in 36.219113 seconds
+INFO: Running report handlers
+INFO: Resources updated this run:
+INFO:   execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg]
+INFO:   execute[sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /]
+INFO:   execute[hdiutil detach &#8216;/Volumes/Virtualbox&#8217;]
+INFO: Report handlers complete&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;After writing and testing, the next thing I wanted to do is share the cookbook on the Opscode Chef Community site. However, I discovered that the good Chris Peplin already shared one! Since the site has a flat namespace, I would have to name mine differently. However, I think it would be better to collaborate in true Open Source fashion with Chris, and we&amp;#8217;ll collaborate on this.&amp;nbsp;&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Switching to GNU Emacs</title>
+    <link href="http://jtimberman.github.com/blog/2011/05/06/switching-to-gnu-emacs/"/>
+    <updated>2011-05-06T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/05/06/switching-to-gnu-emacs</id>
+    <content type="html">&lt;p&gt;I have a confession to make.&lt;/p&gt;
+&lt;p&gt;For those who follow me on &lt;a href=&quot;http://twitter.com/jtimberman&quot; target=&quot;_blank&quot;&gt;Twitter&lt;/a&gt;, you already know. For those who read the title of this post, you can make an educated guess.&lt;/p&gt;
+&lt;p&gt;After ~16 years of using Vi/Vim/MacVim, I&amp;#8217;m switching my primary editor to Emacs. Over the years, I have tried to use Emacs without much progress. I never really gave enough effort to learn it. In fact, only in the last year did I learn all the movement keys (C-f, C-b, C-n, C-p). To say I made uneducated disparaging comments about Emacs would be an understatement.&lt;/p&gt;
+&lt;p&gt;I have a highly customized Vim/MacVim setup, with lots of bells and whistles like NERDtree, Command-T, language plugins &lt;a href=&quot;https://github.com/jtimberman/dotvim&quot; target=&quot;_blank&quot;&gt;and more&lt;/a&gt;&amp;nbsp;derived from Adam Jacob&amp;#8217;s &lt;a href=&quot;https://github.com/adamhjk/adam-vim&quot; target=&quot;_blank&quot;&gt;repository&lt;/a&gt;. I&amp;#8217;ve spent countless hours tweaking and customizing it further to enhance productivity.&lt;/p&gt;
+&lt;p&gt;So how did I come around and completely switch editors? It wasn&amp;#8217;t easy, that&amp;#8217;s for sure. First there&amp;#8217;s the resistance to a new tool. However, I wanted to keep a truly open mind, and give it a real, honest attempt. I bought the &lt;a href=&quot;http://amzn.com/0596006489&quot; target=&quot;_blank&quot;&gt;O&amp;#8217;Reilly Learning GNU Emacs&lt;/a&gt; book and started reading, with the editor open to one of my favorite things to edit, my ~/chef-repo.&lt;/p&gt;
+&lt;p&gt;Actually the first thing I did was get a sensible and sane configuration started. I forked Phil Hagelberg&amp;#8217;s excellent&amp;nbsp;&lt;a href=&quot;https://github.com/technomancy/emacs-starter-kit&quot;&gt;Emacs Starter Kit&lt;/a&gt;. I also thought AquaMacs would be the sensible place to start, since I&amp;#8217;m using a Mac, and it uses a lot of familiar OS X hotkeys for copy/paste, opening and closing tabs and more. However, some fellow Opscode coworkers advised against AquaMacs, especially with the starter kit, because it leads one down a path of really &amp;#8220;non-standard&amp;#8221; Emacs settings. That isn&amp;#8217;t entirely awful, since I manage my &lt;a href=&quot;jtimberman.posterous.com/managing-my-workstations-with-chef&quot; target=&quot;_blank&quot;&gt;workstation(s) with Chef&lt;/a&gt; and have my Emacs config available first thing on a new machine (now that its added in, anyway :)). However, I quickly became annoyed with some erratic behavior. For example, opening a tab, then having something like a completion window means that switching tabs will keep the completion window persisted, even though it was split on &amp;#8220;a different tab&amp;#8221;.&amp;nbsp;&lt;/p&gt;
+&lt;p&gt;So I switched to GNU Emacs, and have been using that for the last week. I have no measure of whether my productivity is increased or not, but I&amp;#8217;m getting pretty comfortable with the editor, and able to do most of what I was really good at in Vim. I sometimes miss Command-T, but the default Emacs file fine (C-x C-f for those that don&amp;#8217;t know) is really good. Some of the things that I have found to be totally essential and are what keep me using the editor:&lt;/p&gt;
+&lt;p&gt;Buffers are totally sane, very fast to switch between, and easy to navigate between open files. Also related, the half hour or so I spent learning and practising the basics - create horizontal and veritical split, opening files in new windows, and more was totally worth it. I&amp;#8217;m actually getting to be faster than the panels used in Vim, which I&amp;#8217;ve been using for ~4 years.&lt;/p&gt;
+&lt;p&gt;File navigation is awesome. I really liked &amp;#8221;&lt;img src=&quot;http://km.support.apple.com/library/APPLE/APPLECARE_ALLGEOS/HT1343/ks_command.gif&quot; alt=&quot;&quot; /&gt;-T&amp;#8221; in the short time I used TextMate, and I loved &lt;a href=&quot;http://weblog.jamisbuck.org/2008/10/10/coming-home-to-vim&quot; target=&quot;_blank&quot;&gt;FuzzyFileFinder&lt;/a&gt; and &lt;a href=&quot;http://www.vim.org/scripts/script.php?script_id=3025&quot; target=&quot;_blank&quot;&gt;Command-T plugins&lt;/a&gt; for Vim. However the flexiblity of the built-in default file navigation in Emacs is really intuitive for me.&lt;/p&gt;
+&lt;p&gt;With the Emacs starter-kit, some good modes are installed and available by default without modification. Most of the time I&amp;#8217;m using Ruby, Markdown or Javascript modes. I anticipate starting in on org-mode at some point, but as I&amp;#8217;m still getting comfortable with the basics, we&amp;#8217;ll take some baby steps :).&lt;/p&gt;
+&lt;p&gt;Emacs really is easy to customize. I never really did much with Vim. I certainly cargo culted other configs, went with what worked, and left it at that. With Emacs, I&amp;#8217;m doing that, but the code I&amp;#8217;m looking at is more sensible to me. I hope this doesn&amp;#8217;t mean I&amp;#8217;m going to go learn Lisp :). As I&amp;#8217;ve forked emacs-starter-kit on GitHub, and made my own customizations, I&amp;#8217;m also sharing those back on the site, so if you want to see what changes I&amp;#8217;ve made and additional modes I&amp;#8217;ve installed, &lt;a href=&quot;https://github.com/jtimberman/emacs-starter-kit&quot; target=&quot;_blank&quot;&gt;take a peek&lt;/a&gt;. If you look, there&amp;#8217;s a chef.el the &amp;#8220;jtimberman&amp;#8221; directory with some shortcuts to drop off common Chef resources. As I learn more, I plan to make that a bit more useful as snippets or maybe even a chef-mode.&lt;/p&gt;
+&lt;p&gt;Speaking of custom modes, even if I didn&amp;#8217;t use it for anything else, Emacs is totally worth using for confluence-mode. We have two Confluence wikis, one for Chef, and an internal company wiki. Confluence mode seems to assume you only have one wiki, and I haven&amp;#8217;t sorted out the details on how to easily switch between the two. For now I just put the confluence-url setting in the *scratch* buffer and do M-x eval-region to &amp;#8220;switch&amp;#8221;. That said, the ability to quickly search for a page and load the confluence wiki markup page in a buffer, then save the content back out to the wiki directly is *awesome*. No more 4 step process to copy/paste the markup into an editor window and back out to the form. Also, while there&amp;#8217;s a Vim syntax plugin for Confluence, I had no end of error trying to use it.&lt;/p&gt;
+&lt;p&gt;As I&amp;#8217;ve only been using Emacs for a week, I&amp;#8217;m still a novice. However, I&amp;#8217;ve gotten to the point where I can get what I need done in writing Chef cookbooks and documentation. I&amp;#8217;m enjoying the learning process, and pleased that I&amp;#8217;m at a point where the editor is not only out of the way, but helping me get more done.&lt;/p&gt;
+&lt;p&gt;The potential to devolve into an editor war is high, so please, no comments about how other editors are better or that I should switch back to Vim. I firmly believe that everyone should use tools that they enjoy, and that help them be productive. Snarky comments can be made on twitter, of course :).&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>A Simple Report Handler</title>
+    <link href="http://jtimberman.github.com/blog/2011/04/24/a-simple-report-handler/"/>
+    <updated>2011-04-24T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/04/24/a-simple-report-handler</id>
+    <content type="html">&lt;p&gt;&lt;a href=&quot;http://tickets.opscode.com/browse/CHEF-2179&quot; title=&quot;Exception and Report Handlers&quot; target=&quot;_blank&quot;&gt;Exception and report handlers&lt;/a&gt; are a pretty cool feature of Chef. They have been around for several versions (&lt;a href=&quot;http://www.opscode.com/blog/2010/06/21/chef-0-9-0-and-ohai-0-5-6-released/&quot; title=&quot;Chef 0.9.0 Release Post&quot; target=&quot;_blank&quot;&gt;first appearing in 0.9.0&lt;/a&gt;), but haven&amp;#8217;t received a lot of attention. In the Chef Advanced training class, we go into greater detail about writing handlers, so I had a play with them a bit recently. Also, the default logging output for a chef-client run is a bit more verbose in Chef 0.10 than it was in previous versions. &lt;a href=&quot;http://tickets.opscode.com/browse/CHEF-2179&quot; title=&quot;CHEF-2179&quot; target=&quot;_blank&quot;&gt;I&amp;#8217;ve been convinced&lt;/a&gt; this is for the better overall, though all the &amp;#8220;Processing&amp;#8230;&amp;#8221; lines can get in the way of things that are actually being configured. To make it clearer of what resources were actually configured in the Chef run, I wrote a very simple handler:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/940171.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;To use this in my chef-client, I drop it off as a file, say &amp;#8220;/var/lib/chef/handler/updated_resources.rb&amp;#8221; and then configure /etc/chef/client.rb:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/940176.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;Then when I run chef-client, after the run is complete it will display something like this:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Chef Run complete in 15.297228 seconds
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Running report handlers
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Resources updated this run:
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO:   execute[apt-get update]
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO:   execute[index-gem-repository]
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO:   remote_directory[/srv/gems/gems]
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Report handlers complete&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt;: I released a &lt;a href=&quot;https://rubygems.org/gems/chef-handler-updated-resources&quot;&gt;gem for this handler&lt;/a&gt;. You can now install the gem and then use &lt;code&gt;require &#8216;chef/handler/updated_resources&#8217;&lt;/code&gt; in /etc/chef/client.rb&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Chef 0.10&#8217;s Knife Plugins</title>
+    <link href="http://jtimberman.github.com/blog/2011/04/22/chef-0-10-s-knife-plugins/"/>
+    <updated>2011-04-22T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/04/22/chef-0-10-s-knife-plugins</id>
+    <content type="html">&lt;p&gt;Earlier today^Wyesterday, Opscode previewed a new feature of the upcoming Chef 0.10, &lt;a href=&quot;http://www.opscode.com/blog/2011/04/22/chef-0-10-preview-knife-plugins-and-ui/&quot; title=&quot;Chef 0.10 Preview: Knife Plugins&quot; target=&quot;_blank&quot;&gt;Knife Plugins&lt;/a&gt;. I&amp;#8217;ve been excited about this feature since Dan DeLeo first created the &lt;a href=&quot;http://tickets.opscode.com/browse/CHEF-1248&quot; title=&quot;CHEF-1248&quot; target=&quot;_blank&quot;&gt;ticket for it&lt;/a&gt;. I already created the &amp;#8220;grep&amp;#8221; plugin that Dan illustrates on the blog post, and it is quite useful already (and I only have a few systems!).&lt;/p&gt;
+&lt;p&gt;A few months ago, I wrote a &lt;a href=&quot;https://rubygems.org/gems/ubuntu_ami&quot; title=&quot;UbuntuAmi RubyGem&quot; target=&quot;_blank&quot;&gt;silly library&lt;/a&gt; that will retrieve the list of Canonical&amp;#8217;s released AMIs. They make this available as a text file per distribution codename (lucid, maverick, etc), and my library supports that. For even greater silliness, but perhaps usefulness, I wrote a knife plugin to retrieve the AMI data. The code is really simple.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/938399.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;The run method processes the name_args (see the &lt;a href=&quot;http://wiki.opscode.com/display/chef/Knife+Plugins&quot; title=&quot;Knife Plugins&quot; target=&quot;_blank&quot;&gt;Knife Plugin Documentation&lt;/a&gt;) for the distribution and optionally a type. Lets see an example of what this means.&lt;/p&gt;
+&lt;p&gt;First, usage:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% knife ec2 amis ubuntu -h
+knife ec2 amis ubuntu DISTRO [TYPE]
+    -s, &#8211;server-url URL             Chef Server URL
+    -k, &#8211;key KEY                    API Client Key
+        &#8211;color                      Use colored output
+    -c, &#8211;config CONFIG              The configuration file to use
+        &#8211;defaults                   Accept default values for all questions
+    -e, &#8211;editor EDITOR              Set the editor to use for interactive commands
+    -E, &#8211;environment ENVIRONMENT    Set the Chef environment
+    -F, &#8211;format FORMAT              Which format to use for output
+        &#8211;no-color                   Don&#8217;t use colors in the output
+    -n, &#8211;no-editor                  Do not open EDITOR, just accept the data as is
+    -u, &#8211;user USER                  API Client Username
+        &#8211;print-after                Show the data after a destructive operation
+    -V, &#8211;verbose                    More verbose output. Use twice for max verbosity
+    -v, &#8211;version                    Show chef version
+    -y, &#8211;yes                        Say yes to all prompts for confirmation
+    -h, &#8211;help                       Show this message&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The name_args we can pass are DISTRO and TYPE, TYPE being optional. The rest of the options are built into knife and available to every sub-command. Let&amp;#8217;s pick a distro. My favorite these days is lucid:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% knife ec2 amis ubuntu lucid
+ap_northeast_large:      ami-580fa459
+ap_northeast_large_ebs:  ami-5e0fa45f
+ap_northeast_small:      ami-4c0fa44d
+ap_northeast_small_ebs:  ami-5c0fa45d
+ap_southeast_large:      ami-c692ec94
+ap_southeast_large_ebs:  ami-f092eca2
+ap_southeast_small:      ami-2492ec76
+ap_southeast_small_ebs:  ami-f292eca0
+eu_west_large:           ami-631f2b17
+eu_west_large_ebs:       ami-3d1f2b49
+eu_west_small:           ami-a11e2ad5
+eu_west_small_ebs:       ami-311f2b45
+us_east_large:           ami-fa01f193
+us_east_large_ebs:       ami-3202f25b
+us_east_small:           ami-7000f019
+us_east_small_ebs:       ami-3e02f257
+us_west_large:           ami-e1bfefa4
+us_west_large_ebs:       ami-f5bfefb0
+us_west_small:           ami-19bfef5c
+us_west_small_ebs:       ami-ebbfefae&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;For the DISTRO, I can use any of the codenames that Canonical makes available, including karmic, lucid, maverick and even natty at the time of this writing. The value on the left is the TYPE. Lets see what happens when I pass one of those:&lt;/p&gt;
+&lt;div class=&quot;CodeRay&quot;&gt;
+  &lt;div class=&quot;code&quot;&gt;&lt;pre&gt;% knife ec2 amis ubuntu lucid us_west_small
+ami-19bfef5c&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This returns just the AMI. We can feed this into an environment variable or just copy and paste it into a &amp;#8220;knife ec2 server create&amp;#8221; command for the &amp;#8220;-I ami&amp;#8221; option.&lt;/p&gt;
+&lt;p&gt;A note about the naming, I classed it under the ec2 sub-command space since it is most relevant there. Further, I used &amp;#8220;amis ubuntu&amp;#8221; rather than &amp;#8220;ubuntu amis&amp;#8221; because theoretically other plugins could be written to retrieve other platforms. There&amp;#8217;s a couple bugs I know about already and will fix them later. Enjoy!&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Display Chef Server Search Indexes</title>
+    <link href="http://jtimberman.github.com/blog/2011/04/11/display-chef-server-search-indexes/"/>
+    <updated>2011-04-11T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/04/11/display-chef-server-search-indexes</id>
+    <content type="html">&lt;p&gt;Anyone who runs a Chef Server or uses the Opscode Platform has a wealth of search indexes available to them for data stored on the server. However, there isn&amp;#8217;t a direct subcommand for displaying the search indexes. The following are automatically created on the server or Platform organization at creation and we know about them already:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;node&lt;/li&gt;
+&lt;li&gt;role&lt;/li&gt;
+&lt;li&gt;client&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Also, all data bags are created as a search index for the items they contain. All of these indexes are available through the API, and can be retrieved with Knife.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/915019.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;div&gt;This uses knife&amp;#8217;s &amp;#8220;exec&amp;#8221; sub-command. The subcommand takes a script argument, which is a Ruby script. It is executed in the context of the knife configuration, so if you have a .chef/knife.rb, it will be able to connect to a Chef Server. Let&amp;#8217;s look at the contents of this script, it&amp;#8217;s pretty simple.&lt;/div&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/915020.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;The &amp;#8216;p&amp;#8217; simply prints output of the argument. Then I&amp;#8217;m calling the &amp;#8220;get&amp;#8221; method on the &amp;#8220;api&amp;#8221; object. This is a preconfigured object that knows how to talk to the Chef Server API through the aforementioned configuration. This takes an argument, which I pass the search API endpoint. The results that come back from the API are a Ruby hash, so I print out just the keys by calling the &amp;#8220;keys&amp;#8221; method. As we can see, I have a number of data bags in my environment, including DNS entries, users and Samba (shares and permissions for the curious).&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Managing My Workstations with Chef</title>
+    <link href="http://jtimberman.github.com/blog/2011/04/03/managing-my-workstations-with-chef/"/>
+    <updated>2011-04-03T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/04/03/managing-my-workstations-with-chef</id>
+    <content type="html">&lt;p&gt;&lt;em&gt;Update: &lt;a href=&quot;http://jtimberman.posterous.com/update-to-managing-my-workstations&quot;&gt;New cookbook, Lion and more&lt;/a&gt;!&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;This post describes how I use &lt;a href=&quot;http://wiki.opscode.com/display/chef/Home&quot; title=&quot;Chef Wiki&quot; target=&quot;_blank&quot;&gt;Chef&lt;/a&gt; and&amp;nbsp;&lt;a href=&quot;http://opscode.com/platform/&quot; title=&quot;Opscode Platform&quot; target=&quot;_blank&quot;&gt;Opscode Hosted Chef&lt;/a&gt;&amp;nbsp;to manage my workstations, Apple Macbooks. I have three:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Company issued Macbook Pro&lt;/li&gt;
+&lt;li&gt;Personal Macbook Air&lt;/li&gt;
+&lt;li&gt;Family Macbook Pro&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Note that while I do use this on my work laptop, Opscode has a different set of recipes to set up development and internal company workstations. At some point there may be a post on the &lt;a href=&quot;http://www.opscode.com/blog&quot; title=&quot;Opscode Blog&quot; target=&quot;_blank&quot;&gt;Opscode Blog&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Before I get started with Chef itself, I have to install a few things to &amp;#8220;bootstrap&amp;#8221; the systems to be ready. I&amp;#8217;m not going to include the commands to install all these &amp;#8220;pre-requisites&amp;#8221;, as you can learn how to do that from their respective web sites.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;Xcode 3.2 (or 4.0)&lt;/span&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;I wish I could purchase a Macbook with Xcode preinstalled. In fact, I would pay $50 to have this over iLife on new machines, so the $5 cost for version 4 is really minor. However, I don&amp;#8217;t have any use for whatever 4.0 has to offer, since I only want Xcode because its the most sane way to get GCC and friends on OSX.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://developer.apple.com/xcode/&quot;&gt;http://developer.apple.com/xcode/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;Ruby Version Manager&lt;/span&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;I want to use Ruby 1.9.2 instead of the default that comes with OSX, and RVM makes it easy to do that. I also like the gemset feature, which allows me to sandbox and play with various configurations of RubyGems.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://rvm.beginrescueend.com&quot;&gt;http://rvm.beginrescueend.com&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;Chef&lt;/span&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;I generally just install the latest released Chef gem from RubyGems.org once I have Ruby installed.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://rubygems.org/gems/chef&quot;&gt;https://rubygems.org/gems/chef&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Once Chef itself is installed, it&amp;#8217;s time to get cooking! I have the following already set up:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Opscode Community &lt;a href=&quot;http://community.opscode.com/users/jtimberman&quot; title=&quot;Joshua Timberman&quot; target=&quot;_blank&quot;&gt;userid&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;Opscode Hosted Chef organization.&lt;/li&gt;
+&lt;li&gt;Chef Repository&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let&amp;#8217;s take a look at what I put into the Chef Repository to configure my workstations. First, I created the repository and the listed components, then I upload everything to my Opscode Hosted Chef organization.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;&lt;strong&gt;Cookbooks&lt;/strong&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;I have a number of cookbooks for my personal repository, but the relevant ones for workstations are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://community.opscode.com/cookbooks/dmg&quot; title=&quot;dmg cookbook&quot; target=&quot;_blank&quot;&gt;dmg&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://community.opscode.com/cookbooks/homebrew&quot; title=&quot;homebrew cookbook&quot; target=&quot;_blank&quot;&gt;homebrew&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;workstation&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I wrote the dmg cookbook to automatically install OSX applications that are delivered to users via DMGs. After writing cookbooks for skype, and tunnelblick, I noticed some common patterns and abstracted those out to a lightweight resource and provider, &amp;#8220;dmg_package&amp;#8221;. This does the heavy lifting of:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Retrieve a .dmg file from a remote URL.&lt;/li&gt;
+&lt;li&gt;Mount the disk image.&lt;/li&gt;
+&lt;li&gt;Copy the .app directory to /Applications.&lt;/li&gt;
+&lt;li&gt;Unmount the disk image.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The homebrew cookbook was written by&amp;nbsp;&lt;span style=&quot;line-height: 14px; color: #000000;&quot;&gt;&lt;a href=&quot;http://community.opscode.com/users/mathie&quot; title=&quot;Graeme Mathieson&quot; target=&quot;_blank&quot;&gt;Graeme Mathieson&lt;/a&gt;, and it will install Homebrew in /usr/local and use it as the default package provider on OSX.&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;line-height: 14px; color: #000000;&quot;&gt;Both the dmg and homebrew cookbooks were downloaded to my local chef-repo with the &amp;#8220;vendor&amp;#8221; pattern supported by knife.&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;line-height: 14px; color: #000000;&quot;&gt;The workstation cookbook consists of a number of recipes. Many of them contain commands lifted from Pivotal Labs experimental GitHub repository, &lt;a href=&quot;https://github.com/pivotalexperimental/wschef&quot; title=&quot;Pivotal Labs Experimental Chef Workstation Recipes&quot; target=&quot;_blank&quot;&gt;wschef&lt;/a&gt;. I don&amp;#8217;t use any of the scaffolding they wrote in that repository, but I grabbed lots of the executes. However, that repository &lt;a href=&quot;https://github.com/pivotalexperimental/wschef/issues/3&quot; title=&quot;No License for redistribution of wschef recipes&quot; target=&quot;_blank&quot;&gt;does not have any mention of a license&lt;/a&gt;, so I haven&amp;#8217;t published the workstation cookbook I use. I can publish the recipe I wrote, which will be part of the cookbook when the license of their recipes is sorted out.&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901008.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;&lt;strong&gt;Roles&lt;/strong&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;I use two roles on my workstations that tell Chef what recipes to apply. First, is role[mac_os_x]:&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901013.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;Next is the actual workstation recipe.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901012.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;Data Bags&lt;/span&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Chef is data driven, and I have written a data bag item for my workstation. It simply lists the gems, dmg&amp;#8217;s and packages to install with the above recipe.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901009.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;Client Configuration&lt;/span&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;I run Chef as my normal user, so it will need to be able to write out cache and other files in a location my user has write access. I replace &amp;#8220;workstation_hostname&amp;#8221; for the node name depending on the host. For example, doppelbock is the hostname and node name of my Macbook Air.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901065.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;&lt;strong&gt;Nodes&lt;/strong&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;I use the following run list on my workstations.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901014.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-size: x-large;&quot;&gt;&lt;strong&gt;Upload Chef Repository&lt;/strong&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;Now that all the victims are assembled, it is time to upload the Chef repository, copy the configuration file and validation certificate and run Chef.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/901076.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;Then I simply run &amp;#8216;chef-client&amp;#8217; as my normal user and my laptop is configured. It does take some time because several of the DMGs are large, and homebrew compiles from source. All in all, it took about 1 hour to do the initial run of Chef on my Macbook Air 13&amp;#8221; when I first set it up.&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Obligatory first post</title>
+    <link href="http://jtimberman.github.com/blog/2011/04/02/obligatory-first-post/"/>
+    <updated>2011-04-02T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/04/02/obligatory-first-post</id>
+    <content type="html">&lt;p&gt;My intention is to post about Linux/Unix system administration, Ruby development, Opscode&amp;#8217;s Chef and even more philosophical topics like devops, cloud computing, or really anything that strikes my fancy.&lt;/p&gt;
+&lt;p&gt;I&amp;#8217;m probably going to post a lot about Chef. Most of this is my own personal exploration of the framework and testing for my personal usage. While I work for Opscode and you&amp;#8217;re free to ask me any time about Chef and the Opscode Platform, I post on this blog in my personal time. Not all the information here is canonical or even reflects the best way to go about doing &lt;strong&gt;anything,&lt;/strong&gt;&amp;nbsp;let alone with Chef.&lt;/p&gt;
+&lt;p&gt;&amp;nbsp;&lt;/p&gt;
+</content>
+  </entry>
+  
+  <entry>
+    <title>Debian/Ubuntu Package for Ruby 1.9.2 with fpm</title>
+    <link href="http://jtimberman.github.com/blog/2011/04/02/debian-ubuntu-package-for-ruby-1-9-2-with-fpm/"/>
+    <updated>2011-04-02T00:00:00-06:00</updated>
+    <id>http://jtimberman.github.com/blog/2011/04/02/debian-ubuntu-package-for-ruby-1-9-2-with-fpm</id>
+    <content type="html">&lt;p&gt;Jordan Sissel created &lt;a href=&quot;https://github.com/jordansissel/fpm&quot;&gt;fpm&lt;/a&gt; a few months ago. It is a quick and easy way to create packages for Debian, Ubuntu and Red Hat family Linux distributions. I created a Ruby 1.9.2 package for my personal server.&lt;/p&gt;
+&lt;p&gt;&lt;script src=&quot;https://gist.github.com/881058.js&quot;&gt;&lt;/script&gt;&lt;/p&gt;
+</content>
+  </entry>
+  
+</feed>
