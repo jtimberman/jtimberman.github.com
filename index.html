@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Reminder: this blog reflects my opinions and thoughts, and notthose of my employer, Opscode, Inc.Like any good sysadmin, I have my own domain for e...">
+  <meta name="description" content="A few weeks ago, I listened to theChangelog Podcastepisode featuring Chris Forsythe, lead of the Growl project. Iactually don&#8217;tWdidn&#8217;t ...">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -60,6 +60,111 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/02/chef-report-handler-for-growl/">Chef Report Handler for Growl</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+  
+
+
+
+<time datetime="2012-01-02T20:37:00-07:00" pubdate  data-updated="true" >Jan 2<span>nd</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A few weeks ago, I listened to the
+<a href="http://thechangelog.com/post/11317828888/episode-0-6-8-growl-and-open-source-in-the-app-store-wit">Changelog Podcast</a>
+episode featuring Chris Forsythe, lead of the Growl project. I
+actually don&#8217;t<sup>Wdidn&#8217;t</sup> use Growl for a long time, because I really
+disliked notifications of any kind, as they are distracting. However,
+I do appreciate the project, and supporting them by purchasing Growl
+on the App Store seemed totally reasonable.</p>
+
+<p>Of course, buying the app means it was installed on the spot. I always
+resisted it in the past because it was bundled with so many apps, but
+I don&#8217;t want unsolicited software to show up on my computer. Now, it
+seemed a bit more natural, and I made a few configuration tweaks (I
+should put those into Chef&#8230;). I&#8217;m actually happy to use it now,
+especially since it has a nice network accessible API.</p>
+
+<h1>Growlnotify</h1>
+
+<p>Shortly after I started using Growl on my work system, I looked into
+ways I could get notifications fired off from the command-line after
+long running processes finished. In particular, I wanted to get a
+notification that <code>knife ec2 server create</code> was done. I found the
+<code>growlnotify</code> program, which is available via
+<a href="https://github.com/mxcl/homebrew">homebrew</a>. This is quite a nifty
+tool, and I set it to use immediately, doing things like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife ec2 server create <span class="se">\</span>
+</span><span class='line'>  -f m1.small -I <span class="nv">$lucid_small</span> -x ubuntu <span class="se">\</span>
+</span><span class='line'>  -r <span class="s1">&#39;role[base],role[webserver]&#39;</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
+</span><span class='line'>growlnotify -m <span class="s2">&quot;Finished launching 1 instance&quot;</span> <span class="o">||</span> <span class="se">\</span>
+</span><span class='line'>growlnotify -m <span class="s2">&quot;failed to launch instance&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I could kick off the server creation, switch focus to another
+workspace, and then know via growl if the instance was created.</p>
+
+<h1>Chef Handler</h1>
+
+<p>As many know, I
+<a href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef/">manage my workstations with Chef</a>.
+Chef has a pretty cool
+<a href="http://wiki.opscode.com/display/chef/Exception+and+Report+Handlers">exception and report handler API</a>
+that has a lot of flexibility. I thought it would be fun to throw
+together a simple report handler that would send a growl notification
+after a Chef run. In this case, it will report the elapsed time of the
+run if it was successful, or report an exception if it failed.</p>
+
+<p>Using the handler is pretty straightforward. Install the
+<code>chef-handler-growl</code> Gem, then configure chef-client (or solo).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s2">&quot;chef/handler/growl&quot;</span>
+</span><span class='line'><span class="n">report_handlers</span> <span class="o">&lt;&lt;</span> <span class="no">Chef</span><span class="o">::</span><span class="no">Handler</span><span class="o">::</span><span class="no">Growl</span><span class="o">.</span><span class="n">new</span>
+</span><span class='line'><span class="n">exception_handlers</span> <span class="o">&lt;&lt;</span> <span class="no">Chef</span><span class="o">::</span><span class="no">Handler</span><span class="o">::</span><span class="no">Growl</span><span class="o">.</span><span class="n">new</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then run Chef, and see something like this:</p>
+
+<p><img src="https://img.skitch.com/20120103-emxnsfht3557xjcp4rshxcufka.png" alt="Chef Handler Growl" /></p>
+
+<p>The handler is available as a
+<a href="http://rubygems.org/gems/chef-handler-growl">RubyGem</a>. You can also
+view the <a href="https://github.com/jtimberman/chef-handler-growl">source</a>. I
+created issues on the GitHub project for the two items on the roadmap, too.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1680,45 +1785,6 @@ knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/06/01/non-technical-analogy-for-as-a-service-providers/">Non-technical Analogy for &#8220;as a Service&#8221; Providers</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-  
-
-
-
-<time datetime="2011-06-01T00:00:00-06:00" pubdate  data-updated="true" >Jun 1<span>st</span>, 2011</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I wrote the following as a non-technical analogy for a variety of &#8220;as a service&#8221; cloud type providers.</p>
-<p>AWS gives you the entire play ground, for the most part. You can do pretty much anything you want, and they give you some really cool pre-made toys to put in it.</p>
-<p>Engine Yard is more like a sandbox. You can come play in the sandbox, but they make the rules and you have to use their buckets and shovels.</p>
-<p>Heroku is just the bucket. You can&#8217;t look inside, you just put your sand in and they mold it into the sandcastle.</p>
-<p>Rackspace is more like the entire park where the playground is. There&#8217;s other stuff there, and you can make use of it while you visit. They have a few sandboxes, and you can build your own section.</p>
-<p>Opscode is like the construction company. We provide the tools and materials needed to build all the sandboxes, buckets, and parks. Each of the others can use Opscode in whole or in part of building their playground or park.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <nav class="pagination">
     <div>
       
@@ -1753,6 +1819,10 @@ knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2012/01/02/chef-report-handler-for-growl/">Chef Report Handler for Growl</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2012/01/02/switching-to-dnsimple/">Switching to DNSimple</a>
       </li>
     
@@ -1766,10 +1836,6 @@ knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre
     
       <li class="post">
         <a href="/blog/2011/09/29/blog-moved-to-github-pages/">Blog Moved to GitHub Pages</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2011/09/04/update-to-managing-my-workstations/">Update to Managing my Workstations</a>
       </li>
     
   </ul>
