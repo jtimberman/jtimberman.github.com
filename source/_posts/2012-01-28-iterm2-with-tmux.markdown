@@ -70,6 +70,13 @@ iTerm2 window are separate tmux windows (`0:zsh` and `1:zsh`).
 
 ![iTerm2 panes are panes in tmux](http://img.skitch.com/20120128-miaa1dkeatt2hebxcxst8sydy1.png)
 
+And now, I can SSH to that system and attach to the tmux session
+started by iTerm2.
+
+![SSH to remote and run tmux attach](http://img.skitch.com/20120129-gjgajqnekq93da59m4r86ewh2k.png)
+
+![tmux is attached to iTerm2 session](http://img.skitch.com/20120129-j2x4iir5557nt68n5jmr64f8dp.png)
+
 # Automating Installation with Chef
 
 Installing OS X apps is quite easy, but I automate them
