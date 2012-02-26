@@ -61,6 +61,11 @@ Then I updated my base role to replace `recipe[emacs]` with
 the build, but now I have the same version of Emacs everywhere, and
 there was much rejoicing.
 
+And yes, you're absolutely right, I could just build a package and
+install that. However, I don't want to set up and maintain a package
+management repository for my small network, as
+[easy](http://ckbk.it/reprepro) as [that](http://ckbk.it/apt) may be.
+
 My OS X systems are a special case because I'm using Homebrew, but the
 [homebrew cookbook](http://ckbk.it/homebrew) does not [yet?] support
 install-time options, and I didn't spend the time adding support for
