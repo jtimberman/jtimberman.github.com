@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Disable-airdrop-lion"
+title: "Disable AirDrop in Mac OS X Lion"
 date: 2012-02-25 23:20
 comments: true
 categories:
