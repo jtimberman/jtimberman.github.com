@@ -31,3 +31,5 @@ post haste:
     type "bool"
   end
 ```
+
+The resource above is available in my [mac_os_x cookbook](http://ckbk.it/mac_os_x).
