@@ -24,6 +24,12 @@ this kind of problem.
 Issue
 =====
 
+*Update - Preface: I am not talking about a security vulnerability (a
+la an exploit) in Rails. I am talking about a feature that allows
+automatically generated code to do things that are not secure and it
+is apparently on purpose and by design. This is the wrong thing to
+do. Deny by default with whitelisting is the right thing to do.*
+
 There is a security issue in
 [Ruby on Rails](https://github.com/rails/rails/issues/5228). The bug
 is closed, but I haven't dug into find out if the actual problem is
@@ -37,6 +43,11 @@ was opened in the Rails project to force new applications to enforce
 whitelist mode by default. That bug was subsequently closed just a few
 days ago. I'm not going to do an analysis of the issue itself, you can go
 read the linked tickets and do further research on the issue.
+
+*Update* I missed clarifying this. There is a second issue at hand.
+ GitHub resolved the mass assignment bug by fixing their application.
+ The second issue is that they had a vulnerability in their public key
+ form update.
 
 Resolution and Aftermath
 ------------------------
