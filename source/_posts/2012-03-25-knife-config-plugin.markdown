@@ -12,6 +12,16 @@ scope of the automatically detected
 [knife configuration file](http://wiki.opscode.com/display/chef/Knife#Knife-ConfiguringYourSystemForKnife),
 or by passing the `-c` option with a configuration file.
 
+## Installation
+
+It's a gem.
+
+```
+% gem install knife-config
+```
+
+You can get the [source on GitHub](https://github.com/jtimberman/knife-config).
+
 ## Examples
 
 Without any options:
