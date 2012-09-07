@@ -6,6 +6,11 @@ comments: true
 categories: vagrant
 ---
 
+**Update** Chef 10.14 is
+  [released](http://www.opscode.com/blog/2012/09/07/chef-10-14-0-released/).
+  I removed the "`--pre`" from the gem install commands but otherwise
+  left this post, since it was written by Past Me.
+
 As you may be aware, the next release of Chef, 10.14, is in
 [beta testing](http://lists.opscode.com/sympa/arc/chef-dev/2012-07/msg00021.html).
 Most publicly available baseboxes for [Vagrant](http://vagrantup.com)
@@ -21,7 +26,7 @@ context.
 First, the shell provisioner line looks like this:
 
 ```ruby
-config.vm.provision :shell, :inline => "sudo /opt/chef/embedded/bin/gem install chef --pre --no-ri --no-rdoc"
+config.vm.provision :shell, :inline => "sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc"
 ```
 
 It goes in the config block. Remember that `cookbook_testers` is a
@@ -33,7 +38,7 @@ Vagrant::Config.run do |global_config|
   cookbook_testers.each_pair do |name, options|
     global_config.vm.define name do |config|
       ### Use shell for great justice!
-      config.vm.provision :shell, :inline => "sudo /opt/chef/embedded/bin/gem install chef --pre --no-ri --no-rdoc"
+      config.vm.provision :shell, :inline => "sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc"
       ### chef-client (allthethings)
       config.vm.provision :chef_client do |chef|
         # ... chef provisioner is the same as before
@@ -96,5 +101,5 @@ And the shell script, `gem-updater.sh` in the same directory as the Vagrantfile:
 ```sh
 #!/bin/sh
 sudo /opt/chef/embedded/bin/gem update --system
-sudo /opt/chef/embedded/bin/gem install chef --pre --no-ri --no-rdoc
+sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc
 ```
