@@ -47,7 +47,7 @@ Whether you're unpacking a brand new Mac, or using an existing system,
 use this command:
 
 ``` sh
-curl -L http://opscode.com/chef/install.sh | sudo bash
+curl -L https://opscode.com/chef/install.sh | sudo bash
 ```
 
 Symbolic links are created for Chef's binaries in `/usr/bin`.
