@@ -244,7 +244,7 @@ means program authors don't have to worry about managing a pidfile.
 ### Clean Process State
 
 Runit's benefits page
-o[describes how](http://smarden.org/runit/benefits.html#state) it
+[describes how](http://smarden.org/runit/benefits.html#state) it
 guarantees clean process state. I won't repeat it here.
 
 ### Reliable Logging
