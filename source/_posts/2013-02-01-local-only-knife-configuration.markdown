@@ -10,7 +10,7 @@ In this post I want to discuss briefly an approach to setting up a
 shared Knife configuration file for teams using the same Chef
 Repository, while supporting customized configuration.
 
-# Background
+## Background
 
 Most infrastructures managed by Chef have multiple people working on
 them. Recently, several people in the Ruby community started working
@@ -22,7 +22,7 @@ paths where cookbooks and roles are located. In addition to this, I
 wanted to test building the infrastructure using a Chef Server and my
 own EC2 account.
 
-# The Approach
+## The Approach
 
 At Opscode, we believe in leveraging internal DSLs. The
 `.chef/knife.rb` (and Chef's `client.rb` or `solo.rb`, etc) is no
@@ -90,7 +90,19 @@ configuration options for my AWS EC2 account.
 The configuration is parsed top-down, so the options here that overlap
 the `knife.rb` will be used instead.
 
-# Conclusion
+## In the Repository
+
+In the repository, commit only the `.chef/knife.rb` and not the
+`.chef/knife.local.rb`. I recommend adding the local file to the
+.gitignore or VCS equivalent.
+
+```
+% echo .chef/knife.local.rb >> .gitignore
+% git add .chef/knife.rb .gitignore
+% git commit -m 'keep general knife.rb, local config is ignored'
+```
+
+## Conclusion
 
 There are many approaches to solving the issue of having shared Knife
 configuration for multiple people in a single repository. The real
