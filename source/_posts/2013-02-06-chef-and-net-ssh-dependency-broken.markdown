@@ -6,8 +6,14 @@ comments: true
 categories: ruby,chef
 ---
 
+**2nd UPDATE**
+[CHEF-3835](http://tickets.opscode.com/browse/CHEF-3835) was opened by
+a member of the community; Chef versions 11.2.0 and 10.20.0 have been
+released by Opscode to resolve the issue.
+
 **UPDATE** Opscode is working on getting a new release of the Chef gem
   with updated version constraints.
+
 
 # What Happened?
 
