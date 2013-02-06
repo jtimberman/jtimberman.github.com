@@ -6,7 +6,8 @@ comments: true
 categories: ruby,chef
 ---
 
-An incomplete analysis.
+**UPDATE** Opscode is working on getting a new release of the Chef gem
+  with updated version constraints.
 
 # What Happened?
 
