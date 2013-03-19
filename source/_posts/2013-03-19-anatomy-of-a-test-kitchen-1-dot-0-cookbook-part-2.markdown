@@ -6,6 +6,9 @@ comments: true
 categories: chef testing test-kitchen
 ---
 
+**DISCLAIMER** Test Kitchen 1.0 is still in *alpha* at the time of
+  this post.
+
 This is a continuation from [part 1](/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/)
 
 In order to run the tests then, we need a few things on our machine:

@@ -6,6 +6,9 @@ comments: true
 categories: chef testing test-kitchen
 ---
 
+**DISCLAIMER** Test Kitchen 1.0 is still in *alpha* at the time of
+  this post.
+
 Let's take a look at the anatomy of a cookbook set up with
 test-kitchen 1.0-alpha.
 
