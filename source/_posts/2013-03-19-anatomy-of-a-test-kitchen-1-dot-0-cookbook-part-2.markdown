@@ -3,8 +3,10 @@ layout: post
 title: "Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)"
 date: 2013-03-19 09:28
 comments: true
-categories: chef,testing,test-kitchen
+categories: chef testing test-kitchen
 ---
+
+This is a continuation from [part 1](/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/)
 
 In order to run the tests then, we need a few things on our machine:
 
@@ -51,7 +53,7 @@ a non-zero return code. This is important, because we know at the end
 of a successful run, Chef did the right thing, assuming our recipe is
 the right thing :-).
 
-To recap the previous post, we have a run list like this:
+To recap the [previous post](/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/), we have a run list like this:
 
 ```
 ["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"]
@@ -97,7 +99,7 @@ plugin). This step does a `vagrant up --no-provision`.
 [Berkshelf] Using chef_handler (1.1.0)
 ```
 
-Remember from the previous post that we're using Berkshelf? This is
+Remember from the [previous post](/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/) that we're using Berkshelf? This is
 the integration with Vagrant that ensures that the cookbooks are
 available. The first four, `apt`, `yum`, `minitest-handler` and
 bluepill_test are defined in the Berksfile. The next, `rsyslog` is a
@@ -211,7 +213,7 @@ INFO: file[/var/log/bluepill.log] mode changed to 755
 INFO: file[/var/log/bluepill.log] created file /var/log/bluepill.log
 ```
 
-Recall from the previous post that the `bluepill_test` recipe includes
+Recall from the [previous post](/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/) that the `bluepill_test` recipe includes
 the `bluepill` recipe. This is the basic setup of bluepill.
 
 ```

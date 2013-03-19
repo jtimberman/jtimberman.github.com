@@ -3,7 +3,7 @@ layout: post
 title: "Anatomy of a Test Kitchen 1.0 Cookbook (Part 1)"
 date: 2013-03-19 09:28
 comments: true
-categories: chef,testing,test-kitchen
+categories: chef testing test-kitchen
 ---
 
 Let's take a look at the anatomy of a cookbook set up with
