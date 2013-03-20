@@ -10,7 +10,7 @@ Most commonly, [Vagrant's](http://vagrantup.com)
 Vagrantfile describes only a single VM. That's fine, but most
 environments separate functionality to different servers (e.g.,
 database and web app). For this reason, Vagrantfiles can be set up for
-[multi-VM arrangements](http://vagrantup.com/docs/multivm.html).
+[multi-VM arrangements](http://docs.vagrantup.com/v2/multi-machine/index.html).
 
 However, I'm going to describe a different use case for multiple VMs.
 
