@@ -9,11 +9,19 @@ categories: chef testing test-kitchen
 **DISCLAIMER** Test Kitchen 1.0 is still in *alpha* at the time of
   this post.
 
+**Update** We're no longer required to use bundler, and in fact
+  recommend installing the required RubyGems in your globalRuby
+  environment (#3 below).
+
+**Update** The log output from the various kitchen commands is not
+  updated with the latest and greatest. Play along at home, it'll be
+  okay :-).
+
 This is a continuation from [part 1](/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/)
 
 In order to run the tests then, we need a few things on our machine:
 
-1. VirtualBox
+1. VirtualBox and Vagrant (1.1+)
 2. A compiler toolchain with XML/XSLT development headers (for building Gem dependencies)
 3. A sane, working Ruby environment (Ruby 1.9.3 or greater)
 4. Git
@@ -24,17 +32,17 @@ installed.
 Once those are installed:
 
 ```
-% gem install bundler
-% git clone git://github.com/opscode-cookbooks/bluepill.git
-% bundle install
-% bundle exec kitchen list
+% vagrant plugin install vagrant-berkshelf
+% gem install berkshelf
+% gem install test-kitchen --pre
+% gem install kitchen-vagrant
 ```
 
 Test Kitchen combines the suite (default) with the platform names
 (e.g., ubuntu-12.04). To run all the suites on all platforms, simply do:
 
 ```
-% bundle exec kitchen test
+% kitchen test
 ```
 
 This will take awhile, especially if you don't already have the
@@ -42,7 +50,7 @@ Vagrant boxes on your system, as it will download each one. To make
 this faster, we'll just run Ubuntu 12.04:
 
 ```
-% bundle exec kitchen test default.*1204
+% kitchen test default.*1204
 ```
 
 Test Kitchen 1.0 can take a regular expression for the instances to
@@ -328,7 +336,7 @@ vagrant@ubuntu-1204$ ^D
 My goal with these posts is to get some information out for folks to
 consider when examining Test Kitchen 1.0 alpha for their own projects.
 There's a lot more to Test Kitchen, such as managing non-cookbook
-projects. We'll have more documentation and guides as we get the 1.0
-release out.
+projects, or even using other kinds of tests. We'll have more
+documentation and guides as we get the 1.0 release out.
 
 Enjoy!

@@ -9,6 +9,8 @@ categories: chef testing test-kitchen
 **DISCLAIMER** Test Kitchen 1.0 is still in *alpha* at the time of
   this post.
 
+**Update** Remove Gemfile and Vagrantfile
+
 Let's take a look at the anatomy of a cookbook set up with
 test-kitchen 1.0-alpha.
 
@@ -24,10 +26,9 @@ This is the full directory tree of Opscode's
 ├── Berksfile
 ├── CHANGELOG.md
 ├── CONTRIBUTING
-├── Gemfile
 ├── LICENSE
 ├── README.md
-├── Vagrantfile
+├── TESTING.md
 ├── attributes
 │   └── default.rb
 ├── metadata.rb
@@ -72,8 +73,6 @@ let's trim this down to just the areas of concern for Test Kitchen.
 ```
 ├── .kitchen.yml
 ├── Berksfile
-├── Gemfile
-├── Vagrantfile
 └── test
     └── cookbooks
         └── bluepill_test
@@ -151,28 +150,12 @@ Community site. It will also use the
 included in the bluepill cookbook. This is transparent to the user, as
 I'll cover in a moment.
 
-The next file is the Gemfile. This is to be used with
-[Bundler](http://gembundler.com) to install the RubyGems required for
-this cookbook. You can view the whole file on
-[GitHub](https://github.com/opscode-cookbooks/bluepill/blob/master/Gemfile).
-In this particular Gemfile, we're going to make sure that the correct
-version of Test Kitchen and the Vagrant driver are installed.
-
-Next is the Vagrantfile. This particular Vagrantfile is very short:
-
-```ruby
-require 'kitchen/vagrant'
-require 'berkshelf/vagrant'
-Vagrant::Config.run do |config|
-  Kitchen::Vagrant.define_vms(config)
-end
-```
-
 Test Kitchen's Vagrant driver plugin handles all the configuration of
-Vagrant itself based on the entries in the `.kitchen.yml`. By adding
-`berkshelf/vagrant`, we automatically get Berkshelf's Vagrant
-integration, meaning all the cookbooks defined in the Berksfile are
-going to be available on the box we bring up.
+Vagrant itself based on the entries in the `.kitchen.yml`. To get the
+Berkshelf integration in the Vagrant boxes, we need to install the
+vagrant-berkshelf plugin in Vagrant. Then, we automatically get
+Berkshelf's Vagrant integration, meaning all the cookbooks defined in
+the Berksfile are going to be available on the box we bring up.
 
 Remember the test cookbook mentioned above? It's the next component.
 The default `suite` in `.kitchen.yml` puts `bluepill_test` in the run
