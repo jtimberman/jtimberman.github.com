@@ -169,9 +169,7 @@ Again, ensure that the network configuration to use DNS is available.
 
 Create the `ipadm.conf` config for the new zone. I named it `clonebase.ipadm.conf`
 
-    _ifname=vnicclonebase0;_family=2;
-    _ifname=vnicclonebase0;_family=26;
-    _ifname=vnicclonebase0;_aobjname=vnicclonebase0/v4;_dhcp=-1,no;
+    sed 's/base/clonebase/g' base.ipadm.conf > clonebase.ipadm.conf
 
 Now copy this to the zone.
 
