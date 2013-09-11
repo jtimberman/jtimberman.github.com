@@ -104,6 +104,9 @@ Password: chef-vault
 $6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/
 ```
 
+**Note**: This is the `mkpasswd(1)` command from the Ubuntu 10.04
+  [mkpasswd package](http://packages.ubuntu.com/lucid/mkpasswd).
+
 ## Create the Item
 
 The command I'm going to use is `knife encrypt create` since this is a
@@ -121,9 +124,10 @@ secret on disk or in a repository.
 ```
 
 The `[VALUES]` in this command is raw JSON that will be created in the
-data bag item by `chef-vault`. The `--search` option tells chef-vault to
-allow any nodes that match the query to decrypt the secret with their
-public key on the Chef Server. The `--admins` option tells chef-vault
+data bag item by `chef-vault`. The `--search` option tells chef-vault
+to use the **public** keys of the nodes matching the SOLR query for
+encrypting the value. Then during the Chef run, chef-vault uses those
+node's **private** keys to decrypt the value. The `--admins` option tells chef-vault
 the list of users on the Chef Server who are also allowed to decrypt
 the secret. This is specified as a comma separated string for
 multiple admins. Finally, as I mentioned, I'm using a Chef Server so I
@@ -484,7 +488,8 @@ administrator leaves the organization, we will want to change the
 `vaultuser` password (and SSH private key).
 
 ```text
-% mkpasswd -m sha-512 gone-user
+% mkpasswd -m sha-512
+Password: gone-user
 $6$zM5STNtXdmsrOSm$svJr0tauijqqxTjnMIGJGJPv5V3ovMFCQo.ZDBleiL.yOxcngRqh9yAjpMAsMBA7RlKPv5DKFd1aPZm/wUoKs.
 ```
 
@@ -496,7 +501,8 @@ already exists:
 ERROR: ChefVault::Exceptions::ItemAlreadyExists: secrets/vaultuser already exists, use 'knife encrypt remove' and 'knife encrypt update' to make changes.
 ```
 
-So, I need to use `encrypt update`:
+So, I need to use `encrypt update`. **Note** make sure that the
+contents of the JSON file are valid JSON.
 
 ```text
 % knife encrypt update secrets vaultuser --search 'role:base' --json secrets_vaultuser.json --admins jtimberman --mode client
