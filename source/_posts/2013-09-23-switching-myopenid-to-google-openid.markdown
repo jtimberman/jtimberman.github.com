@@ -13,7 +13,8 @@ The next best thing to use IMO, is Google's OpenID, since they have
 2-factor authentication. Google doesn't really expose the OpenID URL
 in a way that makes it as easy to use as "username.myopenid.com."
 Fortunately, it's relatively simple to add to a custom domain hosted
-by, for example, [GitHub pages](http://pages.github.com/).
+by, for example, [GitHub pages](http://pages.github.com/). My
+coworker, Stephen Delano, pointed me to this pro-tip.
 
 The requirement is to put a `<link>` tag in the HTML header of the
 site. It should look like this:
