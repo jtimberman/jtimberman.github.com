@@ -139,25 +139,25 @@ make use of combinations of data bags and search, such as Opscode's
 
 ## Questions
 
-1. Does it work with Berkshelf?
+* Does it work with Berkshelf?
 
 I don't know. Probably not (yet).
 
-2. Does it work with Test Kitchen?
+* Does it work with Test Kitchen?
 
 I don't know. Probalby not (yet). Provisioners in test-kitchen
 would need to be (re)written.
 
-3. Should I use this in production?
+* Should I use this in production?
 
 This is an unreleased feature in the master branch. What do you think?
 :)
 
-4. When will this be released?
+* When will this be released?
 
 I don't know the schedule for 11.8.0. Soon?
 
-5. Where do I find out more, or get involved?
+* Where do I find out more, or get involved?
 
 Join #chef-hacking in irc.freenode.net, the chef-dev mailing list, or
 attend the Chef Community Summit (November 12-13, 2013 in Seattle).
