@@ -37,8 +37,8 @@ aws_access_key_id=MY_DEFAULT_KEY
 aws_secret_access_key=MY_DEFAULT_SECRET
 region=us-east-1
 [nondefault]
-aws_access_key_id=MY_DEFAULT_KEY
-aws_secret_access_key=MY_DEFAULT_SECRET
+aws_access_key_id=NOT_MY_DEFAULT_KEY
+aws_secret_access_key=NOT_MY_DEFAULT_SECRET
 region=us-east-1
 ```
 
