@@ -2,24 +2,21 @@
 // To give it a try, uncomment some of the lines below rebuild your blog, and see how it works.
 // If you need a handy color picker try http://hslpicker.com
 
-$link-color: #104080;
-$link-color-hover: $link-color;
-$link-color-visited: #666;
-
+$header-bg: #fefefe;
 $title-color: #10100a;
 $subtitle-color: #20201a;
-
-$header-bg: #fafafe;
 $nav-bg: desaturate(lighten(#7a8fc1, 18), 5);
-$page-bg: $header-bg;
-$main-bg: $header-bg;
-
+$nav-bg-front: #c6cfe1;
 $sidebar-bg: desaturate(#c6cfe1, 8);
-$sidebar-link-color: $link-color;
-$sidebar-link-color-hover: $link-color;
+//$sidebar-link-color: saturate(#526f9a, 10);
+//$sidebar-link-color-hover: darken(#7ab662, 9);
+//$footer-bg: #ccc !default;
+//$footer-bg-front: image-url('noise.png');
+//$footer-bg-back: linear-gradient(lighten($footer-bg, 8), $footer-bg, darken($footer-bg, 11));
+
 
 /* To use the light Solarized highlighting theme uncomment the following line */
-//$solarized: light
+//$solarized: light;
 
 /* If you want to tweak the Solarized colors you can do that here */
 //$base03:          #002b36; //darkest blue
@@ -41,6 +38,6 @@ $sidebar-link-color-hover: $link-color;
 
 
 /* Non highlighted code colors */
-//$pre-bg: #333338;
-//$pre-border: #666;
-//$pre-color: #ddd;
+//$pre-bg: $base03;
+//$pre-border: darken($base02, 5);
+//$pre-color: $base1;
