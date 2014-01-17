@@ -1,117 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
 
-<!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  <title>jtimberman's Code Blog</title>
-  <meta name="author" content="Joshua Timberman">
-
-  
-  <meta name="description" content="In this post, I will describe my local setup for using the
-AWS CLI, the
-AWS Ruby SDK, and of course the
-Knife EC2 plugin. The general practice I& &hellip;">
-  
-
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://jtimberman.housepub.org">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
-<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
-
-  
-  <script type="text/javascript">
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-26031299-1']);
-    _gaq.push(['_trackPageview']);
-
-    (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-    })();
-  </script>
-
-
-</head>
-
-<body   >
-  <header role="banner"><hgroup>
-  <h1><a href="/">jtimberman's Code Blog</a></h1>
-  
-    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
-  
-</hgroup>
-
-</header>
-  <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="http://google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-  <li><a href="/blog/archives">Archives</a></li>
-</ul>
-
-</nav>
-  <div id="main">
-    <div id="content">
-      <div class="blog-index">
-  
-  
-  
-    <article>
-      
-  <header>
+  <title><![CDATA[jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
     
-      <h1 class="entry-title"><a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
 
   
-
-
-<time datetime="2013-10-19T17:55:00-06:00" pubdate data-updated="true">Oct 19<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>In this post, I will describe my local setup for using the
+  <entry>
+    <title type="html"><![CDATA[Managing Multiple AWS Account Credentials]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials/"/>
+    <updated>2013-10-19T17:55:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials</id>
+    <content type="html"><![CDATA[<p>In this post, I will describe my local setup for using the
 <a href="http://aws.amazon.com/cli/">AWS CLI</a>, the
 <a href="http://aws.amazon.com/sdkforruby/">AWS Ruby SDK</a>, and of course the
 <a href="http://rubygems.org/gems/knife-ec2">Knife EC2 plugin</a>.</p>
@@ -241,42 +148,15 @@ authentication in a Ruby script is automatically set up.</p>
 <p>Naturally, since <code>knife.rb</code> is Ruby, I could use <code>Inifile.load</code> there,
 but I only started using that library recently, and I have my knife
 configuration setup already.</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-10T23:39:00-06:00" pubdate data-updated="true">Oct 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Opscode Developer John Keiser
+  <entry>
+    <title type="html"><![CDATA[Preview Chef Client Local Mode]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/10/10/preview-chef-client-local-mode/"/>
+    <updated>2013-10-10T23:39:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/10/10/preview-chef-client-local-mode</id>
+    <content type="html"><![CDATA[<p>Opscode Developer John Keiser
 <a href="https://twitter.com/jkeiser2/status/388460927026085888">mentioned</a>
 that a feature for Chef Zero he&rsquo;s been working on, &ldquo;local mode,&rdquo; is
 now in Chef&rsquo;s master branch. This means it should be in the next
@@ -498,42 +378,15 @@ would need to be (re)written.</p>
 
 <p>Join #chef-hacking in irc.freenode.net, the chef-dev mailing list, or
 attend the Chef Community Summit (November 12-13, 2013 in Seattle).</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-23T10:38:00-06:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>You may be aware that MyOpenID is
+  <entry>
+    <title type="html"><![CDATA[Switching MyOpenID to Google OpenID]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/09/23/switching-myopenid-to-google-openid/"/>
+    <updated>2013-09-23T10:38:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/09/23/switching-myopenid-to-google-openid</id>
+    <content type="html"><![CDATA[<p>You may be aware that MyOpenID is
 <a href="http://thenextweb.com/insider/2013/09/04/myopenid-to-shut-down/">shutting down in February 2014</a>.</p>
 
 <p>The next best thing to use IMO, is Google&rsquo;s OpenID, since they have
@@ -560,42 +413,15 @@ this probably has a Google+ account for Google Hangouts anyway :).</p>
 <a href="http://octopress.org/">Octopress</a> blog, this goes in
 <code>source/_includes/custom/head.html</code>. Then deploy the site and in a few
 moments you&rsquo;ll be able to start using your site as an OpenID.</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-10T09:30:00-06:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Two years ago, I wrote a post about
+  <entry>
+    <title type="html"><![CDATA[Managing Secrets With Chef Vault]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault/"/>
+    <updated>2013-09-10T09:30:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault</id>
+    <content type="html"><![CDATA[<p>Two years ago, I wrote a post about
 <a href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">using Chef encrypted data bags</a>
 for SASL authentication with Postfix. At the time, my ISP didn&rsquo;t allow
 non-authenticated SMTP, so I had to find a solution so I could get
@@ -1599,42 +1425,15 @@ encrypted data bag feature isn&rsquo;t a panacea, but it certainly helps.
 Hopefully, this blog post was informative. While I don&rsquo;t always
 respond, I do read all comments posted here via Disqus, so let me know
 if something is out of whack, or needs an update.</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-23T23:47:00-06:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I&rsquo;ve become enamored with
+  <entry>
+    <title type="html"><![CDATA[Getting Started With Zones on OmniOS]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/06/23/getting-started-with-zones-on-omnios/"/>
+    <updated>2013-06-23T23:47:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/06/23/getting-started-with-zones-on-omnios</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve become enamored with
 <a href="http://wiki.illumos.org/display/illumos/illumos+Home">IllumOS</a>
 recently. Years ago, I used Solaris (2.5.1 through 8) at IBM.
 Unfortunately (for me), I stopped using it before Solaris 10 brought
@@ -1886,42 +1685,15 @@ for the reference material they contain.</p>
 <li><a href="http://omnios.omniti.com/ticket.php/11">http://omnios.omniti.com/ticket.php/11</a> (related to above list post(s))</li>
 </ul>
 
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/05/09/starting-chefspec-example/">Starting ChefSpec Example</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-05-09T21:10:00-06:00" pubdate data-updated="true">May 9<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This is a quick post to introduce what I&rsquo;m starting on testing with
+  <entry>
+    <title type="html"><![CDATA[Starting ChefSpec Example]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/09/starting-chefspec-example/"/>
+    <updated>2013-05-09T21:10:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/09/starting-chefspec-example</id>
+    <content type="html"><![CDATA[<p>This is a quick post to introduce what I&rsquo;m starting on testing with
 <a href="http://acrmp.github.io/chefspec/">ChefSpec</a>. This is from Opscode&rsquo;s
 Java cookbook. While the recipe tested is really trivial, it actually
 has some nuances that require detailed testing.</p>
@@ -2078,42 +1850,15 @@ detail), and we can see that the <code>ibm</code> recipe is in fact included.</p
 <p>This is just the start of the testing for this cookbook. We&rsquo;ll need to
 test each individual recipe. However as I&rsquo;ve not written that code
 yet, I don&rsquo;t have examples. Stay tuned!</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/05/08/test-kitchen-and-jenkins/">Test Kitchen and Jenkins</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-05-08T23:53:00-06:00" pubdate data-updated="true">May 8<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I&rsquo;ve been working more with test-kitchen 1.0 alpha lately. The most
+  <entry>
+    <title type="html"><![CDATA[Test Kitchen and Jenkins]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/08/test-kitchen-and-jenkins/"/>
+    <updated>2013-05-08T23:53:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/08/test-kitchen-and-jenkins</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve been working more with test-kitchen 1.0 alpha lately. The most
 recent thing I&rsquo;ve done is set up a Jenkins build server to run
 test-kitchen on cookbooks. This post will describe how I did this for
 my own environment, and how you can use my new test-kitchen cookbook
@@ -2235,42 +1980,15 @@ help conserve resources.</p>
 <p>Hopefully the <code>kitchen-jenkins</code> cookbook is helpful and this blog post
 will give you some ideas how to go about adding cookbook tests to your
 CI system, even if it&rsquo;s not Jenkins.</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/05/03/tdd-cookbook-ticket/">TDD Cookbook Ticket</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-05-03T14:36:00-06:00" pubdate data-updated="true">May 3<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This post will briefly describe how I did a TDD update to Opscode&rsquo;s
+  <entry>
+    <title type="html"><![CDATA[TDD Cookbook Ticket]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket/"/>
+    <updated>2013-05-03T14:36:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket</id>
+    <content type="html"><![CDATA[<p>This post will briefly describe how I did a TDD update to Opscode&rsquo;s
 <a href="http://ckbk.it/runit">runit</a> to resolve an
 <a href="https://tickets.opscode.com/browse/COOK-2867">issue reported last night</a>.</p>
 
@@ -2385,42 +2103,15 @@ in the &ldquo;failing&rdquo; test).</p>
 <p>If you&rsquo;re contributing to cookbooks, and they have support for
 test-kitchen, it&rsquo;s awesome if you can open a bug report with a failing
 test. In this case, it was fairly easy to reproduce the bug.</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/">Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-03-19T09:28:00-06:00" pubdate data-updated="true">Mar 19<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
+  <entry>
+    <title type="html"><![CDATA[Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/"/>
+    <updated>2013-03-19T09:28:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2</id>
+    <content type="html"><![CDATA[<p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
   this post.</p>
 
 <p><strong>Update</strong> We&rsquo;re no longer required to use bundler, and in fact
@@ -2431,7 +2122,7 @@ test. In this case, it was fairly easy to reproduce the bug.</p>
   updated with the latest and greatest. Play along at home, it&rsquo;ll be
   okay :&ndash;).</p>
 
-<p>This is a continuation from <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">part 1</a></p>
+<p>This is a continuation from <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">part 1</a></p>
 
 <p>In order to run the tests then, we need a few things on our machine:</p>
 
@@ -2484,7 +2175,7 @@ a non-zero return code. This is important, because we know at the end
 of a successful run, Chef did the right thing, assuming our recipe is
 the right thing :&ndash;).</p>
 
-<p>To recap the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a>, we have a run list like this:</p>
+<p>To recap the <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a>, we have a run list like this:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"]</span></code></pre></td></tr></table></div></figure>
@@ -2547,7 +2238,7 @@ plugin). This step does a <code>vagrant up --no-provision</code>.</p>
 </span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
 
 
-<p>Remember from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that we&rsquo;re using Berkshelf? This is
+<p>Remember from the <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that we&rsquo;re using Berkshelf? This is
 the integration with Vagrant that ensures that the cookbooks are
 available. The first four, <code>apt</code>, <code>yum</code>, <code>minitest-handler</code> and
 bluepill_test are defined in the Berksfile. The next, <code>rsyslog</code> is a
@@ -2726,7 +2417,7 @@ has copied the tests from the <code>bluepill_test</code> cookbook into place.</p
 </span><span class='line'>INFO: file[/var/log/bluepill.log] created file /var/log/bluepill.log</span></code></pre></td></tr></table></div></figure>
 
 
-<p>Recall from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that the <code>bluepill_test</code> recipe includes
+<p>Recall from the <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that the <code>bluepill_test</code> recipe includes
 the <code>bluepill</code> recipe. This is the basic setup of bluepill.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
@@ -2887,42 +2578,15 @@ projects, or even using other kinds of tests. We&rsquo;ll have more
 documentation and guides as we get the 1.0 release out.</p>
 
 <p>Enjoy!</p>
-</div>
+]]></content>
+  </entry>
   
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">Anatomy of a Test Kitchen 1.0 Cookbook (Part 1)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-03-19T09:28:00-06:00" pubdate data-updated="true">Mar 19<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
+  <entry>
+    <title type="html"><![CDATA[Anatomy of a Test Kitchen 1.0 Cookbook (Part 1)]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/"/>
+    <updated>2013-03-19T09:28:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1</id>
+    <content type="html"><![CDATA[<p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
   this post.</p>
 
 <p><strong>Update</strong> Remove Gemfile and Vagrantfile</p>
@@ -3163,147 +2827,1947 @@ tests.</p>
 
 <p>In the next post, we&rsquo;ll look at how to run Test Kitchen, and what all
 the output means.</p>
-</div>
+]]></content>
+  </entry>
   
+  <entry>
+    <title type="html"><![CDATA[Last Check-in Time for Nodes]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes/"/>
+    <updated>2013-02-16T20:14:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes</id>
+    <content type="html"><![CDATA[<p>This one liner uses the knife exec sub-command to iterate over all the
+node objects on the Chef Server, and print out their <code>ohai_time</code>
+attribute in a human readable format.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E 'nodes.all {|n| puts "#{n.name} #{Time.at(n[:ohai_time])}"}'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s break this up a little.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The exec plugin for knife executes a script or the given string of
+Ruby code in the same context as <code>chef-shell</code> (or <code>shef</code> in Chef 10
+and earlier) if you start it up in it&rsquo;s &ldquo;main&rdquo; context. Since it is
+knife, it will also use your <code>.chef/knife.rb</code> settings, so it knows
+about your user, key and Chef Server.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>nodes.all</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>chef-shell</code> main context has helper methods to access the
+corresponding endpoints in the Chef Server API. Clearly we&rsquo;re working
+with &ldquo;nodes&rdquo; here, and the <code>#all</code> method returns all the node objects
+from the Chef Server. This differs from search in that there&rsquo;s a
+commit delay between the time when data is saved to the server, and
+the data is indexed by Solr. This is usually a few seconds, but
+depending on various factors like the hardware you&rsquo;re using, how many
+nodes are converging, etc, it can take longer.</p>
+
+<p>Anyway, we can pass a block to nodes.all and do something with each
+node object. The example above is a oneliner, so let&rsquo;s make it more
+readable.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">nodes</span><span class="o">.</span><span class="n">all</span> <span class="k">do</span> <span class="o">|</span><span class="n">n</span><span class="o">|</span>
+</span><span class='line'>  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="no">Time</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">n</span><span class="o">[</span><span class="ss">:ohai_time</span><span class="o">]</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We&rsquo;re simply going to use <code>n</code> as the iterator for each node object,
+and we&rsquo;ll print a string about the node. The <code>#{}</code>&rsquo;s in the string to
+print with puts is Ruby string interpolation. That is, everything
+inside the braces is a Ruby expression. First, the <code>Chef::Node</code> object
+has a method, <code>#name</code>, that returns the node&rsquo;s name. This is usually
+the FQDN, but depending on your configuration (<code>node_name</code> in
+<code>/etc/chef/client.rb</code> or using the <code>-N</code> option for <code>chef-client</code>), it
+could be something else. Then, we&rsquo;re going to use the node&rsquo;s
+<code>ohai_time</code> attribute. Every time Chef runs and it gathers data about
+the node with Ohai, it generates the <code>ohai_time</code> attribute, which is
+the Unix epoch of the timestamp when Ohai ran. When Chef saves the
+node data at the end of the run, we know approximately the last time
+the node ran Chef. In this particular string, we&rsquo;re converting the
+Unix epoch, like <code>1358962351.444405</code> to a human readable timestamp
+like <code>2013-01-23 10:32:31 -0700</code>.</p>
+
+<p>Of course, you can get similar data from the Chef Server by using
+<code>knife status</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>ohai_time</code> attribute will be displayed as a relative time, e.g.,
+&ldquo;585 hours ago.&rdquo; It will include some more data about the nodes like IP&rsquo;s. This
+uses Chef&rsquo;s search feature, so you can also pass in a query:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span> <span class="s2">&quot;role:webserver&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>knife exec</code> example is simple, but you can get a lot more data
+about the nodes than what <code>knife status</code> reports.</p>
+
+<p>In either case, <code>ohai_time</code> isn&rsquo;t 100% accurate, since it is generated
+at the beginning of the run, and depending on what you&rsquo;re doing with
+Chef on your systems, it can take a long time before the node data is
+saved. However, it&rsquo;s close enough for many use cases.</p>
+
+<p>If more detailed or completely accurate information about the Chef run
+is required for your purposes, you should use a
+<a href="http://docs.opscode.com/chef/essentials_handlers.html">report handler</a>,
+which does have more data about the run available, including whether
+the run was successful or not.</p>
+]]></content>
+  </entry>
   
+  <entry>
+    <title type="html"><![CDATA[Install Chef 11 Server on CentOS 6]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/10/install-chef-11-server-on-centos-6/"/>
+    <updated>2013-02-10T07:57:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/10/install-chef-11-server-on-centos-6</id>
+    <content type="html"><![CDATA[<p>A few months ago, I posted briefly on
+<a href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos/">how to install Chef 10 server on CentOS</a>.
+This post revisits the process for Chef 11.</p>
+
+<p>These steps were performed on a default CentOS 6.3 server install.</p>
+
+<p>First, navigate to the
+<a href="http://www.opscode.com/chef/install">Chef install page</a> to get the
+package download URL. Use the form on the &ldquo;Chef Server&rdquo; tab to select
+the appropriate drop-down items for your system.</p>
+
+<p>Install the package from the given URL.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rpm -Uvh https://opscode-omnitruck-release.s3.amazonaws.com/el/6/x86_64/chef-server-11.0.4-1.el6.x86_64.rpm</span></code></pre></td></tr></table></div></figure>
 
 
-    </article>
+<p>The package just puts the bits on disk (in <code>/opt/chef-server</code>). The
+next step is to configure the Chef Server and start it.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% chef-server-ctl reconfigure</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This runs the embedded <code>chef-solo</code> with the included cookbooks, and
+sets up everything required &ndash; Erchef, RabbitMQ, PostgreSQL, etc.</p>
+
+<p>Next, run the Opscode Pedant test suite. This will verify that
+everything is working.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% chef-server-ctl test</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Copy the default admin user&rsquo;s key and the validator key to your local
+workstation system that you have Chef <em>client</em> installed on, and
+create a new user for yourself with knife. You&rsquo;ll need version 11.2.0.
+The key files on the Chef Server are readable only by root.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>scp root@chef-server:/etc/chef-server/admin.pem .
+</span><span class='line'>scp root@chef-server:/etc/chef-server/chef-validator.pem .</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Use <code>knife configure -i</code> to create an initial <code>~/.chef/knife.rb</code> and
+new administrative API user for yourself. Use the FQDN of your newly
+installed Chef Server, with HTTPS. The validation key needs to be
+copied over from the Chef Server from
+<code>/etc/chef-server/chef-validator.pem</code> to <code>~/.chef</code> to use it for
+automatically bootstrapping nodes with <code>knife bootstrap</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife configure -i</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>.chef/knife.rb</code> file should look something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/home/jtimberman/.chef/jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/home/jtimberman/.chef/chef-validator.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;https://chef-server.example.com&#39;</span>
+</span><span class='line'><span class="n">syntax_check_cache_path</span>  <span class="s1">&#39;/home/jtimberman/.chef/syntax_check_cache&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Your Chef Server is now ready to use. Test connectivity as your user
+with knife:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">client</span> <span class="n">list</span>
+</span><span class='line'><span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
+</span><span class='line'><span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">user</span> <span class="n">list</span>
+</span><span class='line'><span class="n">admin</span>
+</span><span class='line'><span class="n">jtimberman</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In previous versions of Open Source Chef Server, users were API
+clients. In Chef 11, users are separate entities on the Server.</p>
+
+<p>The <code>chef-server-ctl</code> command is used on the Chef Server system for
+management. It has built-in help (<code>-h</code>) that will display the various
+sub-commands.</p>
+]]></content>
+  </entry>
   
-  <div class="pagination">
-    
-      <a class="prev" href="/blog/page/2/">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-</div>
-<aside class="sidebar">
+  <entry>
+    <title type="html"><![CDATA[Chef and Net::SSH Dependency Broken]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/06/chef-and-net-ssh-dependency-broken/"/>
+    <updated>2013-02-06T10:34:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/06/chef-and-net-ssh-dependency-broken</id>
+    <content type="html"><![CDATA[<p><strong>2nd UPDATE</strong>
+<a href="http://tickets.opscode.com/browse/CHEF-3835">CHEF-3835</a> was opened by
+a member of the community; Chef versions 11.2.0 and 10.20.0 have been
+released by Opscode to resolve the issue.</p>
+
+<p><strong>UPDATE</strong> Opscode is working on getting a new release of the Chef gem
+  with updated version constraints.</p>
+
+<h1>What Happened?</h1>
+
+<p>Earlier today (February 6, 2013), a new version of the various net-ssh
+RubyGems were published. This includes:</p>
+
+<ul>
+<li>net-ssh 2.6.4</li>
+<li>net-ssh-multi 1.1.1</li>
+<li>net-ssh-gateway 1.1.1</li>
+</ul>
+
+
+<p>Chef&rsquo;s dependencies have a pessimistic version constraint (<code>~&gt;</code>) on
+net-ssh 2.2.2.</p>
+
+<h1>What&rsquo;s the Problem?</h1>
+
+<p>So what is the problem?</p>
+
+<p>It appears to lie with net-ssh-gateway. The version of net-ssh-gateway
+went from 1.1.0 (released in April 2011), to 1.1.1. It depends on
+net-ssh. In net-ssh-gateway 1.1.0, the net-ssh version constraint was
+<code>&gt;= 1.99.1</code>, which is fine with Chef&rsquo;s constraint against <code>~&gt; 2.2.2</code>.
+However, in net-ssh-gateway 1.1.1, the net-ssh version constraint was
+changed to <code>&gt;= 2.6.4</code>, which is obviously a conflict with Chef&rsquo;s
+constraint.</p>
+
+<h1>What&rsquo;s the Solution?</h1>
+
+<p>So, how can we fix it?</p>
+
+<p>One solution is to use the Opscode Omnibus Package for Chef. This
+isn&rsquo;t a solution for everyone, of course, but it does include and
+contain all the dependencies. This also doesn&rsquo;t help if one wishes to
+install another gem that depends on Chef under the &ldquo;Omnibus&rdquo; Ruby
+environment along with Chef, because the conflict will be found. For
+example, to use the minitest-chef-handler gem for running
+minitest-chef tests.</p>
+
+<p><code>vagrant@ubuntu-12-04:~$ /opt/chef/embedded/bin/gem install
+minitest-chef-handler ERROR: While executing gem ...
+(Gem::DependencyError) Unable to resolve dependencies: net-ssh-gateway
+requires net-ssh (&gt;= 2.6.4)</code></p>
+
+<p>Another solution is to relax / modify the constraint in Chef. This may
+be okay, but as of <em>right now</em> we don&rsquo;t know if this will affect
+anything in the way that Chef uses net-ssh. We have tickets related to
+net-ssh version constraints in Chef:</p>
+
+<ul>
+<li><a href="http://tickets.opscode.com/browse/CHEF-2977">http://tickets.opscode.com/browse/CHEF-2977</a></li>
+<li><a href="http://tickets.opscode.com/browse/CHEF-3156">http://tickets.opscode.com/browse/CHEF-3156</a></li>
+</ul>
+
+]]></content>
+  </entry>
   
-    
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating&#8230;</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("jtimberman", 3, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  <entry>
+    <title type="html"><![CDATA[Local-only Knife Configuration]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/01/local-only-knife-configuration/"/>
+    <updated>2013-02-01T10:57:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/01/local-only-knife-configuration</id>
+    <content type="html"><![CDATA[<p>In this post I want to discuss briefly an approach to setting up a
+shared Knife configuration file for teams using the same Chef
+Repository, while supporting customized configuration.</p>
+
+<h2>Background</h2>
+
+<p>Most infrastructures managed by Chef have multiple people working on
+them. Recently, several people in the Ruby community started working
+together on migrating <a href="http://rubygems.org">RubyGems</a> to
+<a href="https://github.com/rubygems/rubygems-aws">Amazon EC2</a>.</p>
+
+<p>The repository has a shared <code>.chef/knife.rb</code> which sets some local
+paths where cookbooks and roles are located. In addition to this, I
+wanted to test building the infrastructure using a Chef Server and my
+own EC2 account.</p>
+
+<h2>The Approach</h2>
+
+<p>At Opscode, we believe in leveraging internal DSLs. The
+<code>.chef/knife.rb</code> (and Chef&rsquo;s <code>client.rb</code> or <code>solo.rb</code>, etc) is no
+exception. While you can have a fairly simple configuration like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>        <span class="s2">&quot;jtimberman&quot;</span>
+</span><span class='line'><span class="n">client_key</span>       <span class="s2">&quot;/home/jtimberman/.chef/jtimberman.pem&quot;</span>
+</span><span class='line'><span class="n">chef_server_url</span>  <span class="s2">&quot;https://api.opscode.com/organizations/my_organization&quot;</span>
+</span><span class='line'><span class="n">cookbook_path</span>    <span class="s2">&quot;cookbooks&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can also have something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>     <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>  <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>     <span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;NODE_NAME&quot;</span><span class="o">]</span> <span class="o">||</span> <span class="s2">&quot;solo&quot;</span>
+</span><span class='line'><span class="n">client_key</span>    <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../solo.pem&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span>
+</span><span class='line'><span class="n">cache_type</span>    <span class="s2">&quot;BasicFile&quot;</span>
+</span><span class='line'><span class="n">cache_options</span><span class="p">(</span><span class="ss">path</span><span class="p">:</span> <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../checksums&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
+</span><span class='line'><span class="n">cookbook_path</span> <span class="o">[</span> <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span> <span class="o">]</span>
+</span><span class='line'><span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
+</span><span class='line'>  <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is the <code>knife.rb</code> included in the
+<a href="https://github.com/rubygems/rubygems-aws">RubyGems-AWS repo</a>.</p>
+
+<p>The main part of interest here is the last three lines.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
+</span><span class='line'>  <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This says &ldquo;if a file <code>knife.local.rb</code> exists, then load its
+configuration. The <code>Chef::Config</code> class is what Chef uses for
+configuration files, and the <code>#from_file</code> method will load the
+specified file.</p>
+
+<p>In this case, the content of my <code>knife.local.rb</code> is:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>                <span class="s2">&quot;jtimberman&quot;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s2">&quot;/Users/jtimberman/.chef/jtimberman.pem&quot;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s2">&quot;ORGNAME-validator&quot;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s2">&quot;/Users/jtimberman/.chef/ORGNAME-validator.pem&quot;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s2">&quot;https://api.opscode.com/organizations/ORGNAME&quot;</span>
+</span><span class='line'><span class="n">cookbook_path</span> <span class="o">[</span>
+</span><span class='line'>  <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">),</span>
+</span><span class='line'>  <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/site-cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span>
+</span><span class='line'><span class="o">]</span>
+</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_access_key_id</span><span class="o">]</span>      <span class="o">=</span> <span class="s2">&quot;Some access key I like&quot;</span>
+</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_secret_access_key</span><span class="o">]</span>  <span class="o">=</span> <span class="s2">&quot;The matching secret access key&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here I&rsquo;m setting my Opscode Hosted Chef credentials and server. I also
+set the <code>cookbook_path</code> to include the site-cookbooks directory (this
+should probably go in the regular knife.rb). Finally, I set the knife
+configuration options for my AWS EC2 account.</p>
+
+<p>The configuration is parsed top-down, so the options here that overlap
+the <code>knife.rb</code> will be used instead.</p>
+
+<h2>In the Repository</h2>
+
+<p>In the repository, commit only the <code>.chef/knife.rb</code> and not the
+<code>.chef/knife.local.rb</code>. I recommend adding the local file to the
+.gitignore or VCS equivalent.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% echo </span><span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">knife</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">rb</span> <span class="o">&gt;&gt;</span> <span class="o">.</span><span class="n">gitignore</span>
+</span><span class='line'><span class="sx">% git </span><span class="n">add</span> <span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">knife</span><span class="o">.</span><span class="n">rb</span> <span class="o">.</span><span class="n">gitignore</span>
+</span><span class='line'><span class="sx">% git </span><span class="n">commit</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;keep general knife.rb, local config is ignored&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Conclusion</h2>
+
+<p>There are many approaches to solving the issue of having shared Knife
+configuration for multiple people in a single repository. The real
+benefit here is that the configuration file is Ruby, which provides a
+lot of flexibility. Of course, when using someone else&rsquo;s configuration
+examples, one should always read the code and understand it first :&ndash;).</p>
+]]></content>
+  </entry>
   
-    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  <entry>
+    <title type="html"><![CDATA[Local Templates for Application Configuration]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/01/28/local-templates-for-application-configuration/"/>
+    <updated>2013-01-28T09:57:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/01/28/local-templates-for-application-configuration</id>
+    <content type="html"><![CDATA[<p>Today I joined the
+<a href="http://foodfightshow.org/2013/01/application-deployment.html">Food Fight Show</a>
+for a conversation about Application Deployment. Along the way, the
+question came up about where to store application specific
+configuration files. Should they be stored in a Chef cookbook for
+setting up the system for the application? Or shoud they be stored in
+the application codebase itself?</p>
+
+<p>The answer is either, as far as Chef is concerned. Chef&rsquo;s
+<a href="http://docs.opscode.com/resource_template.html">template resource</a>
+can render a template from a local file on disk, or retrieve the
+template from a cookbook. The latter is the most common pattern, so
+let&rsquo;s examine the former, using a local file on disk.</p>
+
+<p>For sake of discussion, let&rsquo;s use a Rails application that needs a
+<code>database.yml</code> file rendered. Also, we&rsquo;ll assume that information
+about the application (database user, password, server) we need is
+stored in a Chef
+<a href="http://docs.opscode.com/essentials_data_bags_store.html">data bag</a>.
+Finally, we&rsquo;re going to assume that the application is already
+deployed on the system somehow and we just want to render the
+database.yml.</p>
+
+<p>The application source tree looks something like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>myapp/
+</span><span class='line'>-&gt; config/
+</span><span class='line'>    -&gt; database.yml.erb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that there should not be a database.yml (non-.erb) here, as it
+will be rendered with Chef. The deployment of the app will end up
+in <code>/srv</code>, so the full path of this template is, for example,
+<code>/srv/myapp/current/config/database.yml.erb</code>. The content of the
+template may look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">&lt;%= @rails_env %&gt;</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @adapter %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @host %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @database %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @username %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @password %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="s">&#39;utf8&#39;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The Chef recipe looks like this. Note we&rsquo;ll use a search to find
+the first node that should be the database master (there should only
+be one). For the adapter, we may have set an attribute in the role
+that selects the adapter to use.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">results</span> <span class="o">=</span> <span class="n">search</span><span class="p">(</span><span class="ss">:node</span><span class="p">,</span> <span class="s2">&quot;role:myapp_database_master AND environment:</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">db_master</span> <span class="o">=</span> <span class="n">results</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/srv/myapp/shared/database.yml&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;/srv/myapp/current/config/database.yml.erb&quot;</span>
+</span><span class='line'>  <span class="n">local</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">:rails_env</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:adapter</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;myapp&#39;</span><span class="o">][</span><span class="s1">&#39;db_adapter&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:host</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;fqdn&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:database</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp_</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:username</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:password</span> <span class="o">=&gt;</span> <span class="s2">&quot;SUPERSECRET&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The rendered template, <code>/srv/myapp/shared/database.yml</code>, will look
+like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">production</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mysql</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">domU-12-31-39-14-F1-C3.compute-1.internal</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp_production</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">SUPERSECRET</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">utf8</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This post is only part of the puzzle, mainly to explain what I
+mentioned on the Food Fight Show today. There are a number of
+unanswered questions like,</p>
+
+<ul>
+<li>Should database.yml be .gitignore&rsquo;d?</li>
+<li>How do developers run the app locally?</li>
+<li>How do I use this with Chef Solo?</li>
+</ul>
+
+
+<p>As mentioned on the show, there&rsquo;s currently a
+<a href="http://lists.opscode.com/sympa/arc/chef/2013-01/msg00392.html">thread</a>
+related to this topic on the Chef mailing list.</p>
+]]></content>
+  </entry>
   
-</section>
+  <entry>
+    <title type="html"><![CDATA[Process Supervision: Solved Problem]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/12/29/process-supervision-solved-problem/"/>
+    <updated>2012-12-29T21:41:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/12/29/process-supervision-solved-problem</id>
+    <content type="html"><![CDATA[<p><strong>TL;DR</strong>: Use <a href="http://smarden.org/runit/index.html">runit</a>; skip to
+&ldquo;This is a Solved Problem&rdquo; and &ldquo;Additional Resources&rdquo; sections at the
+end of this post.</p>
 
-<section>
-  <h1>Recent Posts</h1>
-  <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
-      </li>
-    
-  </ul>
-</section>
+<p>Recently on my twitter stream, I saw a link to
+<a href="http://stackoverflow.com/questions/3295737/how-to-start-jetty-properly">a question</a>
+on Stack Overflow about how to properly start Jetty. While the
+question is over 2.5 years old, the question stems from the common
+problem: How do I start a long running process, and <em>keep it running</em>?
+That an accepted answer is to run it under &ldquo;nohup&rdquo; (or screen?!) tells
+me that for some reason, this isn&rsquo;t perceived as a solved problem.</p>
 
-<section>
-  <h1>GitHub Repos</h1>
-  <ul id="gh_repos">
-    <li class="loading">Status updating&#8230;</li>
-  </ul>
+<p>In my opinion, process supervision <em>is</em> a solved problem. However,
+this wheel keeps getting reinvented, or reimplemented with solutions
+that are not easily manageable or scalable. In this post, I will
+clarify some terminology, describe commonly understood goals of
+process supervision, explore some of the common approaches, and how
+they don&rsquo;t meet those goals, and finally explain why I feel this is a
+solved problem.</p>
+
+<p><em>Note</em> This is a Unix/Linux centric post. Windows has its own
+  methods for running services, but the problem is definitely solved
+  there too; Microsoft gave developers and administrators APIs that
+  seem to be commonly used.</p>
+
+<h1>Process Supervision is Not Service Management</h1>
+
+<p>What exactly is process supervision?</p>
+
+<p>One of the reasons for running servers is to provide a service of some
+kind. That is, an application that provides business value. A service
+is made up of one or more running processes on computer systems
+somewhere. Those processes are typically long-lived running daemons.</p>
+
+<p>Process supervision is simply the concept of starting a daemon and
+keeping it running.</p>
+
+<p>Note that this is <em>not</em> the same as more general service management.
+That may imply multiple services, which may be running on separate
+physical or virtual servers in a distributed system. That is outside
+the scope of this post.</p>
+
+<p>This is also <em>not</em> service monitoring, a la graphing (munin, graphite)
+and/or alerting (nagios, sensu). That is also outside the scope of
+this post.</p>
+
+<h1>Goals and Benefits of Process Supervision</h1>
+
+<p>The
+<a href="http://en.wikipedia.org/wiki/Process_supervision">Wikipedia page on Process Supervision</a>
+describe its benefits as follows:</p>
+
+<ul>
+<li>Ability to restart services which have failed</li>
+<li>The fact that it does not require the use of &ldquo;pidfiles&rdquo;</li>
+<li>Clean process state</li>
+<li>Reliable logging, because the master process can capture the stdout/stderr of the service process and route it to a log</li>
+<li>Faster (concurrent) and ability to start up and stop</li>
+</ul>
+
+
+<p>To this, I add:</p>
+
+<ul>
+<li>Manage processes with Unix signals</li>
+<li>Simple setup that is configuration management-friendly (I&rsquo;m obviously
+<a href="http://opscode.com/chef">biased</a>)</li>
+<li>Dependency management between services on the same machine</li>
+</ul>
+
+
+<p>For sake of argument, these combined lists of goals and benefits are
+my criteria for a process supversion system in this post.</p>
+
+<p><strong>Spoiler alert</strong>: <a href="http://smarden.org/runit/benefits.html">runit</a>
+covers all of these, as does
+<a href="http://skarnet.org/software/s6/why.html">s6</a>.</p>
+
+<h1>Common Approaches</h1>
+
+<p>I&rsquo;m going to talk about some approaches to process supervision, and
+how they don&rsquo;t meet the criteria above. This won&rsquo;t be comprehensive. I
+want to illustrate the highlights.</p>
+
+<h2>Nohup</h2>
+
+<p>First, the approach mentioned in the StackOverflow answer: &ldquo;nohup.&rdquo;
+The &ldquo;nohup&rdquo; command will &ldquo;run a command immune to hangups, with output
+to a non-tty.&rdquo; This typically involves logging into a system and
+manually invoking the command, such as:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>nohup jar -jar start.jar</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This doesn&rsquo;t provide the ability to restart if it fails. The process
+state is contaminated with whatever the user has in their login shell
+profile(s). It will log to &ldquo;nohup.out&rdquo; by default, though it can be
+redirected to another file. It&rsquo;s pretty safe to say that in my opinion
+that this fails the criteria above, and should not be used for long
+running processes, especially those as important as running your Java
+application.</p>
+
+<h2>Terminal Multiplexers</h2>
+
+<p>Next up, a common approach for running process is to start up screen
+(or tmux), and let them run in the foreground. Screen and tmux are
+terminal multiplexers. That is, they are &ldquo;full-screen window
+manager[s] that multiplex a physical terminal between several
+processes.&rdquo; These are great tools, and
+<a href="http://jtimberman.housepub.org/blog/2012/01/28/iterm2-with-tmux/">I use tmux</a>
+for other reasons. However, this fails the criteria for the same
+reasons as nohup. Additionally, automating a process running in screen
+is not a simple task that can be repeated reliably.</p>
+
+<h2>SysV/BSD Init</h2>
+
+<p>Most commonly, process management (and not supervision) is handled on
+Unix/Linux systems by plain ol&#8217; SysV/BSD
+&ldquo;<a href="http://en.wikipedia.org/wiki/Init">init</a>.&rdquo; These obviously fail to
+meet the criteria above, because two new(er) systems,
+&ldquo;<a href="http://upstart.ubuntu.com/">upstart</a>&rdquo; and
+&ldquo;<a href="http://www.freedesktop.org/wiki/Software/systemd">systemd</a>&rdquo; have
+been written to address the problems. That said, &ldquo;init&rdquo; fails pretty
+much all the criteria:</p>
+
+<ol>
+<li>No ability to restart services which have failed.</li>
+<li>One of the biggest problems is handling of &ldquo;pidfiles.&rdquo;</li>
+<li>Process state is theoretically clean, but then realize the average
+init script sources at least two different shell scripts for helper
+functions and environment variables, nevermind homegrown scripts that
+might read in user shell settings, too.</li>
+<li>The best one can hope for in logging is that the process writes to
+syslog, because many init scripts redirect log output in different,
+non-portable ways.</li>
+<li>Init is 100% sequential startup, no concurrency: &ldquo;/etc/rc2.d/S*&rdquo;</li>
+<li>Sure, you can send signals to the process, but most init scripts
+don&rsquo;t support more than &ldquo;reload&rdquo; or &ldquo;restart,&rdquo; so you&rsquo;re left on your
+own with picking up the pieces manually.</li>
+<li>Configuration management is easy, right? Just &ldquo;ensure running&rdquo; or
+&ldquo;action :start&rdquo; &ndash; except let&rsquo;s not forget the &ldquo;/etc/sysconfig&rdquo; or
+&ldquo;/etc/default&rdquo; that sets more configuration. And that the package
+manager might have started it for you before you&rsquo;re ready.</li>
+<li>Okay, I&rsquo;ll give you this. As long as the sequential ordering of the
+init scripts is all correct to meet the dependencies.</li>
+</ol>
+
+
+<p>Also, I have a personal pet peeve about init script complexity,
+inconsistency and non-portability between distributions of Linux, let
+alone Unix. I could (and probably will) write a post about that. For a
+taste, see <a href="http://tickets.opscode.com/browse/CHEF-3774">CHEF-3774</a>.</p>
+
+<p><strong>Note</strong>: I&rsquo;m generalizing both SysV and BSD here. I admit I don&rsquo;t have
+extensive experience with BSD systems, but my observation is it fails
+in very similar ways to SysV.</p>
+
+<h2>Systemd/Upstart</h2>
+
+<p>The newer init-replacement systems, systemd and upstart are worth
+their own section, though I&rsquo;ll be brief. Other people have
+<a href="http://blog.mywarwithentropy.com/2010/10/upstart-better-init-or-more-painful-one.html">posted</a>
+<a href="http://monolight.cc/2011/05/the-systemd-fallacy/">about</a> these, and
+they&rsquo;re pretty well covered on the
+<a href="http://skarnet.org/software/s6/why.html">s6 comparison</a>.</p>
+
+<p>Mainly, I see both of these as reinventing the solution that follows.
+However, a couple points I&rsquo;d like to make:</p>
+
+<ol>
+<li>Both systems are primarily focused on desktop systems, rather than
+server systems. This is mostly evident in their use of D-Bus
+(<em>Desktop</em> bus), goals of faster boot time, and that their roots are
+in primarily desktop-oriented Linux distributions (Fedora and Ubuntu).</li>
+<li>They both completely replace init, which isn&rsquo;t necessarily bad.
+However, they both operate differently from init, and each other, thus
+being a non-portable major difference between Linux distributions.</li>
+</ol>
+
+
+<h2>Other Process Supervision Systems</h2>
+
+<p>There are a lot of process supervision systems out there. In no
+particular order, an incomplete list:</p>
+
+<ul>
+<li><a href="https://github.com/arya/bluepill">Bluepill</a></li>
+<li><a href="http://godrb.com/">God</a></li>
+<li><a href="http://ddollar.github.com/foreman/">Foreman</a> (not to be confused
+with <a href="http://theforeman.org/">The Foreman</a>)</li>
+<li><a href="http://supervisord.org/">Supervisor</a></li>
+<li><a href="http://mmonit.com/monit/">Monit</a></li>
+</ul>
+
+
+<p>I have varying degrees of experience with all of these. I have written
+<a href="http://community.opscode.com/cookbooks/bluepill">significant</a>
+<a href="http://community.opscode.com/cookbooks/god">amounts</a> of automation
+code for operating some of them.</p>
+
+<p>I think that with perhaps the exception of Monit(*), they are redundant
+and unnecessary.</p>
+
+<p>(*): I don&rsquo;t have as much experience with Monit as the others, and it
+seems to have a lot of nice additional features. I&rsquo;ve also heard
+<a href="https://twitter.com/nrr/status/293564015827894272">it goes well</a> with
+my favorite solution.</p>
+
+<h1>This Is a Solved Problem</h1>
+
+<p>Earlier I mentioned <a href="http://smarden.org/runit/">runit</a> meets all the
+criteria I listed above. In my opinion, it is the solution to the
+process supervision problem. While the
+<a href="http://smarden.org/runit/benefits.html">runit website</a> itself lists
+its benefits, it gets a nod from the
+<a href="http://skarnet.org/software/s6/why.html">s6 project</a>, too. The
+underlying solution is actually the foundation both runit and s6 build
+on: <a href="http://cr.yp.to/daemontools.html">Dan J Bernstein&rsquo;s daemontools</a>.
+The
+<a href="http://www.skarnet.org/software/skalibs/djblegacy.html">merits of DJB and daemontools</a>
+are <em>very</em> well stated by the author of s6. I strongly recommend
+reading it, as he sums up my thoughts about DJB, too. It is worth
+noting that I do like s6 itself, but it isn&rsquo;t currently packaged
+anywhere and adheres fairly strictly to the &ldquo;slash package&rdquo;
+convention, which isn&rsquo;t compatible with the more popular
+<a href="http://www.pathname.com/fhs/">Filesystem Hierarchy Standard</a>.</p>
+
+<p>Anyway, the real point of this post is to talk about why I like runit.
+I think the best way to explain it is to talk about how it meets the
+criteria above.</p>
+
+<h3>Restart Failed Services</h3>
+
+<p>The <code>runsv</code> program
+<a href="http://smarden.org/runit/benefits.html#supervision">supervises services</a>,
+and will restart them if they fail. While it doesn&rsquo;t provide any
+notification that the service failed, other than possibly writing to
+the log, this means that if a configuration issue caused a service to
+fail, it will automatically start when the configuration file is
+corrected.</p>
+
+<h3>No PID files</h3>
+
+<p>Each service managed by <code>runsv</code> has a &ldquo;service directory&rdquo; where all
+its files are kept. Here, a &ldquo;supervise&rdquo; directory is managed by runsv,
+and a &ldquo;pid&rdquo; file containing the running PID is stored. However this
+isn&rsquo;t the same as the pidfile management used in init scripts, and it
+means program authors don&rsquo;t have to worry about managing a pidfile.</p>
+
+<h3>Clean Process State</h3>
+
+<p>Runit&rsquo;s benefits page
+<a href="http://smarden.org/runit/benefits.html#state">describes how</a> it
+guarantees clean process state. I won&rsquo;t repeat it here.</p>
+
+<h3>Reliable Logging</h3>
+
+<p>Likewise, Runit&rsquo;s benefits page describes how it provides
+<a href="http://smarden.org/runit/benefits.html#log">reliable logging</a>.</p>
+
+<h3>Parallel Start/Stop</h3>
+
+<p>One of the goals and benefits lauded by systemd and upstart is that
+they reduce system boot time because various services can be started
+in parallel. Runit also starts up all the services it manages in
+parallel. More about this under dependency management, too.</p>
+
+<h3>Manage Processes (with Unix Signals)</h3>
+
+<p>The <code>sv</code> <a href="http://smarden.org/runit/sv.8.html">program</a> is used to send
+signals to services, and for general management of the services. It is
+used to start, stop and restart services. It also implements a number of
+commands that can be used for signals like TERM, CONT, USR1. <code>sv</code> also
+includes &ldquo;LSB-init&rdquo; compatibility, so the binary can be linked to
+<code>/etc/init.d/service-name</code> so &ldquo;init style&rdquo; commands can be used:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo /etc/init.d/service-name status
+</span><span class='line'>sudo /etc/init.d/service-name restart</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And so forth.</p>
+
+<h3>Simple Setup, Configuration Management Friendly</h3>
+
+<p>One of the benefits listed is that runit is
+<a href="http://smarden.org/runit/benefits.html#packaging">packaging friendly</a>.
+This is interesting because that also makes it configuration
+management friendly. Setting up a new service under runit is
+fairly simple:</p>
+
+<ol>
+<li>Create a &ldquo;service directory&rdquo; for the service.</li>
+<li>Write a &ldquo;run&rdquo; script that will start the service.</li>
+<li>Create a symbolic link from the service directory to the directory
+of supervised services.</li>
+</ol>
+
+
+<p>As an example, suppose we want to run a git daemon. By convention,
+we&rsquo;ll create the service directory in <code>/etc/sv</code>, and the supervised
+services are linked in <code>/etc/service</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo mkdir /etc/sv/git-daemon
+</span><span class='line'>sudo vi /etc/sv/git-daemon/run
+</span><span class='line'>sudo chmod 0755 /etc/sv/git-daemon/run
+</span><span class='line'>sudo ln -s /etc/sv/git-daemon /etc/service</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The run script may look like this
+(<a href="http://smarden.org/runit/chpst.8.html">chpst</a> is a program that
+comes with runit that changes the process state, such as the user it
+runs as):</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>#!/bin/sh
+</span><span class='line'>exec 2&gt;&1
+</span><span class='line'>exec chpst -ugitdaemon \
+</span><span class='line'>  "$(git --exec-path)"/git-daemon --verbose --reuseaddr \
+</span><span class='line'>    --base-path=/var/cache /var/cache/git</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Within a few seconds, the git daemon will be running:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>root      6236  0.0  0.0    164     4 ?        Ss   19:03   0:00 runsv git-daemon
+</span><span class='line'>119      12093  0.0  0.0  11460   812 ?        S    23:46   0:00 /usr/lib/git-core/git-daemon --verbose --reuseaddr --base-path=/var/cache /var/cache/git</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <a href="http://smarden.org/runit/faq.html">documentation</a> contains a
+lot more information and usesp</p>
+
+<p><strong>Note</strong>: As evidence that this is packaging friendly, this is
+  provided by the very simple <code>git-daemon-run</code> package on
+  <a href="http://packages.debian.org/search?keywords=git-daemon-run">Debian</a>
+  and
+  <a href="http://packages.ubuntu.com/search?keywords=git-daemon-run">Ubuntu</a>.</p>
+
+<h3>Dependency Management</h3>
+
+<p>Many services require that other services are available before they
+can start. A common example is that the database filesystem must be
+mounted before the database can be started.</p>
+
+<p>Depending on the services, this can be addressed simply by <code>runsv</code>
+restarting services that fail. For example, if the startup of the
+database fails because its file system isn&rsquo;t mounted and the process
+exits with a return code greater than 0, then perhaps restarting will
+eventually work once the filesystem is mounted. Of course, this is an
+oversimplified naive example.</p>
+
+<p>The runit <a href="http://smarden.org/runit/faq.html#depends">FAQ</a> addresses
+this issue by use of the program <code>sv</code>, mentioned earlier. Simply put,
+use the <code>sv start</code> command on the required service.</p>
+
+<h2>A Few Notes</h2>
+
+<p>I&rsquo;ve used runit for a few years now. We used it at HJK Solutions to
+manage all system and application services that weren&rsquo;t packaged with
+an init script. We use it at Opscode to manage all the services that
+run <a href="http://opscode.com/private-chef">Opscode Private Chef</a>.</p>
+
+<ol>
+<li>Manage services that run in the foreground. If a service doesn&rsquo;t
+support running in the foreground, you&rsquo;ll have a bad time with it in
+runit, as <code>runsv</code> cannot supervise it.</li>
+<li>Use <a href="http://smarden.org/runit/svlogd.8.html">svlogd</a> to capture log
+output. It automatically rotates the log files, and can capture both
+STDOUT and STDERR. It can also be configured (see the man page).</li>
+<li>The author of runit is also the package maintainer for
+Debian/Ubuntu. This means runit works extremely well on these
+distributions.</li>
+<li>I don&rsquo;t replace init with runit, so I can&rsquo;t speak to that.</li>
+<li><a href="https://twitter.com/ianmeyer">Ian Meyer</a> maintains an
+<a href="https://github.com/imeyer/runit-rpm">RPM spec</a> for runit packages
+that work well. It will be included in Opscode&rsquo;s
+<a href="http://community.opscode.com/cookbooks/runit">runit cookbook</a>
+<a href="http://tickets.opscode.com/browse/COOK-2164">soon</a>.</li>
+<li>If you use Chef, use Opscode&rsquo;s
+<a href="http://community.opscode.com/cookbooks/runit">runit cookbook</a>. It
+will <a href="http://tickets.opscode.com/browse/CHEF-154">soon</a> have a
+resource/provider for managing runit services, instead of the definition.</li>
+</ol>
+
+
+<h1>Conclusion</h1>
+
+<p>Use runit.</p>
+
+<p>But not just because I said so. Use it because it meets the criteria
+for a process supervision system, and it builds on the foundation
+pioneered by an excellent
+<a href="www.skarnet.org/software/skalibs/djblegacy.html">software engineer</a>.</p>
+
+<p>After all, I&rsquo;m not <a href="http://rubyists.github.com/2011/05/02/runit-for-ruby-and-everything-else.html">the only one who thinks so</a>.</p>
+
+<h1>Additional Resources</h1>
+
+<ul>
+<li><a href="http://skarnet.org/software/s6/">s6</a> &ndash; by Laurent Bercot</li>
+<li><a href="http://smarden.org/runit/">runit</a> &ndash; by Gerrit Pape</li>
+<li><a href="http://cr.yp.to/daemontools.html">daemontools</a> &ndash; by Dan J Bernstein</li>
+<li><a href="http://rubyists.github.com/2011/05/02/runit-for-ruby-and-everything-else.html">Runit for Ruby (and everything else)</a></li>
+<li><a href="http://community.opscode.com/cookbooks/runit">runit cookbook for Chef</a>
+(nice changes coming in
+<a href="http://tickets.opscode.com/browse/CHEF-154">CHEF-154</a>, and
+<a href="http://tickets.opscode.com/browse/COOK-2164">COOK-2164</a> too!)</li>
+</ul>
+
+]]></content>
+  </entry>
   
-  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  <entry>
+    <title type="html"><![CDATA[Cookbook Integration Testing With Real Examples]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/12/13/cookbook-integration-testing-with-real-examples/"/>
+    <updated>2012-12-13T20:54:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/12/13/cookbook-integration-testing-with-real-examples</id>
+    <content type="html"><![CDATA[<p>This blog post starts with a <a href="https://gist.github.com/4281314">gist</a>,
+and a
+<a href="https://twitter.com/jtimberman/status/279380189287436289">tweet</a>.
+However, that isn&rsquo;t the whole story. Read on&hellip;</p>
+
+<p>Today I released version 1.6.0 of
+<a href="http://community.opscode.com/cookbooks/apt">Opscode&rsquo;s apt cookbook</a>. The
+cookbook itself needed better coverage for testing in Test Kitchen.
+This post will describe these additions to the cookbook, including how
+one of the test recipes can actually be used for actual production
+use. My goal is to explain a bit about how we go about testing with
+Test Kitchen, and provide some real world examples.</p>
+
+<p>TL;DR &ndash;
+<a href="https://github.com/opscode-cookbooks/apt/commit/9996510bab27a9ea5f17e2f6362151dcbe708e89">This commit has all the code</a>.</p>
+
+<h1>Kitchenfile</h1>
+
+<p>First, the Kitchenfile for the project looked like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apt&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">runtimes</span> <span class="o">[]</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is outdated as far as Kitchenfiles goes. It still has the empty
+array runtimes setting which prevents Test Kitchen from attempting to
+<a href="http://tickets.opscode.com/browse/KITCHEN-4">run additional tests under RVM</a>.
+We&rsquo;ll remove this line, and update it for supporting the
+configurations of the recipes and features we want to test. The
+cookbook itself has three recipes:</p>
+
+<ul>
+<li>default.rb</li>
+<li>cacher-client.rb</li>
+<li>cacher-ng.rb</li>
+</ul>
+
+
+<p>By default, with no configurations defined in a Kitchenfile,
+test-kitchen will run the default recipe (using Chef Solo under
+Vagrant). This is useful in the common case, but we also want to
+actually test other functionality in the cookbook. In addition to the
+recipes, we want to verify that the LWRPs will do what we intend.</p>
+
+<p>I updated the Kitchenfile with the following content:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apt&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">configuration</span> <span class="s2">&quot;default&quot;</span>
+</span><span class='line'>  <span class="n">configuration</span> <span class="s2">&quot;cacher-ng&quot;</span>
+</span><span class='line'>  <span class="n">configuration</span> <span class="s2">&quot;lwrps&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A configuration can correspond to a recipe (<code>default</code>, <code>cacher-ng</code>),
+but it can also be arbitrarily named. This is a name used by kitchen
+test. The <code>cacher-client</code> recipe isn&rsquo;t present because
+<code>recipe[apt::cacher-ng]</code> includes it, and getting the test to work,
+where the single node is a cacher client to itself, was prone to
+error. &ldquo;I assure you, it works&rdquo; :&ndash;). We&rsquo;ll look at this later anyway.</p>
+
+<p>With the above Kitchenfile, kitchen test will start up the Vagrant
+VMs and attempt to run Chef Solo with the recipes named by the
+configuration. This is a good start, but we want to actually run some
+minitest-chef tests. These will be created inside a &ldquo;test&rdquo; cookbook
+included with this cookbook. I created a cookbook named <code>apt_test</code>
+under <code>./test/kitchen/cookbooks</code> using:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>knife cookbook create apt_test -o ./test/kitchen/cookbooks
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This creates the cookbook scaffolding like normal. I cleaned up the
+contents of the directory to contain what I needed to start:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>test/kitchen/cookbooks//apt_test/metadata.rb
+</span><span class='line'>test/kitchen/cookbooks//apt_test/README.md
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes/cacher-ng.rb
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes/default.rb
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes/lwrps.rb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The metadata.rb is as you&rsquo;d expect, it contains the name, a version,
+maintainer information and a description. The README simply mentions
+that this is a test cookbook for the parent project. The recipes are
+the interesting part. Let&rsquo;s address them in the order of the
+configurations in the Kitchenfile.</p>
+
+<h1>Configuration: default</h1>
+
+<p>First, the default recipe in the test cookbook. This is simply going
+to perform an <code>include_recipe "apt::default"</code>. The way test kitchen
+runs, it will actually have the following run list for Chef Solo:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>[test-kitchen::default, minitest-handler, apt_test::default, apt::default]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>test-kitchen</code> sets up some essential things for Test Kitchen itself.
+<code>minitest-handler</code> is the recipe that sets up minitest-chef-handler to
+run post-convergence tests. <code>apt_test::default</code> is the &ldquo;test&rdquo; recipe
+for this configuration, and finally <code>apt::default</code> is the cookbook&rsquo;s
+recipe for this configuration named &ldquo;default&rdquo;.</p>
+
+<p>Had we not done anything else here, the results are the same as simply
+running test kitchen with the original Kitchenfile (with runtimes,
+instead of configurations defined).</p>
+
+<h2>Minitest: default recipe</h2>
+
+<p>There are now minitest-chef tests for each configuration. The default
+recipe provides some &ldquo;apt-get update&rdquo; executes, and also creates a
+directory that can be used for preseeding packages. We&rsquo;ll simply test
+that the preseeding directory exists. We could probably check that the
+cache is updated, but since this cookbook has worked for almost 4
+years w/o issue for <code>apt-get update</code> we&rsquo;ll trust it continues working
+:&ndash;). Here&rsquo;s the test (ignoring the boilerplate):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;creates the preseeding directory&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">directory</span><span class="p">(</span><span class="s1">&#39;/var/cache/local/preseeding&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">must_exist</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When Chef runs, it will run this test:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>apt_test::default#test_0001_creates_the_preseeding_directory = 0.00 s = .
+</span><span class='line'>Finished tests in 0.007988s, 125.1808 tests/s, 125.1808 assertions/s.
+</span><span class='line'>1 tests, 1 assertions, 0 failures, 0 errors, 0 skips
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Configuration: cacher-ng</h1>
+
+<p>Next, Test Kitchen runs the <code>cacher-ng</code> configuration. The recipe in
+the <code>apt_test</code> cookbook simply includes the <code>apt::cacher-ng</code> recipe.
+The run list in Chef Solo looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>[test-kitchen::default, minitest-handler, apt_test::cacher-ng, apt::cacher-ng]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>apt::cacher-ng</code> recipe also includes the client recipe, but
+basically does nothing unless the <code>cacher_ipaddress</code> attribute is set,
+or if we can search using a Chef Server (which Solo can&rsquo;t, of course).</p>
+
+<h2>Minitest: cacher-ng recipe</h2>
+
+<p>The meat of the matter for the <code>cacher-ng</code> recipe is running the
+<code>apt-cacher-ng</code> service, so we&rsquo;ve written a minitest test for this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;runs the cacher service&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">service</span><span class="p">(</span><span class="s2">&quot;apt-cacher-ng&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">must_be_running</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And when Chef runs the test:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>apt_test::default#test_0001_runs_the_cacher_service = 0.06 s = .
+</span><span class='line'>Finished tests in 0.067250s, 14.8698 tests/s, 14.8698 assertions/s.
+</span><span class='line'>1 tests, 1 assertions, 0 failures, 0 errors, 0 skips
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Configuration: lwrps</h1>
+
+<p>Finally, we have our custom configuration that doesn&rsquo;t correspond to a
+recipe in the <code>apt</code> cookbook, <code>lwrps</code>. This configuration instead is
+to do a real-world integration test that the LWRPs actually do what
+they&rsquo;re supposed to.</p>
+
+<h2>Recipe: apt_test::lwrps</h2>
+
+<p>The recipe itself looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">include_recipe</span> <span class="s2">&quot;apt&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">apt_repository</span> <span class="s2">&quot;opscode&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">uri</span> <span class="s2">&quot;http://apt.opscode.com&quot;</span>
+</span><span class='line'>  <span class="n">components</span> <span class="o">[</span><span class="s2">&quot;main&quot;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">distribution</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;lsb&#39;</span><span class="o">][</span><span class="s1">&#39;codename&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">-0.10&quot;</span>
+</span><span class='line'>  <span class="n">key</span> <span class="s2">&quot;2940ABA983EF826A&quot;</span>
+</span><span class='line'>  <span class="n">keyserver</span> <span class="s2">&quot;pgpkeys.mit.edu&quot;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:add</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">apt_preference</span> <span class="s2">&quot;chef&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">pin</span> <span class="s2">&quot;version 10.16.2-1&quot;</span>
+</span><span class='line'>  <span class="n">pin_priority</span> <span class="s2">&quot;700&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>apt</code> recipe is included because otherwise, we may not be able to
+notify the <code>apt-get update</code> resource to execute when the new sources.list
+is dropped off.</p>
+
+<p>Next, we use Opscode&rsquo;s very own apt repository as an example because
+we can rely on that existing. When Test Kitchen runs, it will actually
+write out the apt repository configuration file to
+<code>/etc/apt/sources.list.d/opscode.list</code>, but more on that in a minute.</p>
+
+<p>Finally, we&rsquo;re going to write out an apt preferences file for pinning
+the Chef package. Currently, Chef is actually packaged at various
+versions in Ubuntu releases:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% rmadison chef
+</span><span class='line'>      chef | 0.7.10-0ubuntu1.1 | lucid/universe | source, all
+</span><span class='line'>      chef | 0.8.16-4.2 | oneiric/universe | source, all
+</span><span class='line'>      chef |  10.12.0-2 | quantal/universe | source, all
+</span><span class='line'>      chef |  10.12.0-2 | raring/universe | source, all
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So by adding the Opscode APT repository, and pinning Chef, we can
+ensure that we&rsquo;re going to have the correct version of Chef installed
+as a package, if we were installing Chef as a package from APT :).</p>
+
+<p>When Chef Solo runs, here is the run list:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>[test-kitchen::default, minitest-handler, apt_test::lwrps]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice it doesn&rsquo;t have &ldquo;<code>apt::lwrps</code>&rdquo;, since that isn&rsquo;t a recipe in
+the apt cookbook.</p>
+
+<h2>Minitest: lwrps recipe</h2>
+
+<p>The minitest tests for the lwrps configuration and recipe look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;creates the Opscode sources.list&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">file</span><span class="p">(</span><span class="s2">&quot;/etc/apt/sources.list.d/opscode.list&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">must_exist</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;adds the Opscode package signing key&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">opscode_key</span> <span class="o">=</span> <span class="n">shell_out</span><span class="p">(</span><span class="s2">&quot;apt-key list&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">assert</span> <span class="n">opscode_key</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;Opscode Packages &lt;packages@opscode.com&gt;&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;creates the correct pinning preferences for chef&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">chef_policy</span> <span class="o">=</span> <span class="n">shell_out</span><span class="p">(</span><span class="s2">&quot;apt-cache policy chef&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">assert</span> <span class="n">chef_policy</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;Package pin: 10.16.2-1&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The first test simply asserts that the Opscode APT sources.list is
+present. We could elaborate on this by verifying that its content is
+correct, but for now we&rsquo;re going to trust that the declarative
+resource in the recipe is, ahem, declared properly.</p>
+
+<p>Next, we run the <code>apt-key</code> command to show the available GPG keys in
+the APT trusted keyring. This will have the correct Opscode Packages
+key if it was added correctly.</p>
+
+<p>Finally, we test that the package pinning for the Chef package is
+correct. Successful output of the tests looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>apt_test::default#test_0003_creates_the_correct_pinning_preferences_for_chef = 0.05 s = .
+</span><span class='line'>apt_test::default#test_0002_adds_the_opscode_package_signing_key = 0.05 s = .
+</span><span class='line'>apt_test::default#test_0001_creates_the_opscode_sources_list = 0.00 s = .
+</span><span class='line'>Finished tests in 0.112725s, 26.6133 tests/s, 26.6133 assertions/s.
+</span><span class='line'>3 tests, 3 assertions, 0 failures, 0 errors, 0 skips
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>The Real World Bits</h1>
+
+<p>The tests hide some of the detail. What does this actually look like
+on a real system? Glad you asked!</p>
+
+<p>Here&rsquo;s the sources.list for Opscode&rsquo;s APT repository.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ cat /etc/apt/sources.list.d/opscode.list
+</span><span class='line'>deb     http://apt.opscode.com precise-0.10 main
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, the apt-key content:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ sudo apt-key list
+</span><span class='line'>(snip, ubuntu&#39;s keys)
+</span><span class='line'>pub   1024D/83EF826A 2009-07-24
+</span><span class='line'>uid                  Opscode Packages &lt;packages@opscode.com&gt;
+</span><span class='line'>sub   2048g/3B6F42A0 2009-07-24
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the grand finale, the pinning preferences:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ apt-cache policy chef
+</span><span class='line'>chef:
+</span><span class='line'>  Installed: 10.14.4-2.ubuntu.11.04
+</span><span class='line'>  Candidate: 10.16.2-1
+</span><span class='line'>  Package pin: 10.16.2-1
+</span><span class='line'>  Version table:
+</span><span class='line'>     10.16.2-1 700
+</span><span class='line'>        500 http://apt.opscode.com/ precise-0.10/main amd64 Packages
+</span><span class='line'> *** 10.14.4-2.ubuntu.11.04 700
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I used <a href="https://github.com/opscode/bento">Opscode&rsquo;s bento box</a> for
+Ubuntu 12.04, which comes with the &lsquo;omnibus&rsquo; Chef package version
+10.14.4(-2.ubuntu.11.04). In order to install the newer Chef package
+and demonstrate the pinning, I&rsquo;ll first remove it:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ sudo dpkg --purge chef
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, I install from the Opscode APT repository:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ sudo apt-get install chef
+</span><span class='line'>...
+</span><span class='line'>Setting up chef (10.16.2-1) ...
+</span><span class='line'>...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the package is installed:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ apt-cache policy chef
+</span><span class='line'>chef:
+</span><span class='line'>  Installed: 10.16.2-1
+</span><span class='line'>  Candidate: 10.16.2-1
+</span><span class='line'>  Package pin: 10.16.2-1
+</span><span class='line'>  Version table:
+</span><span class='line'> *** 10.16.2-1 700
+</span><span class='line'>        500 http://apt.opscode.com/ precise-0.10/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Currently the omnibus packages are <em>NOT</em> in the APT repository, since
+they do not have additional dependencies they are installed simply
+with dpkg. Don&rsquo;t use this particular recipe if you&rsquo;re using the
+Omnibus packages. Instead, just marvel at the utility of this. Perhaps
+instead, use the LWRPs in the apt cookbook to set up your own local
+APT repository and pinning preferences.</p>
+
+<h1>Conclusion</h1>
+
+<p>Test Kitchen is a framework for isolated integration testing in
+individual projects. As such, it has a lot of features, capabilities
+and also moving parts. Hopefully this post helps you understand some
+of them, and see how it works, and how you may be able to use it for
+yourself. Or, if you want, simply grab the <code>apt_test::lwrps</code> recipe&rsquo;s
+contents and stick them in your own cookbook that manages Chef package
+installation and move along. :&ndash;)</p>
+
+<p>All the code used in this post is available in the <a href="https://github.com/opscode-cookbooks/apt/">Opscode Cookbook&rsquo;s
+organization &ldquo;apt&rdquo; repository</a>.</p>
+
+<h2>Further Reading</h2>
+
+<ul>
+<li><a href="https://github.com/opscode/test-kitchen">Learn about Test Kitchen</a></li>
+<li><a href="https://github.com/calavera/minitest-chef-handler">More about Minitest-Chef</a></li>
+<li><a href="https://github.com/opscode-cookbooks/apt/commit/9996510bab27a9ea5f17e2f6362151dcbe708e89">apt cookbook commit</a></li>
+<li><a href="http://www.opscode.com/blog/2012/07/20/on-the-level-testing-your-infrastructure/">BDD Testing Infrastructure</a></li>
+</ul>
+
+]]></content>
+  </entry>
   
-  <script type="text/javascript">
-    $(document).ready(function(){
-        if (!window.jXHR){
-            var jxhr = document.createElement('script');
-            jxhr.type = 'text/javascript';
-            jxhr.src = '/javascripts/libs/jXHR.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(jxhr, s);
-        }
+  <entry>
+    <title type="html"><![CDATA[Some Knife Plugins]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins/"/>
+    <updated>2012-11-29T19:11:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve shared my <code>~/.chef/plugins/knife</code> directory as a Git repository
+on <a href="https://github.com/jtimberman/chef-plugins-knife">GitHub</a>. There&rsquo;s
+only a few, but I hope you find them useful. They are licensed under
+the Apache 2.0 software license, but please only use them for awesome.</p>
 
-        github.showRepos({
-            user: 'jtimberman',
-            count: 10,
-            skip_forks: true,
-            target: '#gh_repos'
-        });
-    });
-  </script>
-  <script src="/javascripts/github.js" type="text/javascript"> </script>
-</section>
+<h2>gem</h2>
+
+<p>This plugin will install a gem into the Ruby environment that knife is
+executing in. This is handy if you want to install knife plugins that
+are gems.</p>
+
+<p>If you have Ruby and Chef/Knife installed in an area where your user
+can write:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
 
 
+<p>If you&rsquo;re using an Omnibus package install of Chef, or otherwise
+require root access to install:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Note</strong> If you&rsquo;re trying to install a gem for <em>Chef</em> to use, you
+  should put it in a <code>chef_gem</code> resource in a recipe.</p>
+
+<h2>metadata</h2>
+
+<p>This plugin prints out information from a cookbook&rsquo;s metadata. It
+currently only works with <code>metadata.rb</code> files, and not <code>metadata.json</code>
+files.</p>
+
+<p>In a cookbook&rsquo;s directory, display the cookbook&rsquo;s dependencies:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Show the dependencies and supported platforms:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies platforms</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Use the <code>-P</code> option to pass a path to a cookbook.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata name dependencies -P ~/.berkshelf/cookbooks/rabbitmq-1.6.4</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>nukular</h2>
+
+<p><a href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/">I wrote on this blog about this plugin awhile ago</a>.</p>
+
+<p>This plugin cleans up after running <code>chef-client</code> on a VMware Fusion machine.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife nukular guineapig base guineapig.int.example.com</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>plugin_create</h2>
+
+<p>This creates a plugin scaffolding in <code>~/.chef/plugins/knife</code>. It will
+join underscored words as CamelCaseClasses.</p>
+
+<p>For example,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesometown</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Creates a plugin that is class <code>Awesometown</code> that can be executed with:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife awesometown</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Whereas this,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesome_town</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Creates a plugin that is class <code>AwesomeTown</code> that can be executed
+with:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin awesome town</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
-</aside>
+  <entry>
+    <title type="html"><![CDATA[Chef Repository Berkshelf Conversion]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/19/chef-repository-berkshelf-conversion/"/>
+    <updated>2012-11-19T22:10:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/19/chef-repository-berkshelf-conversion</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve been managing my personal systems with Chef since Chef was
+created, though I didn&rsquo;t always use the same chef-repo for them. For
+about two years though, I&rsquo;ve used pretty much the same repository,
+which has grown and accumulated cruft over time. Fortunately since
+it&rsquo;s only me working on it, and I only have a few systems, it is
+really easy to make drastic changes.</p>
 
-    </div>
-  </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2011-2014 - Joshua Timberman -
-  <span class="credit">Powered
-  by <a href="http://octopress.org">Octopress</a></span>
-  <br /><a rel="license"
-  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
-  Commons License" style="border-width:0"
-  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
-</p>
+<p>I have a number of to do items that I&rsquo;ve put off, so this weekend I
+decided to spend some time cleaning house, and convert the repository
+to have cookbooks managed by <a href="http://berkshelf.com/">Berkshelf</a>.</p>
 
-</footer>
+<h1>Rationale</h1>
+
+<p>There are other cookbook management tools, including the built in
+&ldquo;<code>knife cookbook site install</code>&rdquo;,
+<a href="https://github.com/applicationsonline/librarian">librarian-chef</a>, and
+<a href="https://github.com/kisoku/whisk">whisk</a>. I have used the knife
+command as long as it has existed, and it worked well for awhile. The
+buzz in the community since the
+<a href="http://wiki.opscode.com/display/chef/Opscode+Community+Summit+2">Chef Summit</a>
+has been around &ldquo;library&rdquo; vs &ldquo;application&rdquo; cookbooks, especially in
+conjunction with Berkshelf so I thought I&rsquo;d give it a go.</p>
+
+<h1>Before Berkshelf</h1>
+
+<p>Before I started on this migration, here are some numbers about
+cookbooks in my chef-repo.</p>
+
+<ul>
+<li>113 total cookbooks</li>
+<li>33 &ldquo;chef-vendor&rdquo; branches (<code>knife cookbook site install</code> creates a
+branch for each cookbook)</li>
+<li>50 &ldquo;cookbook site&rdquo; tags</li>
+</ul>
+
+
+<p>Overall, I had about a half dozen cookbooks that I actually modified
+from their &ldquo;upstream&rdquo; versions on the community site. Most of those
+customizations were adding munin plugins, changing a couple minor
+settings in a template, or long term workarounds that are actually
+fixed in the current released versions.</p>
+
+<h1>The Conversion</h1>
+
+<p>The conversion was fairly straight-forward. It required some preparation:</p>
+
+<ul>
+<li>Determine the cookbooks that would be managed by Berkshelf.</li>
+<li>Refactor customizations into &ldquo;application&rdquo; cookbooks or otherwise.</li>
+<li>Remove all those cookbooks, and the completely unused cookbooks.</li>
+</ul>
+
+
+<h2>Cookbooks in Berkshelf</h2>
+
+<p>Determining the cookbooks that would be managed by Berkshelf was
+simple. I started with all the cookbooks that had been installed via
+<code>knife cookbook site install</code>. Since the command creates a branch for
+each one, I had a nice list already. I did review that for cookbooks I
+know I wasn&rsquo;t using anymore, or didn&rsquo;t plan to use for long, to
+simplify matters.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git branch | grep 'chef-vendor' | awk -F- '{print $3}'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I also looked at the cookbooks that are applied to node&rsquo;s expanded run
+lists. This <code>knife exec</code> one-liner will return such a list.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E "nodes.find('recipes:*').map {|n| n[:recipes]}.flatten.map {|r| r.gsub(/::.*/, '')}.sort.uniq"</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Refactoring Customization</h2>
+
+<p>My repository has a fair amount of customization to the cookbooks from
+the community site. Rather than go through all the changes, I&rsquo;ll
+summarize with the more interesting parts.</p>
+
+<p>First, I use Samba for filesharing from an Ubuntu server. I originally
+changed the <code>samba::server</code> recipe so the services used upstart as the
+provider and set a <code>start_command</code> on Ubuntu, which looked like this
+(<code>s</code> is smbd or nmbd):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">service</span> <span class="n">s</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">pattern</span> <span class="s2">&quot;smbd|nmbd&quot;</span> <span class="k">if</span> <span class="n">node</span><span class="o">[</span><span class="s2">&quot;platform&quot;</span><span class="o">]</span> <span class="o">=~</span> <span class="sr">/^arch$/</span>
+</span><span class='line'>  <span class="n">provider</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Provider</span><span class="o">::</span><span class="ss">Service</span><span class="p">:</span><span class="ss">:Upstart</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">start_command</span> <span class="s2">&quot;/usr/bin/service </span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2"> start&quot;</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">action</span> <span class="o">[</span><span class="ss">:enable</span><span class="p">,</span> <span class="ss">:start</span><span class="o">]</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The upstream cookbook doesn&rsquo;t have this change, so I added an
+&ldquo;application&rdquo; cookbook, <code>housepub-samba</code>, which has this as the
+default recipe:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="o">[</span><span class="s2">&quot;smbd&quot;</span><span class="p">,</span> <span class="s2">&quot;nmbd&quot;</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">s</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">srv</span> <span class="o">=</span> <span class="n">resource</span><span class="p">(</span><span class="s2">&quot;service[</span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">srv</span><span class="o">.</span><span class="n">provider</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Provider</span><span class="o">::</span><span class="ss">Service</span><span class="p">:</span><span class="ss">:Upstart</span>
+</span><span class='line'>  <span class="n">srv</span><span class="o">.</span><span class="n">start_command</span> <span class="s2">&quot;/usr/bin/service </span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2"> start&quot;</span>
+</span><span class='line'><span class="k">end</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>For each of the Samba services, we look up the resource in the
+resource collection, then change the provider to upstart, and set the
+<code>start_command</code> to use upstart&rsquo;s service command.</p>
+
+<p>Next, I use OpenVPN. I also want to modify the template used for the
+<code>/etc/openvpn/server.conf</code> and <code>/etc/openvpn/server.up.sh</code> resources.
+Again, I create an &ldquo;application&rdquo; cookbook, <code>housepub-openvpn</code>, and the
+default recipe looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">resources</span><span class="p">(</span><span class="s2">&quot;template[/etc/openvpn/server.conf]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cookbook</span> <span class="s2">&quot;housepub-openvpn&quot;</span>
+</span><span class='line'><span class="n">resources</span><span class="p">(</span><span class="s2">&quot;template[/etc/openvpn/server.up.sh]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cookbook</span> <span class="s2">&quot;housepub-openvpn&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is a shorter form of what was done for Samba&rsquo;s services above.
+The <code>#resources</code> method does the lookup and returns the resource, and
+any of the resource parameter attributes can be used as a method, so I
+send the <code>cookbook</code> method to both template resources, setting this
+cookbook, <code>housepub-openvpn</code> as the cookbook that contains the
+template to use. Then, I copy my customized templates into
+<code>cookbooks/housepub-openvpn/templates/default</code>, and Chef will do the
+right thing.</p>
+
+<p>Other cookbook changes I made were:</p>
+
+<ul>
+<li>Change the data bag name used in <code>djbdns::internal_server</code>, which I
+changed back so I could use the upstream recipe.</li>
+<li>Add munin plugins to various cookbooks. As I&rsquo;m planning to move
+things to Graphite, this is unnecessary and removed.</li>
+<li>A few of my OS X cookbooks have the plist file for use with
+<code>mac_os_x_plist</code> LWRP. These are simply moved to my
+<a href="https://github.com/jtimberman/workstation-chef-repo/blob/master/cookbooks/workstation/recipes/default.rb#L72-L76">workstation data bag</a>.</li>
+</ul>
+
+
+<p>Finally, one special case is
+<a href="http://fnichol.github.com/chef-rbenv/">Fletcher Nichol&rsquo;s rbenv cookbook</a>.
+The <code>rbenv::user_install</code> recipe manages <code>/etc/profile.d/rbenv.sh</code>,
+which requires root privileges. However, on my workstations where I
+use this particular cookbook, I run Chef as my user, so I had to
+comment this resource out. To allow for a non-privileged user running
+Chef, the better approach is to determine whether to manage that file
+by using an attribute, so I
+<a href="https://github.com/fnichol/chef-rbenv/pull/20">opened a pull request</a>,
+which is now merged. Now I just have the attribute set to <code>false</code> in
+my workstation role, and can use the cookbook unmodified.</p>
+
+<h2>Remove Unused and Berkshelf Cookbooks</h2>
+
+<p>Removing the unused cookbooks, and the cookbooks managed by Berkshelf
+was simple. First, each cookbook gained an entry in the Berksfile. For
+example, <code>apache2</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apache2&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, the cookbook was deleted from the Chef Server. I did this,
+purging all versions, because I planned to upload all the cookbooks as
+resolved by Berkshelf.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">cookbook</span> <span class="n">delete</span> <span class="o">-</span><span class="n">yap</span> <span class="n">apache2</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, I removed the cookbook from the git repository.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">git</span> <span class="n">rm</span> <span class="o">-</span><span class="n">r</span> <span class="n">cookbooks</span><span class="o">/</span><span class="n">apache2</span>
+</span><span class='line'><span class="n">git</span> <span class="n">add</span> <span class="no">Berksfile</span>
+</span><span class='line'><span class="n">git</span> <span class="n">commit</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;apache2 is managed by Berkshelf&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The cookbooks that I didn&rsquo;t plan to use, I simply didn&rsquo;t add to
+Berkshelf, and removed them all in one commit.</p>
+
+<h1>After Berkshelf</h1>
+
+<p>The net effect of this change is a simpler, easier to manage
+repository. I now have only 23 cookbooks in my <code>cookbooks</code> directory.
+Some of those are candidates for refactoring and updating to the
+upstream ones, I just didn&rsquo;t get to that yet. Most of them are
+&ldquo;internal&rdquo; cookbooks that aren&rsquo;t published, since they&rsquo;re specific for
+my internal network, such as my housepub-samba or housepub-openvpn
+cookbooks.</p>
+
+<p>On my Chef Server, I have 90 total cookbooks, which means 67 are
+managed by Berkshelf. I have 62 entries in my Berksfile, and some of
+those are dependencies of others, which means that can be refactored
+some as well.</p>
+
+<p>The workflow is simpler, and there&rsquo;s fewer moving parts to worry about
+changing. I think this is a net positive for this since I do it in my
+free time. However, there&rsquo;s a couple of issues, which should be
+addressed in Berkshelf soon.</p>
+
+<p>First,
+<a href="https://github.com/RiotGames/berkshelf/issues/190">Berkshelf issue #190</a>,
+which would have <code>berks update</code> take a single cookbook to update.
+Currently, it has to update all the cookbooks, and this takes time for
+impatient people.</p>
+
+<p>Second,
+<a href="https://github.com/RiotGames/berkshelf/issues/191">issue #191</a>, which
+would allow <code>berks upload</code> to take a single cookbook to upload.
+Normally, one could just use <code>knife cookbook upload</code>, but the
+directory where Berkshelf stores cookbooks it is managing are not
+located in the <code>cookbook_path</code>, and the knife command uses the
+directory name a the cookbook name. Berkshelf creates directories like
+<code>~/.berkshelf/cookbooks/apache2-1.3.0</code>, so the way to upload Berkshelf
+managed cookbooks is all together with the <code>berks upload</code> command.
+This isn&rsquo;t a huge deal for me as I already uploaded all the cookbooks
+I&rsquo;ve been using once.</p>
+
+<p>All in all, I am happy with this workflow, though. It is simple and
+hassle-free for me. Plus, I have more flexibility for maintaining my
+additional non-Opscode cookbooks.</p>
+]]></content>
+  </entry>
   
+  <entry>
+    <title type="html"><![CDATA[Install Chef 10 Server on CentOS]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos/"/>
+    <updated>2012-11-17T19:49:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos</id>
+    <content type="html"><![CDATA[<p>In addition to capturing the minimal steps required to <a href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/">install a Chef
+10 Server on Ubuntu</a>, I also wanted to capture the steps for CentOS.
+Unfortunately, Ruby 1.9 isn&rsquo;t available in the default distribution
+repositories, and almost all third party repositories are quite out of
+date. As such, I&rsquo;ll use the Ruby 1.8.7 that comes with CentOS, despite
+being an EOL version of Ruby.</p>
 
-<script type="text/javascript">
-      var disqus_shortname = 'jtimberman';
-      
-        
-        var disqus_script = 'count.js';
-      
-    (function () {
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    }());
-</script>
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
 
+<p>This does not include any customization to the installation and takes
+everything as default. This will all change when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
 
+<p>These steps were performed on a default server install of CentOS 6.3.</p>
 
+<p>Install required packages.</p>
 
-
-
-
-  <script type="text/javascript">
-    (function(){
-      var twitterWidgets = document.createElement('script');
-      twitterWidgets.type = 'text/javascript';
-      twitterWidgets.async = true;
-      twitterWidgets.src = '//platform.twitter.com/widgets.js';
-      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
-    })();
-  </script>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>yum install ruby ruby-devel rubygems wget gcc gcc-c++ kernel-devel make</span></code></pre></td></tr></table></div></figure>
 
 
+<p>Update RubyGems.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>gem update --system</span></code></pre></td></tr></table></div></figure>
 
 
+<p>Install Chef.</p>
 
-</body>
-</html>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>gem install chef --no-ri --no-rdoc</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Configure chef-solo.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>mkdir -p /etc/chef
+</span><span class='line'>vi /etc/chef/solo.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The config file should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file_cache_path</span> <span class="s2">&quot;/tmp/chef-solo&quot;</span>
+</span><span class='line'><span class="n">cookbook_path</span> <span class="s2">&quot;/tmp/chef-solo/cookbooks&quot;</span>
+</span><span class='line'><span class="n">recipe_url</span> <span class="s2">&quot;http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef</span><span class="o">-</span><span class="n">solo</span> <span class="o">-</span><span class="n">o</span> <span class="n">chef</span><span class="o">-</span><span class="ss">server</span><span class="p">:</span><span class="ss">:rubygems</span><span class="o">-</span><span class="n">install</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife configure -i
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/root/.chef/jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/root/.chef/validation.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;http://10.1.1.100:4000&#39;</span>
+</span><span class='line'><span class="n">cache_type</span>               <span class="s1">&#39;BasicFile&#39;</span>
+</span><span class='line'><span class="n">cache_options</span><span class="p">(</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s1">&#39;/root/.chef/checksums&#39;</span> <span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cp</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">validation</span><span class="o">.</span><span class="n">pem</span> <span class="o">~</span><span class="sr">/.chef</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Verify that the API client and configuration file work.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">client</span> <span class="n">list</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
+</span><span class='line'>  <span class="n">jtimberman</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+]]></content>
+  </entry>
+  
+</feed>

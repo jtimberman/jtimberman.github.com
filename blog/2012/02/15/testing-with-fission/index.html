@@ -1,0 +1,540 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Testing with fission - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="In this post, I&rsquo;m going to talk about the fission gem: http://rubygems.org/gems/fission
+https://github.com/thbishop/fission I primarily use &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Testing With Fission</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-15T22:53:00-07:00" pubdate data-updated="true">Feb 15<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>In this post, I&rsquo;m going to talk about the fission gem:</p>
+
+<ul>
+<li><a href="http://rubygems.org/gems/fission">http://rubygems.org/gems/fission</a></li>
+<li><a href="https://github.com/thbishop/fission">https://github.com/thbishop/fission</a></li>
+</ul>
+
+
+<p>I primarily use this to manage the VMware Fusion virtual machines I
+use for testing <a href="http://community.opscode.com/users/opscode">Opscode&rsquo;s Chef Cookbooks</a>.</p>
+
+<p>This post is rather light on specific details about things that are
+either &ldquo;common&rdquo; knowledge or documented elsewhere. Particularly, I
+won&rsquo;t tell you how to set up the virtual machines, other than a few
+notes that I think make it easier to manage virtual machines in this
+way. In other words, you&rsquo;re smart and can figure them out.</p>
+
+<h2>Install and Configure</h2>
+
+<p>The first step to use the fission RubyGem is to install it. If you
+don&rsquo;t like RubyGems, then create a package or grab the source from the
+GitHub link, above.</p>
+
+<pre><code>gem install fission
+</code></pre>
+
+<p>Test that it is detecting your VMware Fusion VMs:</p>
+
+<pre><code>fission status
+</code></pre>
+
+<p>Fission has a configuration file, <code>~/.fissionrc</code>, which is yaml
+format. If the status command fails, you may need to configure fission
+to find the <code>vmrun</code> command. Here&rsquo;s the example from my system:</p>
+
+<pre><code>---
+vmrun_bin: /Applications/VMware Fusion.app/Contents/Library/vmrun
+</code></pre>
+
+<h2>Install an OS on a VM</h2>
+
+<p>If you&rsquo;re reading this, I presume you know how to install an OS in a
+VMware virtual machine. I do a number of tasks during the installation
+to make it easy and consistent to work with all my test VMs.</p>
+
+<ul>
+<li>Use bridged networking with DHCP</li>
+</ul>
+
+
+<p>This usually results in the least amount of hassle for connecting to
+the VM without any tunneling or port forwarding tomfoolery.</p>
+
+<ul>
+<li>Give it a simple VM name with alphanumeric characters only.</li>
+<li>Use the same hostname during installation as the VM name</li>
+</ul>
+
+
+<p>In the examples below, I use my &ldquo;guineapig&rdquo; system. I also have other
+systems like &ldquo;ubuntu1110&rdquo;, &ldquo;freebsd82&rdquo; and &ldquo;centos6&rdquo;. This is the name
+you&rsquo;ll use to refer to the VM with fission, so it should be short,
+easy to type and clearly identifiable.</p>
+
+<ul>
+<li>Set the root password, even if the OS doesn&rsquo;t use the root account</li>
+<li>Make sure SSH as root is enabled</li>
+</ul>
+
+
+<p>Some Linux distributions such as Ubuntu do not enable the root login.
+This is for testing, so I really don&rsquo;t care, and I can always write a
+Chef recipe to lock things down (as I would in production) if
+required.</p>
+
+<p>I also set a simple password that I can use with <code>-P</code> to <code>knife
+bootstrap</code> without the shell doing anything with special characters.</p>
+
+<ul>
+<li>Use NTP</li>
+</ul>
+
+
+<p>Install the NTP package for your operating system. The workflow here
+(and the whole point really) is to make heavy use of VMware Fusion
+snapshots and rollback, so it is important that the system time is
+correct. I customized the bootstrap templates I use to add <code>ntpdate</code>.</p>
+
+<h2>Using Fission</h2>
+
+<p>And now the moment you&rsquo;ve been waiting for. First, see the fission
+README for full detail on the commands available. I&rsquo;m going to focus
+here on how I use it.</p>
+
+<p>After the install and post install tasks are done, I create a
+new snapshot for the VM.</p>
+
+<pre><code>% fission status
+guineapig        [running]
+% fission snapshot create guineapig base
+</code></pre>
+
+<p>The name is &ldquo;base&rdquo; because thats a good name for a baseline. It can be
+useful to create specifically named snapshots for particular purposes.</p>
+
+<p>I use Opscode Hosted Chef as my server and I already have my local
+workstation set up with the validation key, a Chef repository and have
+uploaded the cookbook(s) I use for testing. I&rsquo;ll use &ldquo;knife
+bootstrap&rdquo; to kick off a run on my VM:</p>
+
+<pre><code>% knife bootstrap 10.1.1.129 -x root -Pvanilla -r 'recipe[apache2]'
+...
+INFO: service[apache2] restarted
+INFO: Chef Run complete in 44.324473 seconds
+</code></pre>
+
+<p>Sweet, it worked. However, if the Chef run fails, I can log in as
+root, fix the bug and rerun, or whatever else may need to be done.
+Then once I&rsquo;m ready to reset the VM, fission comes back to play.</p>
+
+<pre><code>% fission snapshot revert guineapig base
+Reverting to snapshot 'base'
+Reverted to snapshot 'base'
+</code></pre>
+
+<p>Note that fission will poweroff the VM when reverting the snapshot.
+Turn it on again with the start command.</p>
+
+<pre><code>% fission status
+guineapig        [not running]
+
+% fission start guineapig
+Starting 'guineapig'
+VM 'guineapig' started
+
+% fission status
+guineapig        [running]
+</code></pre>
+
+<p>And after logging in, we can see that apache2 is not installed as it
+should not be after the snapshot is restored.</p>
+
+<pre><code>% ssh root@guineapig 
+root@guineapig's password: 
+root@guineapig:~# dpkg -l apache2
+No packages found matching apache2.
+</code></pre>
+
+<p>The VM is now ready to do my bidding once again.</p>
+
+<h1>Cleanup</h1>
+
+<p>Note that reverting the snapshot doesn&rsquo;t delete the Chef node or
+client objects. Since fission is a Ruby library, a simple knife plugin
+can wrap up all the fission revert, restart and Chef cleanup, though.
+I called mine nukular.</p>
+
+<pre><code>% knife nukular guineapig base guineapig.int.example.com
+</code></pre>
+
+<p>And here&rsquo;s the plugin I&rsquo;m using:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">KnifePlugins</span>
+</span><span class='line'>    <span class="k">class</span> <span class="nc">Nukular</span> <span class="o">&lt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Knife</span>
+</span><span class='line'>      <span class="n">deps</span> <span class="k">do</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;fission&#39;</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;chef/node&#39;</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;chef/api_client&#39;</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">banner</span> <span class="s2">&quot;knife nukular VM SNAPSHOT [NODE]&quot;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">def</span> <span class="nf">run</span>
+</span><span class='line'>        <span class="n">vm</span><span class="p">,</span> <span class="n">snapshot</span> <span class="o">=</span> <span class="vi">@name_args</span>
+</span><span class='line'>        <span class="n">node</span> <span class="o">=</span> <span class="vi">@name_args</span><span class="o">[</span><span class="mi">2</span><span class="o">].</span><span class="n">nil?</span> <span class="p">?</span> <span class="n">vm</span> <span class="p">:</span> <span class="vi">@name_args</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span>
+</span><span class='line'>        <span class="ss">Fission</span><span class="p">:</span><span class="ss">:Command</span><span class="o">::</span><span class="no">SnapshotRevert</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">args</span><span class="o">=[</span><span class="n">vm</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span>
+</span><span class='line'>        <span class="ss">Fission</span><span class="p">:</span><span class="ss">:Command</span><span class="o">::</span><span class="no">Start</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">args</span><span class="o">=[</span><span class="n">vm</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Node</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">destroy</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:ApiClient</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">destroy</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The command-line usage takes 2 or 3 arguments. The first two must be
+the VM name and the snapshot name, e.g. <code>guineapig</code> and <code>base</code>. If the
+node name is different than the VM name, then specify it.</p>
+
+<pre><code>% knife nukular guineapig base guineapig.int.example.com
+</code></pre>
+
+<p>Note that the plugin has <em>zero</em> error handling or any other sensible
+things. You may want to modify it before you use it. Or not, these are
+just test systems after all.</p>
+
+<h2>Full example</h2>
+
+<p>Minus the output from the commands, here is the full output of testing
+the Opscode apache2 cookbook on my guinea pig. Assume that all the
+required things from my Chef Repository have been uploaded to the Chef
+Server and the knife configuration is correct. Also, the <code>chef-full</code>
+bootstrap template specified here is a customized version of the
+template in the
+<a href="https://github.com/opscode/chef/blob/master/chef/lib/chef/knife/bootstrap/chef-full.erb">Chef source master branch template</a>
+that has <code>ntpdate -u pool.ntp.org</code> in it.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% fission </span><span class="n">status</span>
+</span><span class='line'><span class="sx">% fission </span><span class="n">snapshot</span> <span class="n">create</span> <span class="n">guineapig</span> <span class="n">testing</span><span class="o">-</span><span class="n">apache2</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">bootstrap</span> <span class="mi">10</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">129</span> <span class="o">-</span><span class="n">x</span> <span class="n">root</span> <span class="o">-</span><span class="n">P</span> <span class="n">vanilla</span> <span class="p">\</span>
+</span><span class='line'>  <span class="o">-</span><span class="n">r</span> <span class="s1">&#39;recipe[apache2]&#39;</span> <span class="o">-</span><span class="n">d</span> <span class="n">chef</span><span class="o">-</span><span class="n">full</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">nukular</span> <span class="n">guineapig</span> <span class="n">testing</span><span class="o">-</span><span class="n">apache2</span> <span class="n">guineapig</span><span class="o">.</span><span class="n">int</span><span class="o">.</span><span class="n">housepub</span><span class="o">.</span><span class="n">org</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&rsquo;s it. I hope you find this helpful!</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-15T22:53:00-07:00" pubdate data-updated="true">Feb 15<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/01/29/dnsimple-self-registration-recipe/" title="Previous Post: DNSimple Self Registration Recipe">&laquo; DNSimple Self Registration Recipe</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2012/02/25/changing-class-names/" title="Next Post: Changing Class Names">Changing Class Names &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

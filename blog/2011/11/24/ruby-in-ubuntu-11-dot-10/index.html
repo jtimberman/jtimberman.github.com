@@ -1,0 +1,551 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Ruby In Ubuntu 11.10 - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="I was playing around with Ubuntu 11.10 the other day, to explore some of the
+changes that have happened to Ruby lately, and thought I&rsquo;d share &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2011/11/24/ruby-in-ubuntu-11-dot-10">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Ruby in Ubuntu 11.10</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-11-24T00:16:00-07:00" pubdate data-updated="true">Nov 24<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I was playing around with Ubuntu 11.10 the other day, to explore some of the
+changes that have happened to Ruby lately, and thought I&rsquo;d share my findings.</p>
+
+<p>First off, there are still Ruby 1.8(.7p352) packages. This is the
+default you get with the <code>ruby</code> package. However, the <code>ruby1.9.1</code> has
+Ruby 1.9.2p290 as the default version. This isn&rsquo;t the absolute latest
+released (officially, 1.9.3 is the latest stable release), but it&rsquo;s a
+widespread release that a lot of people are using in production.</p>
+
+<p>The main package for getting the Ruby executables is <code>ruby1.9.1</code>. It
+is now a &ldquo;full&rdquo; installation and includes:</p>
+
+<ul>
+<li>/usr/bin/gem1.9.1</li>
+<li>/usr/bin/rdoc1.9.1</li>
+<li>/usr/bin/rake1.9.1</li>
+<li>/usr/bin/erb1.9.1</li>
+<li>/usr/bin/ri1.9.1</li>
+<li>/usr/bin/ruby1.9.1</li>
+<li>/usr/bin/irb1.9.1</li>
+<li>/usr/bin/testrb1.9.1</li>
+</ul>
+
+
+<p>Previous versions had these as separate packages, and you had to
+remember to install everything to have a full Ruby installation
+available.</p>
+
+<p>In the package name and the above binaries, <code>1.9.1</code> indicates the Ruby
+library compatibility, <code>1.9.2</code> is compatible with <code>1.9.1</code>.</p>
+
+<p>The Debian alternatives system is used to set the default ruby, gem
+and irb binaries in the $PATH as links to the 1.9.1 versions, e.g.:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ls -l /usr/bin/ruby /etc/alternatives/ruby
+</span><span class='line'>lrwxrwxrwx 1 root root 18 2011-11-24 00:02 /etc/alternatives/ruby -&gt; /usr/bin/ruby1.9.1
+</span><span class='line'>lrwxrwxrwx 1 root root 22 2011-11-24 00:02 /usr/bin/ruby -&gt; /etc/alternatives/ruby</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Users can also update RubyGems via the <code>gem update --system</code> command,
+but a shell environment variable must be exported first.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">export </span><span class="nv">REALLY_GEM_UPDATE_SYSTEM</span><span class="o">=</span>yes
+</span><span class='line'>sudo -E gem update --system
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>-E</code> is significant so the variable is available via
+<code>sudo</code>. Without this variable set, this command will warn noisily
+that you should know what you&rsquo;re doing, and what this is up
+to. Personally, I&rsquo;m fine with RubyGems 1.3.7, as that is the version
+that the Chef <code>gem_package</code> provider uses for the API. With the
+default RubyGems, you also get binaries in <code>/usr/local/bin</code>, rather than
+the awkward <code>/var/lib/ruby</code> location in earlier versions.</p>
+
+<p>These changes are a result of work that has been going in
+<a href="http://wiki.debian.org/Teams/Ruby/Packaging">Debian Wheezy by the Ruby packaging team</a>,
+kicked off by
+<a href="http://lists.debian.org/debian-devel/2011/03/msg00210.html">Lucas Nussbaum</a>.</p>
+
+<p>That said, let&rsquo;s put this to use so we can have Chef running under the
+Ruby 1.9.2 available via APT.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo apt-get install ruby1.9.1 ruby1.9.1-dev build-essential
+</span><span class='line'>Reading package lists... Done
+</span><span class='line'>Building dependency tree
+</span><span class='line'>Reading state information... Done
+</span><span class='line'>build-essential is already the newest version.
+</span><span class='line'>Suggested packages:
+</span><span class='line'>  ruby1.9.1-examples ri1.9.1 graphviz
+</span><span class='line'>The following NEW packages will be installed:
+</span><span class='line'>  libruby1.9.1 ruby1.9.1 ruby1.9.1-dev
+</span><span class='line'>0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+</span><span class='line'>Need to get 0 B/5,027 kB of archives.
+</span><span class='line'>After this operation, 19.5 MB of additional disk space will be used.
+</span><span class='line'>Selecting previously deselected package libruby1.9.1.
+</span><span class='line'><span class="o">(</span>Reading database ... 141637 files and directories currently installed.<span class="o">)</span>
+</span><span class='line'>Unpacking libruby1.9.1 <span class="o">(</span>from .../libruby1.9.1_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
+</span><span class='line'>Selecting previously deselected package ruby1.9.1.
+</span><span class='line'>Unpacking ruby1.9.1 <span class="o">(</span>from .../ruby1.9.1_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
+</span><span class='line'>Selecting previously deselected package ruby1.9.1-dev.
+</span><span class='line'>Unpacking ruby1.9.1-dev <span class="o">(</span>from .../ruby1.9.1-dev_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
+</span><span class='line'>Processing triggers <span class="k">for </span>man-db ...
+</span><span class='line'>Setting up libruby1.9.1 <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
+</span><span class='line'>Setting up ruby1.9.1 <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
+</span><span class='line'>update-alternatives: using /usr/bin/gem1.9.1 to provide /usr/bin/gem <span class="o">(</span>gem<span class="o">)</span> in auto mode.
+</span><span class='line'>update-alternatives: using /usr/bin/ruby1.9.1 to provide /usr/bin/ruby <span class="o">(</span>ruby<span class="o">)</span> in auto mode.
+</span><span class='line'>Setting up ruby1.9.1-dev <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
+</span><span class='line'>Processing triggers <span class="k">for </span>libc-bin ...
+</span><span class='line'>ldconfig deferred processing now taking place
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One of Chef&rsquo;s dependency gems is <code>json</code>, which has native C
+extensions, so the development headers for Ruby, and build tools are
+required (though already installed on my system).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ruby --version
+</span><span class='line'>ruby 1.9.2p290 <span class="o">(</span>2011-07-09 revision 32553<span class="o">)</span> <span class="o">[</span>x86_64-linux<span class="o">]</span>
+</span><span class='line'>% gem --version
+</span><span class='line'>1.3.7
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, I can install Chef as a RubyGem.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo gem install chef
+</span><span class='line'>Building native extensions.  This could take a <span class="k">while</span>...
+</span><span class='line'><span class="o">[</span>Version 0.7.8<span class="o">]</span> <span class="nb">test </span>suite cleanup <span class="o">(</span>eliminated some race conditions related to queue.message_count<span class="o">)</span>
+</span><span class='line'>Building native extensions.  This could take a <span class="k">while</span>...
+</span><span class='line'>Successfully installed mixlib-config-1.1.2
+</span><span class='line'>Successfully installed mixlib-cli-1.2.2
+</span><span class='line'>Successfully installed mixlib-log-1.3.0
+</span><span class='line'>Successfully installed mixlib-authentication-1.1.4
+</span><span class='line'>Successfully installed yajl-ruby-1.1.0
+</span><span class='line'>Successfully installed systemu-2.2.0
+</span><span class='line'>Successfully installed ohai-0.6.10
+</span><span class='line'>Successfully installed mime-types-1.17.2
+</span><span class='line'>Successfully installed rest-client-1.6.7
+</span><span class='line'>Successfully installed bunny-0.7.8
+</span><span class='line'>Successfully installed json-1.5.2
+</span><span class='line'>Successfully installed polyglot-0.3.3
+</span><span class='line'>Successfully installed treetop-1.4.10
+</span><span class='line'>Successfully installed net-ssh-2.1.4
+</span><span class='line'>Successfully installed net-ssh-gateway-1.1.0
+</span><span class='line'>Successfully installed net-ssh-multi-1.1
+</span><span class='line'>Successfully installed erubis-2.7.0
+</span><span class='line'>Successfully installed moneta-0.6.0
+</span><span class='line'>Successfully installed highline-1.6.8
+</span><span class='line'>Successfully installed uuidtools-2.1.2
+</span><span class='line'>Successfully installed chef-0.10.4
+</span><span class='line'>21 gems installed
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And running Chef just works:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo chef-client
+</span><span class='line'><span class="o">[</span>Thu, 24 Nov 2011 14:02:38 -0700<span class="o">]</span> INFO: *** Chef 0.10.4 ***
+</span><span class='line'>...
+</span><span class='line'><span class="o">[</span>Thu, 24 Nov 2011 14:02:50 -0700<span class="o">]</span> INFO: Chef Run <span class="nb">complete </span>in 9.862972181 seconds
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The results of the node object on the Chef Server:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% knife node show virt1test -a languages.ruby
+</span><span class='line'>languages.ruby:
+</span><span class='line'>  bin_dir:        /usr/bin
+</span><span class='line'>  gem_bin:        /usr/bin/gem1.9.1
+</span><span class='line'>  gems_dir:       /var/lib/gems/1.9.1
+</span><span class='line'>  host:           x86_64-pc-linux-gnu
+</span><span class='line'>  host_cpu:       x86_64
+</span><span class='line'>  host_os:        linux-gnu
+</span><span class='line'>  host_vendor:    pc
+</span><span class='line'>  platform:       x86_64-linux
+</span><span class='line'>  release_date:   2011-07-09
+</span><span class='line'>  ruby_bin:       /usr/bin/ruby1.9.1
+</span><span class='line'>  target:         x86_64-pc-linux-gnu
+</span><span class='line'>  target_cpu:     x86_64
+</span><span class='line'>  target_os:      linux
+</span><span class='line'>  target_vendor:  pc
+</span><span class='line'>  version:        1.9.2
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Overall, I&rsquo;m happy with the changes that the Debian Ruby Packaging
+Team has made, and I&rsquo;m glad to see these come to Ubuntu in
+11.10+. It&rsquo;s not the absolute latest version available, but this is
+good forward progress for binary Linux distributions. I also like that
+the alternatives system is used, so users could choose to install and
+use other Ruby interpreters. Hopefully these changes quell some of the
+arguments about Debian and Ubuntu and their handling of Ruby.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-11-24T00:16:00-07:00" pubdate data-updated="true">Nov 24<span>th</span>, 2011</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2011/11/21/chef-on-windows-htpc/" title="Previous Post: Chef on Windows HTPC">&laquo; Chef on Windows HTPC</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2012/01/02/switching-to-dnsimple/" title="Next Post: Switching to DNSimple">Switching to DNSimple &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2011/11/24/ruby-in-ubuntu-11-dot-10/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2011/11/24/ruby-in-ubuntu-11-dot-10/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

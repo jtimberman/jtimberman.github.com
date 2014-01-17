@@ -1,0 +1,309 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Update to Managing my Workstations - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="It has been a few months and several thousand page views since my original post on how I manage my workstations with Chef. I have made some changes &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2011/09/04/update-to-managing-my-workstations">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Update to Managing My Workstations</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-04T00:00:00-06:00" pubdate data-updated="true">Sep 4<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>It has been a few months and several thousand page views since my original post on how I <a href="http://bit.ly/guCtmD" title="Managing My Workstations with Chef" target="_blank">manage my workstations with Chef</a>. I have made some changes to my repository, and have a few additional notes for working with Mac OS X Lion. I also added a new system in my network, an iMac.</p>
+<h2>Mac OS X Cookbook</h2>
+<p>First, I would like to point out the cookbook I created, <a href="http://ckbk.it/mac_os_x" title="Mac OS X Cookbook" target="_blank">mac_os_x</a>. In the original post, I discussed using Pivotal Lab&#8217;s workstation recipes, which use the Mac OS X user defaults system to update system preferences from the command-line (with an execute resource). One of the first things I did in the mac_os_x cookbook is create a lightweight resource and provider for managing user defaults. It can be used, for example, like this:</p>
+<div class="CodeRay">
+  <div class="code"><pre>mac_os_x_userdefaults &quot;dont show hard drives on the desktop&quot; do
+  domain &quot;com.apple.finder&quot;
+  key &quot;ShowHardDrivesOnDesktop&quot;
+  value &quot;false&quot;
+  type &quot;bool&quot;
+end</pre></div>
+</div>
+
+<p>While this does involve more typing than just entering the command, it has a couple advantages. First, it is easier to read for people not totally familiar with the defaults command. Second, behind the scenes it will check if the setting is already set and not update the resource if it isn&#8217;t. This isn&#8217;t a huge deal in terms of system resource usage, but depending on your Chef setup might end up with extra reporting on things that didn&#8217;t need to change if you&#8217;re using a report handler, which <a href="http://bit.ly/pdMawh" title="A Simple Report Handler" target="_blank">I do use</a>.</p>
+<p>This cookbook also includes a lightweight resource/provider for managing plist preferences files for <code>~/Library/Preferences</code>. All plists in OS X can be manipulated through the defaults system, but it can be cumbersome for highly customized applications such as your Adium or 1Password configuration. Usage is very simple:</p>
+<div class="CodeRay">
+  <div class="code"><pre>mac_os_x_plist_file &quot;ws.agile.1Password.plist&quot;</pre></div>
+</div>
+
+<p>This is in my local <a href="http://ckbk.it/1password" title="1Password Cookbook" target="_blank">1password cookbook</a>, which has the file in <code>files/default/ws.agile.1Password.plist</code>. If I make modifications to the preferences, I do have to copy it over to the cookbook and re-upload to the Chef Server, but since I now have 4 computers to change preferences on, this is much easier than remembering everywhere I clicked. I use this for managing my preferences for <a href="http://ckbk.it/ghmac" title="GitHub for Mac" target="_blank">ghmac (GitHub for Mac)</a>, <a href="http://ckbk.it/iterm2" target="_blank">iterm2</a> and alfredapp.</p>
+<h2>Mac OS X Lion</h2>
+<p>Lion brought a lot of changes. In particular along with Xcode 4, Apple changed the gcc compiler to llvm. I&#8217;m not a C programmer, and don&#8217;t really understand the differences yet, I just know that a number of things in <a href="http://github.com/mxcl/homebrew">Homebrew</a> fail to build. The main thing I installed with Homebrew that wasn&#8217;t working with Lion is <a href="http://bit.ly/jIYjkc">Emacs</a>. I actually only have Lion on my iMac, so I haven&#8217;t updated any recipes for installing it via Chef. In fact, I actually removed it from my &#8220;workstation&#8221; recipe and *gasp* installed it manually. The story there is enough for another post though, so stay tuned and I&#8217;ll write up my experience.</p>
+<p>Relevant to how I manage workstations with Chef, I had to make sure that on Lion, I take care of some additional new preferences using my handy-dandy &#8220;mac_os_x_userdefaults&#8221; LWRP. These are in the mac_os_x cookbook recipe, &#8220;lion_tweaks.&#8221; In my workstation recipe, I include this one only on Lion.</p>
+<h2>Conclusion</h2>
+<p>If you haven&#8217;t read it yet, go back and read my post on how I <a href="http://bit.ly/guCtmD" title="Managing My Workstations with Chef" target="_blank">manage my workstations with Chef</a>. I hope if you&#8217;re using Chef to manage a Mac that the <a href="http://ckbk.it/mac_os_x" title="Mac OS X Cookbook" target="_blank">mac_os_x</a> cookbook is useful to you. Also, stay tuned for an update later this week about my experiences installing Emacs on Lion.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-04T00:00:00-06:00" pubdate data-updated="true">Sep 4<span>th</span>, 2011</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2011/09/03/guide-to-writing-chef-cookbooks/" title="Previous Post: Guide to Writing Chef Cookbooks">&laquo; Guide to Writing Chef Cookbooks</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2011/09/29/blog-moved-to-github-pages/" title="Next Post: Blog Moved to GitHub Pages">Blog Moved to GitHub Pages &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

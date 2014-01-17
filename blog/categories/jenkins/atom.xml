@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: jenkins | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/jenkins/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Test Kitchen and Jenkins]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/08/test-kitchen-and-jenkins/"/>
+    <updated>2013-05-08T23:53:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/08/test-kitchen-and-jenkins</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve been working more with test-kitchen 1.0 alpha lately. The most
+recent thing I&rsquo;ve done is set up a Jenkins build server to run
+test-kitchen on cookbooks. This post will describe how I did this for
+my own environment, and how you can use my new test-kitchen cookbook
+in yours&hellip; if you&rsquo;re using Jenkins, anyway.</p>
+
+<p>This is all powered by a relatively simple cookbook, and some
+click-click-clicking in the Jenkins UI. I&rsquo;ll walk through what I did
+to set up my Jenkins system.</p>
+
+<p>First, I started with Debian 7.0 (stable, released this past weekend).
+I installed the OS on it, and then bootstrapped with Chef. The initial
+test was to make sure everything installed correctly, and the commands
+were functioning. This was done in a VM, and is now handled by
+test-kitchen itself (how meta!) in the cookbook, kitchen-jenkins.</p>
+
+<p>The cookbook, <a href="http://ckbk.it/kitchen-jenkins">kitchen-jenkins</a> is
+available on the Chef Community site. I started with a recipe, but
+extracted it to a cookbook to make it easier to share with you all.
+This is essentially a site cookbook that I use to customize my Jenkins
+installation so I can run test-kitchen builds.</p>
+
+<p>I apply the recipe with a role, because I love the roles primitive in
+Chef :&ndash;). Here is the role I&rsquo;m using:</p>
+
+<p>```javascript
+{
+  &ldquo;name&rdquo;: &ldquo;jenkins&rdquo;,
+  &ldquo;description&rdquo;: &ldquo;Jenkins Build Server&rdquo;,
+  &ldquo;run_list&rdquo;: [</p>
+
+<pre><code>"recipe[kitchen-jenkins]"
+</code></pre>
+
+<p>  ],
+  &ldquo;default_attributes&rdquo;: {</p>
+
+<pre><code>"jenkins": {
+  "server": {
+    "home": "/var/lib/jenkins",
+    "plugins": ["git-client", "git"],
+    "version": "1.511",
+    "war_checksum": "7e676062231f6b80b60e53dc982eb89c36759bdd2da7f82ad8b35a002a36da9a"
+  }
+}
+</code></pre>
+
+<p>  },
+  &ldquo;json_class&rdquo;: &ldquo;Chef::Role&rdquo;,
+  &ldquo;chef_type&rdquo;: &ldquo;role&rdquo;
+}
+```</p>
+
+<p>The run list is only slightly different here than my actual role, I
+have a few other things in the run list, which are other site-specific
+recipes. Don&rsquo;t worry about those now. The jenkins attributes are set
+to ensure the right plugins I need are available, and the right
+version of jenkins is installed.</p>
+
+<p>(I&rsquo;m going to leave out the details such as uploading cookbooks and
+roles, if you&rsquo;re interested in test-kitchen, I&rsquo;ll assume you&rsquo;ve got
+that covered :&ndash;).)</p>
+
+<p>Once Chef completes on the Jenkins node, I can reach the Jenkins UI,
+conveniently enough, via &ldquo;<a href="http://jenkins:8080">http://jenkins:8080</a>&rdquo; (because I&rsquo;ve made a
+DNS entry, of course). The next release of the Jenkins cookbook will
+have a resource for managing jobs, but for now I&rsquo;m just going to
+create them in the webui.</p>
+
+<p>For this example, I want to have two kinds of cookbook testing jobs.
+The first, is to simply run foodcritic and fail on any correctness
+matches. Second, I want to actually run test-kitchen.</p>
+
+<p>A foodcritic job is simple:</p>
+
+<ol>
+<li>New job &ndash;> Build a free-style software project
+&ldquo;foodcritic-COOKBOOK&rdquo;.</li>
+<li>Source Code Management &ndash;> Git, supply the repository and the master
+branch.</li>
+<li>Set a build trigger to Poll SCM every 5 minutes, once an hour,
+whenever you like.</li>
+<li>Add a build step to execute a shell, &ldquo;foodcritic . -f correctness&rdquo;</li>
+</ol>
+
+
+<p>I created a view for foodcritic jobs, and added them all to the view
+for easy organizing.</p>
+
+<p>Next, I create a test-kitchen job:</p>
+
+<ol>
+<li>New job &ndash;> Copy existing job &ldquo;foodcritic-COOKBOOK&rdquo;, name the new
+job &ldquo;test-COOKBOOK&rdquo;.</li>
+<li>Uncheck Poll SCM, check &ldquo;Build after other projects are built&rdquo; and
+enter &ldquo;foodcritic-COOKBOOK&rdquo;.</li>
+<li>Replace the foodcritic command in the build shell command with
+&ldquo;kitchen test&rdquo;.</li>
+</ol>
+
+
+<p>Now, the test kitchen test will only run if the foodcritic build
+succeeds. If the cookbook has any correctness lint errors, then the
+foodcritic build fails, and the kitchen build won&rsquo;t run. This will
+help conserve resources.</p>
+
+<p>Hopefully the <code>kitchen-jenkins</code> cookbook is helpful and this blog post
+will give you some ideas how to go about adding cookbook tests to your
+CI system, even if it&rsquo;s not Jenkins.</p>
+]]></content>
+  </entry>
+  
+</feed>

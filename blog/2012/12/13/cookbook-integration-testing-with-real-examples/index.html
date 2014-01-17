@@ -1,0 +1,773 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Cookbook Integration Testing With Real Examples - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="This blog post starts with a gist,
+and a
+tweet.
+However, that isn&rsquo;t the whole story. Read on&hellip; Today I released version 1.6.0 of
+Opscode& &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2012/12/13/cookbook-integration-testing-with-real-examples">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Cookbook Integration Testing With Real Examples</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-13T20:54:00-07:00" pubdate data-updated="true">Dec 13<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This blog post starts with a <a href="https://gist.github.com/4281314">gist</a>,
+and a
+<a href="https://twitter.com/jtimberman/status/279380189287436289">tweet</a>.
+However, that isn&rsquo;t the whole story. Read on&hellip;</p>
+
+<p>Today I released version 1.6.0 of
+<a href="http://community.opscode.com/cookbooks/apt">Opscode&rsquo;s apt cookbook</a>. The
+cookbook itself needed better coverage for testing in Test Kitchen.
+This post will describe these additions to the cookbook, including how
+one of the test recipes can actually be used for actual production
+use. My goal is to explain a bit about how we go about testing with
+Test Kitchen, and provide some real world examples.</p>
+
+<p>TL;DR &ndash;
+<a href="https://github.com/opscode-cookbooks/apt/commit/9996510bab27a9ea5f17e2f6362151dcbe708e89">This commit has all the code</a>.</p>
+
+<h1>Kitchenfile</h1>
+
+<p>First, the Kitchenfile for the project looked like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apt&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">runtimes</span> <span class="o">[]</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is outdated as far as Kitchenfiles goes. It still has the empty
+array runtimes setting which prevents Test Kitchen from attempting to
+<a href="http://tickets.opscode.com/browse/KITCHEN-4">run additional tests under RVM</a>.
+We&rsquo;ll remove this line, and update it for supporting the
+configurations of the recipes and features we want to test. The
+cookbook itself has three recipes:</p>
+
+<ul>
+<li>default.rb</li>
+<li>cacher-client.rb</li>
+<li>cacher-ng.rb</li>
+</ul>
+
+
+<p>By default, with no configurations defined in a Kitchenfile,
+test-kitchen will run the default recipe (using Chef Solo under
+Vagrant). This is useful in the common case, but we also want to
+actually test other functionality in the cookbook. In addition to the
+recipes, we want to verify that the LWRPs will do what we intend.</p>
+
+<p>I updated the Kitchenfile with the following content:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apt&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">configuration</span> <span class="s2">&quot;default&quot;</span>
+</span><span class='line'>  <span class="n">configuration</span> <span class="s2">&quot;cacher-ng&quot;</span>
+</span><span class='line'>  <span class="n">configuration</span> <span class="s2">&quot;lwrps&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A configuration can correspond to a recipe (<code>default</code>, <code>cacher-ng</code>),
+but it can also be arbitrarily named. This is a name used by kitchen
+test. The <code>cacher-client</code> recipe isn&rsquo;t present because
+<code>recipe[apt::cacher-ng]</code> includes it, and getting the test to work,
+where the single node is a cacher client to itself, was prone to
+error. &ldquo;I assure you, it works&rdquo; :&ndash;). We&rsquo;ll look at this later anyway.</p>
+
+<p>With the above Kitchenfile, kitchen test will start up the Vagrant
+VMs and attempt to run Chef Solo with the recipes named by the
+configuration. This is a good start, but we want to actually run some
+minitest-chef tests. These will be created inside a &ldquo;test&rdquo; cookbook
+included with this cookbook. I created a cookbook named <code>apt_test</code>
+under <code>./test/kitchen/cookbooks</code> using:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>knife cookbook create apt_test -o ./test/kitchen/cookbooks
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This creates the cookbook scaffolding like normal. I cleaned up the
+contents of the directory to contain what I needed to start:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>test/kitchen/cookbooks//apt_test/metadata.rb
+</span><span class='line'>test/kitchen/cookbooks//apt_test/README.md
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes/cacher-ng.rb
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes/default.rb
+</span><span class='line'>test/kitchen/cookbooks//apt_test/recipes/lwrps.rb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The metadata.rb is as you&rsquo;d expect, it contains the name, a version,
+maintainer information and a description. The README simply mentions
+that this is a test cookbook for the parent project. The recipes are
+the interesting part. Let&rsquo;s address them in the order of the
+configurations in the Kitchenfile.</p>
+
+<h1>Configuration: default</h1>
+
+<p>First, the default recipe in the test cookbook. This is simply going
+to perform an <code>include_recipe "apt::default"</code>. The way test kitchen
+runs, it will actually have the following run list for Chef Solo:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>[test-kitchen::default, minitest-handler, apt_test::default, apt::default]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>test-kitchen</code> sets up some essential things for Test Kitchen itself.
+<code>minitest-handler</code> is the recipe that sets up minitest-chef-handler to
+run post-convergence tests. <code>apt_test::default</code> is the &ldquo;test&rdquo; recipe
+for this configuration, and finally <code>apt::default</code> is the cookbook&rsquo;s
+recipe for this configuration named &ldquo;default&rdquo;.</p>
+
+<p>Had we not done anything else here, the results are the same as simply
+running test kitchen with the original Kitchenfile (with runtimes,
+instead of configurations defined).</p>
+
+<h2>Minitest: default recipe</h2>
+
+<p>There are now minitest-chef tests for each configuration. The default
+recipe provides some &ldquo;apt-get update&rdquo; executes, and also creates a
+directory that can be used for preseeding packages. We&rsquo;ll simply test
+that the preseeding directory exists. We could probably check that the
+cache is updated, but since this cookbook has worked for almost 4
+years w/o issue for <code>apt-get update</code> we&rsquo;ll trust it continues working
+:&ndash;). Here&rsquo;s the test (ignoring the boilerplate):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;creates the preseeding directory&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">directory</span><span class="p">(</span><span class="s1">&#39;/var/cache/local/preseeding&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">must_exist</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When Chef runs, it will run this test:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>apt_test::default#test_0001_creates_the_preseeding_directory = 0.00 s = .
+</span><span class='line'>Finished tests in 0.007988s, 125.1808 tests/s, 125.1808 assertions/s.
+</span><span class='line'>1 tests, 1 assertions, 0 failures, 0 errors, 0 skips
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Configuration: cacher-ng</h1>
+
+<p>Next, Test Kitchen runs the <code>cacher-ng</code> configuration. The recipe in
+the <code>apt_test</code> cookbook simply includes the <code>apt::cacher-ng</code> recipe.
+The run list in Chef Solo looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>[test-kitchen::default, minitest-handler, apt_test::cacher-ng, apt::cacher-ng]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>apt::cacher-ng</code> recipe also includes the client recipe, but
+basically does nothing unless the <code>cacher_ipaddress</code> attribute is set,
+or if we can search using a Chef Server (which Solo can&rsquo;t, of course).</p>
+
+<h2>Minitest: cacher-ng recipe</h2>
+
+<p>The meat of the matter for the <code>cacher-ng</code> recipe is running the
+<code>apt-cacher-ng</code> service, so we&rsquo;ve written a minitest test for this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;runs the cacher service&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">service</span><span class="p">(</span><span class="s2">&quot;apt-cacher-ng&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">must_be_running</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And when Chef runs the test:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>apt_test::default#test_0001_runs_the_cacher_service = 0.06 s = .
+</span><span class='line'>Finished tests in 0.067250s, 14.8698 tests/s, 14.8698 assertions/s.
+</span><span class='line'>1 tests, 1 assertions, 0 failures, 0 errors, 0 skips
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Configuration: lwrps</h1>
+
+<p>Finally, we have our custom configuration that doesn&rsquo;t correspond to a
+recipe in the <code>apt</code> cookbook, <code>lwrps</code>. This configuration instead is
+to do a real-world integration test that the LWRPs actually do what
+they&rsquo;re supposed to.</p>
+
+<h2>Recipe: apt_test::lwrps</h2>
+
+<p>The recipe itself looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">include_recipe</span> <span class="s2">&quot;apt&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">apt_repository</span> <span class="s2">&quot;opscode&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">uri</span> <span class="s2">&quot;http://apt.opscode.com&quot;</span>
+</span><span class='line'>  <span class="n">components</span> <span class="o">[</span><span class="s2">&quot;main&quot;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">distribution</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;lsb&#39;</span><span class="o">][</span><span class="s1">&#39;codename&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">-0.10&quot;</span>
+</span><span class='line'>  <span class="n">key</span> <span class="s2">&quot;2940ABA983EF826A&quot;</span>
+</span><span class='line'>  <span class="n">keyserver</span> <span class="s2">&quot;pgpkeys.mit.edu&quot;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:add</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">apt_preference</span> <span class="s2">&quot;chef&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">pin</span> <span class="s2">&quot;version 10.16.2-1&quot;</span>
+</span><span class='line'>  <span class="n">pin_priority</span> <span class="s2">&quot;700&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>apt</code> recipe is included because otherwise, we may not be able to
+notify the <code>apt-get update</code> resource to execute when the new sources.list
+is dropped off.</p>
+
+<p>Next, we use Opscode&rsquo;s very own apt repository as an example because
+we can rely on that existing. When Test Kitchen runs, it will actually
+write out the apt repository configuration file to
+<code>/etc/apt/sources.list.d/opscode.list</code>, but more on that in a minute.</p>
+
+<p>Finally, we&rsquo;re going to write out an apt preferences file for pinning
+the Chef package. Currently, Chef is actually packaged at various
+versions in Ubuntu releases:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% rmadison chef
+</span><span class='line'>      chef | 0.7.10-0ubuntu1.1 | lucid/universe | source, all
+</span><span class='line'>      chef | 0.8.16-4.2 | oneiric/universe | source, all
+</span><span class='line'>      chef |  10.12.0-2 | quantal/universe | source, all
+</span><span class='line'>      chef |  10.12.0-2 | raring/universe | source, all
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So by adding the Opscode APT repository, and pinning Chef, we can
+ensure that we&rsquo;re going to have the correct version of Chef installed
+as a package, if we were installing Chef as a package from APT :).</p>
+
+<p>When Chef Solo runs, here is the run list:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>[test-kitchen::default, minitest-handler, apt_test::lwrps]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice it doesn&rsquo;t have &ldquo;<code>apt::lwrps</code>&rdquo;, since that isn&rsquo;t a recipe in
+the apt cookbook.</p>
+
+<h2>Minitest: lwrps recipe</h2>
+
+<p>The minitest tests for the lwrps configuration and recipe look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;creates the Opscode sources.list&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">file</span><span class="p">(</span><span class="s2">&quot;/etc/apt/sources.list.d/opscode.list&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">must_exist</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;adds the Opscode package signing key&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">opscode_key</span> <span class="o">=</span> <span class="n">shell_out</span><span class="p">(</span><span class="s2">&quot;apt-key list&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">assert</span> <span class="n">opscode_key</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;Opscode Packages &lt;packages@opscode.com&gt;&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;creates the correct pinning preferences for chef&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">chef_policy</span> <span class="o">=</span> <span class="n">shell_out</span><span class="p">(</span><span class="s2">&quot;apt-cache policy chef&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">assert</span> <span class="n">chef_policy</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;Package pin: 10.16.2-1&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The first test simply asserts that the Opscode APT sources.list is
+present. We could elaborate on this by verifying that its content is
+correct, but for now we&rsquo;re going to trust that the declarative
+resource in the recipe is, ahem, declared properly.</p>
+
+<p>Next, we run the <code>apt-key</code> command to show the available GPG keys in
+the APT trusted keyring. This will have the correct Opscode Packages
+key if it was added correctly.</p>
+
+<p>Finally, we test that the package pinning for the Chef package is
+correct. Successful output of the tests looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>apt_test::default#test_0003_creates_the_correct_pinning_preferences_for_chef = 0.05 s = .
+</span><span class='line'>apt_test::default#test_0002_adds_the_opscode_package_signing_key = 0.05 s = .
+</span><span class='line'>apt_test::default#test_0001_creates_the_opscode_sources_list = 0.00 s = .
+</span><span class='line'>Finished tests in 0.112725s, 26.6133 tests/s, 26.6133 assertions/s.
+</span><span class='line'>3 tests, 3 assertions, 0 failures, 0 errors, 0 skips
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>The Real World Bits</h1>
+
+<p>The tests hide some of the detail. What does this actually look like
+on a real system? Glad you asked!</p>
+
+<p>Here&rsquo;s the sources.list for Opscode&rsquo;s APT repository.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ cat /etc/apt/sources.list.d/opscode.list
+</span><span class='line'>deb     http://apt.opscode.com precise-0.10 main
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, the apt-key content:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ sudo apt-key list
+</span><span class='line'>(snip, ubuntu&#39;s keys)
+</span><span class='line'>pub   1024D/83EF826A 2009-07-24
+</span><span class='line'>uid                  Opscode Packages &lt;packages@opscode.com&gt;
+</span><span class='line'>sub   2048g/3B6F42A0 2009-07-24
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the grand finale, the pinning preferences:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ apt-cache policy chef
+</span><span class='line'>chef:
+</span><span class='line'>  Installed: 10.14.4-2.ubuntu.11.04
+</span><span class='line'>  Candidate: 10.16.2-1
+</span><span class='line'>  Package pin: 10.16.2-1
+</span><span class='line'>  Version table:
+</span><span class='line'>     10.16.2-1 700
+</span><span class='line'>        500 http://apt.opscode.com/ precise-0.10/main amd64 Packages
+</span><span class='line'> *** 10.14.4-2.ubuntu.11.04 700
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I used <a href="https://github.com/opscode/bento">Opscode&rsquo;s bento box</a> for
+Ubuntu 12.04, which comes with the &lsquo;omnibus&rsquo; Chef package version
+10.14.4(-2.ubuntu.11.04). In order to install the newer Chef package
+and demonstrate the pinning, I&rsquo;ll first remove it:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ sudo dpkg --purge chef
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, I install from the Opscode APT repository:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ sudo apt-get install chef
+</span><span class='line'>...
+</span><span class='line'>Setting up chef (10.16.2-1) ...
+</span><span class='line'>...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the package is installed:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@ubuntu-12-04:~$ apt-cache policy chef
+</span><span class='line'>chef:
+</span><span class='line'>  Installed: 10.16.2-1
+</span><span class='line'>  Candidate: 10.16.2-1
+</span><span class='line'>  Package pin: 10.16.2-1
+</span><span class='line'>  Version table:
+</span><span class='line'> *** 10.16.2-1 700
+</span><span class='line'>        500 http://apt.opscode.com/ precise-0.10/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Currently the omnibus packages are <em>NOT</em> in the APT repository, since
+they do not have additional dependencies they are installed simply
+with dpkg. Don&rsquo;t use this particular recipe if you&rsquo;re using the
+Omnibus packages. Instead, just marvel at the utility of this. Perhaps
+instead, use the LWRPs in the apt cookbook to set up your own local
+APT repository and pinning preferences.</p>
+
+<h1>Conclusion</h1>
+
+<p>Test Kitchen is a framework for isolated integration testing in
+individual projects. As such, it has a lot of features, capabilities
+and also moving parts. Hopefully this post helps you understand some
+of them, and see how it works, and how you may be able to use it for
+yourself. Or, if you want, simply grab the <code>apt_test::lwrps</code> recipe&rsquo;s
+contents and stick them in your own cookbook that manages Chef package
+installation and move along. :&ndash;)</p>
+
+<p>All the code used in this post is available in the <a href="https://github.com/opscode-cookbooks/apt/">Opscode Cookbook&rsquo;s
+organization &ldquo;apt&rdquo; repository</a>.</p>
+
+<h2>Further Reading</h2>
+
+<ul>
+<li><a href="https://github.com/opscode/test-kitchen">Learn about Test Kitchen</a></li>
+<li><a href="https://github.com/calavera/minitest-chef-handler">More about Minitest-Chef</a></li>
+<li><a href="https://github.com/opscode-cookbooks/apt/commit/9996510bab27a9ea5f17e2f6362151dcbe708e89">apt cookbook commit</a></li>
+<li><a href="http://www.opscode.com/blog/2012/07/20/on-the-level-testing-your-infrastructure/">BDD Testing Infrastructure</a></li>
+</ul>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-13T20:54:00-07:00" pubdate data-updated="true">Dec 13<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/chef-test-kitchen/'>chef,test-kitchen</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/11/29/some-knife-plugins/" title="Previous Post: Some Knife Plugins">&laquo; Some Knife Plugins</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2012/12/29/process-supervision-solved-problem/" title="Next Post: Process Supervision: Solved Problem">Process Supervision: Solved Problem &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2012/12/13/cookbook-integration-testing-with-real-examples/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2012/12/13/cookbook-integration-testing-with-real-examples/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

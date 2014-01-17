@@ -1,0 +1,462 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Github Is Classy - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="Fact: GitHub is classy. This isn&rsquo;t just because
+Scott Chacon works there, either. Their
+handling of a security issue today was very &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2012/03/04/github-is-classy">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Github Is Classy</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-04T18:42:00-07:00" pubdate data-updated="true">Mar 4<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Fact: GitHub is classy. This isn&rsquo;t just because
+<a href="https://github.com/schacon">Scott Chacon</a> works there, either. Their
+handling of a security issue today was very professional. That said, I
+have some words to say about the issue itself and the aftermath, and
+things you as an application developer can do to help, and to avoid
+this kind of problem.</p>
+
+<p><em>Disclaimer: I&rsquo;m not an application developer. I am a sysadmin with a
+ diverse background in operating system security, including previously
+ held GSEC and GCUX certifications from the SANS Institute/GIAC.</em></p>
+
+<p><em>Second disclaimer: This is not an anti-Rails post. All web frameworks
+ need to be conscious of security, and take bug reports for security
+ issues seriously.</em></p>
+
+<h1>Issue</h1>
+
+<p><em>Update &ndash; Preface: I am not talking about a security vulnerability (a
+la an exploit) in Rails. I am talking about a feature that allows
+automatically generated code to do things that are not secure and it
+is apparently on purpose and by design. This is the wrong thing to
+do. Deny by default with whitelisting is the right thing to do.</em></p>
+
+<p>There is a security issue in
+<a href="https://github.com/rails/rails/issues/5228">Ruby on Rails</a>. The bug
+is closed, but I haven&rsquo;t dug into find out if the actual problem is
+fixed.</p>
+
+<p>The bug itself is very serious. It allows a malicious user to send
+arbitrary parameters to a Rails application without requiring
+whitelisting up front. In fact,
+<a href="https://github.com/rails/rails/pull/4062">three months ago an issue</a>
+was opened in the Rails project to force new applications to enforce
+whitelist mode by default. That bug was subsequently closed just a few
+days ago. I&rsquo;m not going to do an analysis of the issue itself, you can go
+read the linked tickets and do further research on the issue.</p>
+
+<p><em>Update</em> I missed clarifying this. There is a second issue at hand.
+ GitHub resolved the mass assignment bug by fixing their application.
+ The second issue is that they had a vulnerability in their public key
+ form update.</p>
+
+<h2>Resolution and Aftermath</h2>
+
+<p>You can read all about the initial resolution and retrospective on the
+<a href="https://github.com/blog/1068-public-key-security-vulnerability-and-mitigation">GitHub blog</a>.
+You can also read their
+<a href="https://github.com/blog/1069-responsible-disclosure-policy">follow-up post</a>
+on responsible disclosure.</p>
+
+<p>The manner in which they handled the situation is a class act: they
+behaved like professionals. Here&rsquo;s why:</p>
+
+<ul>
+<li>A user reported a problem with their app.</li>
+<li>They worked with the user to resolve the problem.</li>
+<li>The same user exploited another vulnerability to prove a point to
+the Rails project, which is against the GitHub terms of service.</li>
+<li>GitHub suspended the user&rsquo;s account in accordance with their terms
+of service.</li>
+</ul>
+
+
+<p>As an unauthorized breach of a computer system, what Egor Homakov did
+is illegal in the United States. It was also irresponsible and
+unprofessional. However, his intent was not malicious. I think GitHub
+did the right thing by giving him another chance in reinstating
+Mr. Homakov&rsquo;s account several hours after the incident.</p>
+
+<p>GitHub has issued two apologies about this incident. First for the
+vulnerability existing in the first place, and second for not being
+clear how customers and users can responsibly disclose security
+vulnerabilities. They also committed to doing a security audit of
+their code base.</p>
+
+<p>GitHub is classy.</p>
+
+<h1>Security</h1>
+
+<p>After the above, I feel compelled to say some more things about
+security in general. You are responsible for a lot of things regarding
+the web applications in your infrastructure. One of those is security,
+and you should do everything you can to write stable, secure code.</p>
+
+<p>In a hackernews thread about this incident, Yehuda Katz said,
+&ldquo;<a href="http://news.ycombinator.com/item?id=3664334">Not all security vulnerabilities can be protected automatically by a web framework</a>.&rdquo;</p>
+
+<p>That is a fact. However, web frameworks should provide sane, secure
+settings by default. Those settings should be modifiable by the
+end-user, the developer. If a developer wishes to disable those
+controls, they totally have that right. I think that they need to
+understand the potential risk that they are accepting, and what impact
+that might have on the business/organization implementing the
+application.</p>
+
+<p>This is <em>exactly</em> like the default setting of Red Hat Enterprise Linux
+to enable SELinux by default on new installations. Whether you love or
+hate this default, it is sane and secure. System administrators can
+then use the system as is, or disable SELinux if that is an acceptable
+level of risk.</p>
+
+<p>Clearly in this incident, it is <em>not</em> an acceptable level of risk for
+GitHub, as they have repaired their application. It would have better
+to do that long ago, but at least it&rsquo;s fixed now.</p>
+
+<p>Security and convenience are quite often polar opposites and mutually
+exclusive. This is not always the case, but it is true much of the
+time, if not most of the time. The choice for Rails to not have
+whitelisting by default is in favor of developer convenience. Yes, it
+is up to the developer to make their application secure, but that was
+already the case. This simply creates extra work for them to do so.</p>
+
+<p>Deny-all by default is the sane, correct and secure posture to take
+when building systems. This is the practice of many tools and
+operating system defaults &ndash; SELinux as mentioned, or &ldquo;no open ports&rdquo;
+per Ubuntu&rsquo;s practice. You don&rsquo;t have to agree with it, and you
+certainly can change it, but that doesn&rsquo;t change the fact that it is
+<em>correct</em> and <em>sane</em>.</p>
+
+<h2>Vulnerability Disclosure</h2>
+
+<p>There is an entire field in information technology devoted to
+vulnerability disclosure. This is typically done by people performing
+&ldquo;ethical hacking&rdquo; and is one thing done when a code base goes through
+a security audit. This is a field that has responsible professionals
+participating in a variety of companies, and if it sounds interesting
+to you, I recommend the variety of courses offered by the SANS
+Institute:</p>
+
+<ul>
+<li><a href="https://www.sans.org/security-training/web-app-penetration-testing-ethical-hacking-942-mid">Web Application Penetration Testing (SEC542)</a></li>
+<li><a href="https://www.sans.org/security-training/network-penetration-testing-ethical-hacking-937-mid">Network Penetration Testing (SEC560)</a></li>
+<li><a href="https://www.sans.org/security-training/advanced-penetration-testing-exploits-ethical-hacking-1517-mid">Advanced Penetration Testing (SEC660)</a></li>
+</ul>
+
+
+<h1>What You Can Do</h1>
+
+<p>First of all, understand the security guidelines and best practices
+for the programming language you&rsquo;re using. Doing things that are
+typesafe, or avoid buffer overflows, that kind of thing. Also
+understand and follow the security guideslines and best practices for
+the web framework you&rsquo;re using. The Ruby on Rails project has a fairly
+detailed
+<a href="http://guides.rubyonrails.org/security.html">security guide</a>. If
+you&rsquo;re taking shortcuts, understand the possible risks with that. If
+you don&rsquo;t know the risks, or understand the guidelines, please ask
+someone in the community for help.</p>
+
+<p>I strongly recommend you also learn the security guidelines and
+associated best practices for the operating system or distribution
+that your application will run on in production. If your organization
+has operations staff, I&rsquo;m sure they can help you learn and understand.
+If they don&rsquo;t, they&rsquo;re not doing their job :).</p>
+
+<p>Every organization and every application is different. The security
+implications are going to vary by industry. Talk to the business
+owners and find out what the level of security risk they are
+comfortable accepting.</p>
+
+<p>Above all, be a professional. Don&rsquo;t flippantly close security bugs.
+Don&rsquo;t be a dick on discussions about security topics.</p>
+
+<p>In other words, be classy. Like GitHub.</p>
+
+<p>Thank you.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-04T18:42:00-07:00" pubdate data-updated="true">Mar 4<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/02/26/xcode-command-line-tools/" title="Previous Post: Xcode Command Line Tools">&laquo; Xcode Command Line Tools</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2012/03/18/multivm-vagrantfile-for-chef/" title="Next Post: MultiVM Vagrantfile for Chef">MultiVM Vagrantfile for Chef &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2012/03/04/github-is-classy/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2012/03/04/github-is-classy/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

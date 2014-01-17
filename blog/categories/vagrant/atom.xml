@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: vagrant | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/vagrant/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Using Multiple Provisioners in Vagrant]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/08/10/vagrant-multiple-provisioners/"/>
+    <updated>2012-08-10T11:39:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/08/10/vagrant-multiple-provisioners</id>
+    <content type="html"><![CDATA[<p><strong>Update</strong> Chef 10.14 is
+  <a href="http://www.opscode.com/blog/2012/09/07/chef-10-14-0-released/">released</a>.
+  I removed the &ldquo;<code>--pre</code>&rdquo; from the gem install commands but otherwise
+  left this post, since it was written by Past Me.</p>
+
+<p>As you may be aware, the next release of Chef, 10.14, is in
+<a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-07/msg00021.html">beta testing</a>.
+Most publicly available baseboxes for <a href="http://vagrantup.com">Vagrant</a>
+aren&rsquo;t built for the beta. But perhaps you want to try it out?</p>
+
+<p>Vagrant to the rescue! Besides the Chef solo and client provisioners,
+Vagrant has a shell provisioner, too. It allows you to pass in an
+inline command, or a shell script. This example builds on my
+<a href="/blog/2012/03/18/multivm-vagrantfile-for-chef/">MultiVM Vagrantfile for Chef post</a>.
+You may wish to refer to the full file in that post for complete
+context.</p>
+
+<p>First, the shell provisioner line looks like this:</p>
+
+<p><code>ruby
+config.vm.provision :shell, :inline =&gt; "sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc"
+</code></p>
+
+<p>It goes in the config block. Remember that <code>cookbook_testers</code> is a
+hash of data about the multiple VMs I&rsquo;m using, so they would all get
+launched with this provisioner.</p>
+
+<p>```ruby
+Vagrant::Config.run do |global_config|
+  cookbook_testers.each_pair do |name, options|</p>
+
+<pre><code>global_config.vm.define name do |config|
+  ### Use shell for great justice!
+  config.vm.provision :shell, :inline =&gt; "sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc"
+  ### chef-client (allthethings)
+  config.vm.provision :chef_client do |chef|
+    # ... chef provisioner is the same as before
+  end
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>And now, a <code>vagrant up</code> on my Ubuntu 12.04 VM, with the less
+interesting output truncated:</p>
+
+<p><code>
+% vagrant up precise
+...
+[precise] Running provisioner: Vagrant::Provisioners::Shell...
+Successfully installed chef-10.14.0.beta.3
+1 gem installed
+[precise] Running provisioner: Vagrant::Provisioners::ChefClient...
+...
+[precise] Running chef-client...
+...
+[Fri, 10 Aug 2012 17:50:23 +0000] INFO: *** Chef 10.14.0.beta.3 ***
+...
+[Fri, 10 Aug 2012 17:50:37 +0000] INFO: Chef Run complete in 11.323208919 seconds
+</code></p>
+
+<p>One of the most compelling features of Chef 10.14 is the introduction
+of
+<a href="http://tickets.opscode.com/browse/CHEF-13">&ldquo;no-op&rdquo; or &ldquo;dry-run&rdquo; mode</a>,
+also called
+&ldquo;<a href="http://lists.opscode.com/sympa/arc/chef/2012-07/msg00025.html">Why Run Mode</a>&rdquo;.
+However, at this time, neither arbitrary command-line arguments nor why-run
+mode itself are supported in Vagrant. I opened a
+<a href="https://github.com/mitchellh/vagrant/pull/1067">pull request</a> for the
+former, which will allow the latter easily. Of course, vagrant is
+highly valuable for doing testing by <em>actually running</em> your recipes,
+but I think arbitrary command-line options will be a welcome feature
+for other purposes.</p>
+
+<p>Another use case for this particular method of using Vagrant
+provisioners is to update RubyGems inside an &ldquo;Omnibus&rdquo; full stack
+install, to resolve
+<a href="http://tickets.opscode.com/browse/CHEF-3295">this bug</a>, or
+<a href="http://tickets.opscode.com/browse/CHEF-2871">this request</a>.</p>
+
+<p><code>ruby
+config.vm.provision :shell, :inline =&gt; "sudo /opt/chef/embedded/bin/gem update --system"
+</code></p>
+
+<p>These two example commands can be combined in a single <code>:inline</code>, or
+as a shell script.</p>
+
+<p><code>ruby
+config.vm.provision :shell, :path =&gt; "gem-updater.sh"
+</code></p>
+
+<p>And the shell script, <code>gem-updater.sh</code> in the same directory as the Vagrantfile:</p>
+
+<p>```sh</p>
+
+<h1>!/bin/sh</h1>
+
+<p>sudo /opt/chef/embedded/bin/gem update &mdash;system
+sudo /opt/chef/embedded/bin/gem install chef &mdash;no-ri &mdash;no-rdoc
+```</p>
+]]></content>
+  </entry>
+  
+</feed>

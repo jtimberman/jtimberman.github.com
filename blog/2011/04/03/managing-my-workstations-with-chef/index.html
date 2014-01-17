@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Managing My Workstations with Chef - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="Update: New cookbook, Lion and more! This post describes how I use Chef and&nbsp;Opscode Hosted Chef&nbsp;to manage my workstations, Apple Macbooks. &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Managing My Workstations With Chef</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-04-03T00:00:00-06:00" pubdate data-updated="true">Apr 3<span>rd</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><em>Update: <a href="http://jtimberman.posterous.com/update-to-managing-my-workstations">New cookbook, Lion and more</a>!</em></p>
+<p>This post describes how I use <a href="http://wiki.opscode.com/display/chef/Home" title="Chef Wiki" target="_blank">Chef</a> and&nbsp;<a href="http://opscode.com/platform/" title="Opscode Platform" target="_blank">Opscode Hosted Chef</a>&nbsp;to manage my workstations, Apple Macbooks. I have three:</p>
+<ul>
+<li>Company issued Macbook Pro</li>
+<li>Personal Macbook Air</li>
+<li>Family Macbook Pro</li>
+</ul>
+<p>Note that while I do use this on my work laptop, Opscode has a different set of recipes to set up development and internal company workstations. At some point there may be a post on the <a href="http://www.opscode.com/blog" title="Opscode Blog" target="_blank">Opscode Blog</a>.</p>
+<p>Before I get started with Chef itself, I have to install a few things to &#8220;bootstrap&#8221; the systems to be ready. I&#8217;m not going to include the commands to install all these &#8220;pre-requisites&#8221;, as you can learn how to do that from their respective web sites.</p>
+<p><strong><span style="font-size: x-large;">Xcode 3.2 (or 4.0)</span></strong></p>
+<p>I wish I could purchase a Macbook with Xcode preinstalled. In fact, I would pay $50 to have this over iLife on new machines, so the $5 cost for version 4 is really minor. However, I don&#8217;t have any use for whatever 4.0 has to offer, since I only want Xcode because its the most sane way to get GCC and friends on OSX.</p>
+<p><a href="http://developer.apple.com/xcode/">http://developer.apple.com/xcode/</a></p>
+<p><strong><span style="font-size: x-large;">Ruby Version Manager</span></strong></p>
+<p>I want to use Ruby 1.9.2 instead of the default that comes with OSX, and RVM makes it easy to do that. I also like the gemset feature, which allows me to sandbox and play with various configurations of RubyGems.</p>
+<p><a href="http://rvm.beginrescueend.com">http://rvm.beginrescueend.com</a></p>
+<p><strong><span style="font-size: x-large;">Chef</span></strong></p>
+<p>I generally just install the latest released Chef gem from RubyGems.org once I have Ruby installed.</p>
+<p><a href="https://rubygems.org/gems/chef">https://rubygems.org/gems/chef</a></p>
+<p>Once Chef itself is installed, it&#8217;s time to get cooking! I have the following already set up:</p>
+<ul>
+<li>Opscode Community <a href="http://community.opscode.com/users/jtimberman" title="Joshua Timberman" target="_blank">userid</a>.</li>
+<li>Opscode Hosted Chef organization.</li>
+<li>Chef Repository</li>
+</ul>
+<p>Let&#8217;s take a look at what I put into the Chef Repository to configure my workstations. First, I created the repository and the listed components, then I upload everything to my Opscode Hosted Chef organization.</p>
+<p><span style="font-size: x-large;"><strong>Cookbooks</strong></span></p>
+<p>I have a number of cookbooks for my personal repository, but the relevant ones for workstations are:</p>
+<ul>
+<li><a href="http://community.opscode.com/cookbooks/dmg" title="dmg cookbook" target="_blank">dmg</a></li>
+<li><a href="http://community.opscode.com/cookbooks/homebrew" title="homebrew cookbook" target="_blank">homebrew</a></li>
+<li>workstation</li>
+</ul>
+<p>I wrote the dmg cookbook to automatically install OSX applications that are delivered to users via DMGs. After writing cookbooks for skype, and tunnelblick, I noticed some common patterns and abstracted those out to a lightweight resource and provider, &#8220;dmg_package&#8221;. This does the heavy lifting of:</p>
+<ol>
+<li>Retrieve a .dmg file from a remote URL.</li>
+<li>Mount the disk image.</li>
+<li>Copy the .app directory to /Applications.</li>
+<li>Unmount the disk image.</li>
+</ol>
+<p>The homebrew cookbook was written by&nbsp;<span style="line-height: 14px; color: #000000;"><a href="http://community.opscode.com/users/mathie" title="Graeme Mathieson" target="_blank">Graeme Mathieson</a>, and it will install Homebrew in /usr/local and use it as the default package provider on OSX.</span></p>
+<p><span style="line-height: 14px; color: #000000;">Both the dmg and homebrew cookbooks were downloaded to my local chef-repo with the &#8220;vendor&#8221; pattern supported by knife.</span></p>
+<p><span style="line-height: 14px; color: #000000;">The workstation cookbook consists of a number of recipes. Many of them contain commands lifted from Pivotal Labs experimental GitHub repository, <a href="https://github.com/pivotalexperimental/wschef" title="Pivotal Labs Experimental Chef Workstation Recipes" target="_blank">wschef</a>. I don&#8217;t use any of the scaffolding they wrote in that repository, but I grabbed lots of the executes. However, that repository <a href="https://github.com/pivotalexperimental/wschef/issues/3" title="No License for redistribution of wschef recipes" target="_blank">does not have any mention of a license</a>, so I haven&#8217;t published the workstation cookbook I use. I can publish the recipe I wrote, which will be part of the cookbook when the license of their recipes is sorted out.</span></p>
+<p><script src="https://gist.github.com/901008.js"></script></p>
+<p><span style="font-size: x-large;"><strong>Roles</strong></span></p>
+<p>I use two roles on my workstations that tell Chef what recipes to apply. First, is role[mac_os_x]:</p>
+<p><script src="https://gist.github.com/901013.js"></script></p>
+<p>Next is the actual workstation recipe.</p>
+<p><script src="https://gist.github.com/901012.js"></script></p>
+<p><strong><span style="font-size: x-large;">Data Bags</span></strong></p>
+<p>Chef is data driven, and I have written a data bag item for my workstation. It simply lists the gems, dmg&#8217;s and packages to install with the above recipe.</p>
+<p><script src="https://gist.github.com/901009.js"></script></p>
+<p><strong><span style="font-size: x-large;">Client Configuration</span></strong></p>
+<p>I run Chef as my normal user, so it will need to be able to write out cache and other files in a location my user has write access. I replace &#8220;workstation_hostname&#8221; for the node name depending on the host. For example, doppelbock is the hostname and node name of my Macbook Air.</p>
+<p><script src="https://gist.github.com/901065.js"></script></p>
+<p><span style="font-size: x-large;"><strong>Nodes</strong></span></p>
+<p>I use the following run list on my workstations.</p>
+<p><script src="https://gist.github.com/901014.js"></script></p>
+<p><span style="font-size: x-large;"><strong>Upload Chef Repository</strong></span></p>
+<p>Now that all the victims are assembled, it is time to upload the Chef repository, copy the configuration file and validation certificate and run Chef.</p>
+<p><script src="https://gist.github.com/901076.js"></script></p>
+<p>Then I simply run &#8216;chef-client&#8217; as my normal user and my laptop is configured. It does take some time because several of the DMGs are large, and homebrew compiles from source. All in all, it took about 1 hour to do the initial run of Chef on my Macbook Air 13&#8221; when I first set it up.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-04-03T00:00:00-06:00" pubdate data-updated="true">Apr 3<span>rd</span>, 2011</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2011/04/02/obligatory-first-post/" title="Previous Post: Obligatory first post">&laquo; Obligatory first post</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2011/04/11/display-chef-server-search-indexes/" title="Next Post: Display Chef Server Search Indexes">Display Chef Server Search Indexes &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

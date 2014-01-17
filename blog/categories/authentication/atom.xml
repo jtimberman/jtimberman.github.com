@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: authentication | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/authentication/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Switching MyOpenID to Google OpenID]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/09/23/switching-myopenid-to-google-openid/"/>
+    <updated>2013-09-23T10:38:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/09/23/switching-myopenid-to-google-openid</id>
+    <content type="html"><![CDATA[<p>You may be aware that MyOpenID is
+<a href="http://thenextweb.com/insider/2013/09/04/myopenid-to-shut-down/">shutting down in February 2014</a>.</p>
+
+<p>The next best thing to use IMO, is Google&rsquo;s OpenID, since they have
+2-factor authentication. Google doesn&rsquo;t really expose the OpenID URL
+in a way that makes it as easy to use as &ldquo;username.myopenid.com.&rdquo;
+Fortunately, it&rsquo;s relatively simple to add to a custom domain hosted
+by, for example, <a href="http://pages.github.com/">GitHub pages</a>. My
+coworker, Stephen Delano, pointed me to this pro-tip.</p>
+
+<p>The requirement is to put a <code>&lt;link&gt;</code> tag in the HTML header of the
+site. It should look like this:</p>
+
+<p><code>html
+&lt;link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" /&gt;
+&lt;link rel="openid2.local_id" href="http://www.google.com/profiles/A_UNIQUE_GOOGLE_PROFILE_ID /&gt;
+</code></p>
+
+<p>Obviously you need a Google Profile, but anyone interested in doing
+this probably has a Google+ account for Google Hangouts anyway :).</p>
+
+<p>If you&rsquo;re like me and have your custom domain hosted as an
+<a href="http://octopress.org/">Octopress</a> blog, this goes in
+<code>source/_includes/custom/head.html</code>. Then deploy the site and in a few
+moments you&rsquo;ll be able to start using your site as an OpenID.</p>
+]]></content>
+  </entry>
+  
+</feed>

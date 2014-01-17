@@ -1,0 +1,2211 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="Mac OS X Lion introduced a new nifty feature called AirDrop. This
+allows users on a local network to drag and drop files to each other
+with Finder. &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/page/4">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/25/disable-airdrop-lion/">Disable AirDrop in Mac OS X Lion</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-25T23:20:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Mac OS X Lion introduced a new nifty feature called AirDrop. This
+allows users on a local network to drag and drop files to each other
+with Finder.</p>
+
+<p>While it seems that this would be useful, there are security
+implications. After looking through
+<a href="https://www.google.com/?q=disable+airdrop#sclient=psy&amp;hl=en&amp;site=&amp;source=hp&amp;q=disable+airdrop&amp;pbx=1&amp;oq=disable+airdrop&amp;aq=f&amp;aqi=&amp;aql=&amp;gs_sm=3&amp;gs_upl=0l0l0l884l0l0l0l0l0l0l0l0ll0l0&amp;bav=on.2,or.r_gc.r_pw.,cf.osb&amp;fp=2c07cc10bcee84ff&amp;biw=1440&amp;bih=786">Google Search Results</a>
+on the topic, I found some un-helpful information in a <a href="http://forums.macrumors.com/showthread.php?t=1191359">random forum</a>
+post (unsurprising). A little more
+<a href="http://derflounder.wordpress.com/2011/10/07/disabling-airdrop-from-the-command-line/">review of the search results</a>
+resulted in finding the actual <code>defaults(1)</code> command to do so:</p>
+
+<pre><code>defaults write com.apple.NetworkBrowser DisableAirDrop -bool YES
+</code></pre>
+
+<p>Naturally, I put this in a Chef recipe and applied it on all my Macs
+post haste:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">mac_os_x_userdefaults</span> <span class="s2">&quot;Disable AirDrop&quot;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">domain</span> <span class="s2">&quot;com.apple.NetworkBrowser&quot;</span>
+</span><span class='line'>    <span class="n">key</span> <span class="s2">&quot;DisableAirDrop&quot;</span>
+</span><span class='line'>    <span class="n">value</span> <span class="kp">true</span>
+</span><span class='line'>    <span class="n">type</span> <span class="s2">&quot;bool&quot;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The resource above is available in my <a href="http://ckbk.it/mac_os_x">mac_os_x cookbook</a>.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/25/changing-class-names/">Changing Class Names</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-25T09:39:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>If you change a class name in your library, <em>do a major version
+change</em>! You don&rsquo;t know who is using your library, even the
+undocumented parts.</p>
+
+<h2>Background</h2>
+
+<p>Recently, we had a post on the
+<a href="http://lists.opscode.com">Chef mailing list</a> that using bluepill for
+the Chef Server daemon process(es) was broken. Upon further
+investigation of the output from
+<a href="https://gist.github.com/1847128">Chef debug output</a>, it appeared to
+be an issue with
+<a href="https://github.com/arya/bluepill/issues/132">Bluepill itself</a>, but
+after looking into that ticket, the <a href="http://rubygems.org/gems/daemons">daemons gem</a> had made a change.</p>
+
+<p>Out of curiosity, I was compelled to find out what the source of the
+change in the daemons gem was. This lead to a yak shave, as first, I
+had to look up the <a href="http://rubygems.org/gems/daemons">daemons gem</a> on
+RubyGems.org to try and find the source. The author of the gem still
+uses RubyForge rather than GitHub. That&rsquo;s fine, but it means I have to
+do some link-spelunking to find where the <a href="http://rubyforge.org/projects/daemons">source code lives</a>.</p>
+
+<p>Now I take a look at the change log:</p>
+
+<pre><code>Release 1.1.8: February 7, 2012
+rename to daemonization.rb to daemonize.rb (and Daemonization to Daemonize) to ensure compatibility.
+
+Release 1.1.7: February 6, 2012
+start_proc: Write out the PID file in the newly created proc to avoid race conditions.
+daemonize.rb: remove to simplify licensing (replaced by daemonization.rb).
+
+Release 1.1.6: January 18, 2012
+Add the :app_name option for the "call" daemonization mode.
+
+Release 1.1.5: December 19, 2011
+Catch the case where the pidfile is empty but not deleted and restart
+the app (thanks to Rich Healey)
+</code></pre>
+
+<p>I then went to the ticket tracker to find out what the source of the
+changes might be. Fortunately, there was an open issue that I could
+<a href="http://rubyforge.org/tracker/index.php?func=detail&amp;aid=29516&amp;group_id=524&amp;atid=2084">reference</a>.</p>
+
+<p>My question (which I posted to the ticket) is why wouldn&rsquo;t renaming a
+class cause the author to do a new major version? This way other Gems
+that rely on this as a dependency could use the paranoia operator,
+<code>~&gt;</code> so the broken class name wouldn&rsquo;t break usage elsewhere.</p>
+
+<p>I&rsquo;m glad that the daemons gem author did the right thing and yanked
+the broken version. Open source worked well here. The process of
+finding this was a bit slower than it should have been, and I think
+that the bluepill maintainers moved too quickly to &ldquo;resolve&rdquo; the
+issue, rather than post their concern about the class naming. Kudos to
+thuehlinger for fixing his gem, though.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/15/testing-with-fission/">Testing With Fission</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-15T22:53:00-07:00" pubdate data-updated="true">Feb 15<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>In this post, I&rsquo;m going to talk about the fission gem:</p>
+
+<ul>
+<li><a href="http://rubygems.org/gems/fission">http://rubygems.org/gems/fission</a></li>
+<li><a href="https://github.com/thbishop/fission">https://github.com/thbishop/fission</a></li>
+</ul>
+
+
+<p>I primarily use this to manage the VMware Fusion virtual machines I
+use for testing <a href="http://community.opscode.com/users/opscode">Opscode&rsquo;s Chef Cookbooks</a>.</p>
+
+<p>This post is rather light on specific details about things that are
+either &ldquo;common&rdquo; knowledge or documented elsewhere. Particularly, I
+won&rsquo;t tell you how to set up the virtual machines, other than a few
+notes that I think make it easier to manage virtual machines in this
+way. In other words, you&rsquo;re smart and can figure them out.</p>
+
+<h2>Install and Configure</h2>
+
+<p>The first step to use the fission RubyGem is to install it. If you
+don&rsquo;t like RubyGems, then create a package or grab the source from the
+GitHub link, above.</p>
+
+<pre><code>gem install fission
+</code></pre>
+
+<p>Test that it is detecting your VMware Fusion VMs:</p>
+
+<pre><code>fission status
+</code></pre>
+
+<p>Fission has a configuration file, <code>~/.fissionrc</code>, which is yaml
+format. If the status command fails, you may need to configure fission
+to find the <code>vmrun</code> command. Here&rsquo;s the example from my system:</p>
+
+<pre><code>---
+vmrun_bin: /Applications/VMware Fusion.app/Contents/Library/vmrun
+</code></pre>
+
+<h2>Install an OS on a VM</h2>
+
+<p>If you&rsquo;re reading this, I presume you know how to install an OS in a
+VMware virtual machine. I do a number of tasks during the installation
+to make it easy and consistent to work with all my test VMs.</p>
+
+<ul>
+<li>Use bridged networking with DHCP</li>
+</ul>
+
+
+<p>This usually results in the least amount of hassle for connecting to
+the VM without any tunneling or port forwarding tomfoolery.</p>
+
+<ul>
+<li>Give it a simple VM name with alphanumeric characters only.</li>
+<li>Use the same hostname during installation as the VM name</li>
+</ul>
+
+
+<p>In the examples below, I use my &ldquo;guineapig&rdquo; system. I also have other
+systems like &ldquo;ubuntu1110&rdquo;, &ldquo;freebsd82&rdquo; and &ldquo;centos6&rdquo;. This is the name
+you&rsquo;ll use to refer to the VM with fission, so it should be short,
+easy to type and clearly identifiable.</p>
+
+<ul>
+<li>Set the root password, even if the OS doesn&rsquo;t use the root account</li>
+<li>Make sure SSH as root is enabled</li>
+</ul>
+
+
+<p>Some Linux distributions such as Ubuntu do not enable the root login.
+This is for testing, so I really don&rsquo;t care, and I can always write a
+Chef recipe to lock things down (as I would in production) if
+required.</p>
+
+<p>I also set a simple password that I can use with <code>-P</code> to <code>knife
+bootstrap</code> without the shell doing anything with special characters.</p>
+
+<ul>
+<li>Use NTP</li>
+</ul>
+
+
+<p>Install the NTP package for your operating system. The workflow here
+(and the whole point really) is to make heavy use of VMware Fusion
+snapshots and rollback, so it is important that the system time is
+correct. I customized the bootstrap templates I use to add <code>ntpdate</code>.</p>
+
+<h2>Using Fission</h2>
+
+<p>And now the moment you&rsquo;ve been waiting for. First, see the fission
+README for full detail on the commands available. I&rsquo;m going to focus
+here on how I use it.</p>
+
+<p>After the install and post install tasks are done, I create a
+new snapshot for the VM.</p>
+
+<pre><code>% fission status
+guineapig        [running]
+% fission snapshot create guineapig base
+</code></pre>
+
+<p>The name is &ldquo;base&rdquo; because thats a good name for a baseline. It can be
+useful to create specifically named snapshots for particular purposes.</p>
+
+<p>I use Opscode Hosted Chef as my server and I already have my local
+workstation set up with the validation key, a Chef repository and have
+uploaded the cookbook(s) I use for testing. I&rsquo;ll use &ldquo;knife
+bootstrap&rdquo; to kick off a run on my VM:</p>
+
+<pre><code>% knife bootstrap 10.1.1.129 -x root -Pvanilla -r 'recipe[apache2]'
+...
+INFO: service[apache2] restarted
+INFO: Chef Run complete in 44.324473 seconds
+</code></pre>
+
+<p>Sweet, it worked. However, if the Chef run fails, I can log in as
+root, fix the bug and rerun, or whatever else may need to be done.
+Then once I&rsquo;m ready to reset the VM, fission comes back to play.</p>
+
+<pre><code>% fission snapshot revert guineapig base
+Reverting to snapshot 'base'
+Reverted to snapshot 'base'
+</code></pre>
+
+<p>Note that fission will poweroff the VM when reverting the snapshot.
+Turn it on again with the start command.</p>
+
+<pre><code>% fission status
+guineapig        [not running]
+
+% fission start guineapig
+Starting 'guineapig'
+VM 'guineapig' started
+
+% fission status
+guineapig        [running]
+</code></pre>
+
+<p>And after logging in, we can see that apache2 is not installed as it
+should not be after the snapshot is restored.</p>
+
+<pre><code>% ssh root@guineapig 
+root@guineapig's password: 
+root@guineapig:~# dpkg -l apache2
+No packages found matching apache2.
+</code></pre>
+
+<p>The VM is now ready to do my bidding once again.</p>
+
+<h1>Cleanup</h1>
+
+<p>Note that reverting the snapshot doesn&rsquo;t delete the Chef node or
+client objects. Since fission is a Ruby library, a simple knife plugin
+can wrap up all the fission revert, restart and Chef cleanup, though.
+I called mine nukular.</p>
+
+<pre><code>% knife nukular guineapig base guineapig.int.example.com
+</code></pre>
+
+<p>And here&rsquo;s the plugin I&rsquo;m using:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">KnifePlugins</span>
+</span><span class='line'>    <span class="k">class</span> <span class="nc">Nukular</span> <span class="o">&lt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Knife</span>
+</span><span class='line'>      <span class="n">deps</span> <span class="k">do</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;fission&#39;</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;chef/node&#39;</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;chef/api_client&#39;</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">banner</span> <span class="s2">&quot;knife nukular VM SNAPSHOT [NODE]&quot;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">def</span> <span class="nf">run</span>
+</span><span class='line'>        <span class="n">vm</span><span class="p">,</span> <span class="n">snapshot</span> <span class="o">=</span> <span class="vi">@name_args</span>
+</span><span class='line'>        <span class="n">node</span> <span class="o">=</span> <span class="vi">@name_args</span><span class="o">[</span><span class="mi">2</span><span class="o">].</span><span class="n">nil?</span> <span class="p">?</span> <span class="n">vm</span> <span class="p">:</span> <span class="vi">@name_args</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span>
+</span><span class='line'>        <span class="ss">Fission</span><span class="p">:</span><span class="ss">:Command</span><span class="o">::</span><span class="no">SnapshotRevert</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">args</span><span class="o">=[</span><span class="n">vm</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span>
+</span><span class='line'>        <span class="ss">Fission</span><span class="p">:</span><span class="ss">:Command</span><span class="o">::</span><span class="no">Start</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">args</span><span class="o">=[</span><span class="n">vm</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Node</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">destroy</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:ApiClient</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">destroy</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The command-line usage takes 2 or 3 arguments. The first two must be
+the VM name and the snapshot name, e.g. <code>guineapig</code> and <code>base</code>. If the
+node name is different than the VM name, then specify it.</p>
+
+<pre><code>% knife nukular guineapig base guineapig.int.example.com
+</code></pre>
+
+<p>Note that the plugin has <em>zero</em> error handling or any other sensible
+things. You may want to modify it before you use it. Or not, these are
+just test systems after all.</p>
+
+<h2>Full example</h2>
+
+<p>Minus the output from the commands, here is the full output of testing
+the Opscode apache2 cookbook on my guinea pig. Assume that all the
+required things from my Chef Repository have been uploaded to the Chef
+Server and the knife configuration is correct. Also, the <code>chef-full</code>
+bootstrap template specified here is a customized version of the
+template in the
+<a href="https://github.com/opscode/chef/blob/master/chef/lib/chef/knife/bootstrap/chef-full.erb">Chef source master branch template</a>
+that has <code>ntpdate -u pool.ntp.org</code> in it.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% fission </span><span class="n">status</span>
+</span><span class='line'><span class="sx">% fission </span><span class="n">snapshot</span> <span class="n">create</span> <span class="n">guineapig</span> <span class="n">testing</span><span class="o">-</span><span class="n">apache2</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">bootstrap</span> <span class="mi">10</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">129</span> <span class="o">-</span><span class="n">x</span> <span class="n">root</span> <span class="o">-</span><span class="n">P</span> <span class="n">vanilla</span> <span class="p">\</span>
+</span><span class='line'>  <span class="o">-</span><span class="n">r</span> <span class="s1">&#39;recipe[apache2]&#39;</span> <span class="o">-</span><span class="n">d</span> <span class="n">chef</span><span class="o">-</span><span class="n">full</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">nukular</span> <span class="n">guineapig</span> <span class="n">testing</span><span class="o">-</span><span class="n">apache2</span> <span class="n">guineapig</span><span class="o">.</span><span class="n">int</span><span class="o">.</span><span class="n">housepub</span><span class="o">.</span><span class="n">org</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&rsquo;s it. I hope you find this helpful!</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/29/dnsimple-self-registration-recipe/">DNSimple Self Registration Recipe</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-29T19:00:00-07:00" pubdate data-updated="true">Jan 29<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Earlier this month, I completed a
+<a href="/blog/2012/01/02/switching-to-dnsimple/">switch to DNSimple</a> for my
+domain&rsquo;s DNS provider. I am still happy with the switch, and finally,
+just now, got around to writing a recipe to have my systems
+automatically register themselves in DNS.</p>
+
+<p>In the post, I described automatically adding the DNS entries with the
+<a href="http://community.opscode.com/cookbooks/dnsimple">dnsimple cookbook</a>.
+I did this as a proof of concept, but I didn&rsquo;t add it to all my nodes,
+instead using my existing data bag-driven solution.</p>
+
+<p>That said, this post serves as a brief document on how you can mimic
+this behavior with your own environment.</p>
+
+<h1>Encrypted Data Bag</h1>
+
+<p>I put my DNSimple credentials in an
+<a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags">encrypted data bag</a>.
+Since I have to decrypt and read the entire thing anyway, I also store
+the relevant data there. I keep my encrypted data bags in a bag called
+secrets. The structure looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;api_token&quot;</span><span class="o">:</span> <span class="s2">&quot;DNSimple API Token Here&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;domain&quot;</span><span class="o">:</span> <span class="s2">&quot;your-domain.example.com&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;username&quot;</span><span class="o">:</span> <span class="s2">&quot;DNSimple username&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;password&quot;</span><span class="o">:</span> <span class="s2">&quot;DNSimple password&quot;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Replace the values with your values. Encrypting the data is optional,
+but requires that you create a secret key or key file. Read my
+<a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">previous post on the topic</a>
+for more information.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="o">%</span> <span class="nx">knife</span> <span class="nx">data</span> <span class="nx">bag</span> <span class="nx">from</span> <span class="nx">file</span> <span class="nx">secrets</span> <span class="nx">dnsimple</span><span class="p">.</span><span class="nx">json</span>
+</span><span class='line'><span class="o">%</span> <span class="nx">knife</span> <span class="nx">data</span> <span class="nx">bag</span> <span class="nx">from</span> <span class="nx">file</span> <span class="nx">secrets</span> <span class="nx">dnsimple</span><span class="p">.</span><span class="nx">json</span> <span class="o">--</span><span class="nx">secret</span><span class="o">-</span><span class="nx">file</span> <span class="o">/</span><span class="nx">etc</span><span class="o">/</span><span class="nx">chef</span><span class="o">/</span><span class="nx">encrypted_data_bag_secret</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The first command just uploads the data bag item, the second encrypts
+it. Note that I manage my workstation with Chef, so I will use the
+same secret file as the Chef default. The secret file needs to be
+copied to each system that will need it.</p>
+
+<h1>Recipe</h1>
+
+<p>The recipe looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="n">encrypted_data_bag_item</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">dnsimple_record</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;hostname&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">.int.</span><span class="si">#{</span><span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">content</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;ipaddress&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">type</span> <span class="s2">&quot;A&quot;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
+</span><span class='line'>  <span class="n">username</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;username&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">password</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;password&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">domain</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As
+<a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">mentioned in the previous blog post</a>,
+the <code>encrypted_data_bag_item</code> method is in a library. Either add that
+library to your cookbook, or use the class directly.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:EncryptedDataBagItem</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you&rsquo;re not using an encrypted data bag, then the item can be
+accessed with the normal method:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;bagname&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The real work happens in the <code>dnsimple_record</code> LWRP, which will add an
+&ldquo;A&rdquo; record for the system running the recipe. Note that the actual
+entry is going to use the <code>int</code> subdomain, and it will use the domain
+stored in the data bag item. It also will use the default IP address
+of the node, which means the IP for the interface with the default
+route.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/28/iterm2-with-tmux/">iTerm2 With Tmux</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-28T15:03:00-07:00" pubdate data-updated="true">Jan 28<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A new &ldquo;which tool is best&rdquo; battle is raging in the internets amongst
+developers and system administrators. The contestants are <a href="http://www.gnu.org/software/screen/">screen</a>
+and <a href="http://tmux.sourceforge.net/">tmux</a>, and the
+<a href="https://www.google.com/search?q=tmux+vs+screen">jury is still out</a>.
+This is very much an argument over what color to paint the bikeshed,
+but with the latest version of
+<a href="http://www.iterm2.com/">iTerm2</a>, I think tmux is even more
+compelling. Personally, I chose tmux awhile ago.</p>
+
+<p>At my <a href="http://opscode.com">day job</a>, I worked with a customer that
+uses tmux for remote pairing between developers. At the time, tmux had
+better customizability, and better split-pane support (screen didn&rsquo;t
+yet have vertical split). I stuck with tmux ever since, and was very
+pleased when an iTerm2 update announced integration with tmux.</p>
+
+<h1>iTerm2</h1>
+
+<p>For those who aren&rsquo;t aware, iTerm2 is an alternate terminal program
+for Mac OS X. It is actually an updated codebase from the original,
+<a href="http://iterm.sourceforge.net/">iTerm</a>, which is effectively
+<a href="http://iterm.sourceforge.net/news.shtml">unmaintained</a>. iTerm2 offers
+a lot of excellent features like split panes, Growl support, and
+<a href="http://www.iterm2.com/#/section/features">many more</a>.</p>
+
+<p>One of the excellent new features is integration with tmux.</p>
+
+<h1>iTerm2&rsquo;s tmux integration</h1>
+
+<p>If you already have iTerm2 installed, you may have seen the update
+check prompt you to update. You also need to install a special version
+of tmux that has the integration patched. The iTerm2 author is working
+with the tmux author to get this into the latest tmux codebase, so
+hopefully the custom compiled version won&rsquo;t be necessary soon.</p>
+
+<p>Using the new feature is relatively straightforward. Start up iTerm2
+like normal. Then run <code>tmux -C</code> to open a new iTerm2 window that works
+like tmux.</p>
+
+<p><img src="http://img.skitch.com/20120128-cxjbh9hf9feagn5p5ieg574uce.png" alt="Launch tmux in iTerm2" /></p>
+
+<p>Use the tmux menu in iTerm2 to open new windows in tmux. Note that there
+are keyboard shortcuts for each of these, and they are not the same as
+the tmux window commands.</p>
+
+<p><img src="http://img.skitch.com/20120128-diexhy69d8t3b9da6g65yjmsum.png" alt="Use tmux menu to open buffers" /></p>
+
+<p>You can also attach to a tmux session running in iTerm2. In the
+screenshot, this is running on the same system, for example purposes.
+However, since OS X has SSH, this can be useful if you want to SSH to
+another system in the local network and connect to the running
+session. For example, the system shown below is my wife&rsquo;s iMac over
+screensharing, but I wouldn&rsquo;t need to use screenshare (or participate
+in its lag) to connect to this anymore. The same holds true for
+connecting to my work laptop if necessary.</p>
+
+<p><img src="http://img.skitch.com/20120128-txr67q3jftmcw26n84jm5hpgm.png" alt="Attach to tmux session in iTerm2" /></p>
+
+<p>In this final example screenshot, you can see that I have multiple
+panes split in one iTerm2 tab. These correspond to the split windows
+in the attached tmux in the other window. Also, the two tabs in the
+iTerm2 window are separate tmux windows (<code>0:zsh</code> and <code>1:zsh</code>).</p>
+
+<p><img src="http://img.skitch.com/20120128-miaa1dkeatt2hebxcxst8sydy1.png" alt="iTerm2 panes are panes in tmux" /></p>
+
+<p>And now, I can SSH to that system and attach to the tmux session
+started by iTerm2.</p>
+
+<p><img src="http://img.skitch.com/20120129-gjgajqnekq93da59m4r86ewh2k.png" alt="SSH to remote and run tmux attach" /></p>
+
+<p><img src="http://img.skitch.com/20120129-j2x4iir5557nt68n5jmr64f8dp.png" alt="tmux is attached to iTerm2 session" /></p>
+
+<h1>Automating Installation with Chef</h1>
+
+<p>Installing OS X apps is quite easy, but I automate them
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">with Chef</a>
+anyway. While it is a simple &ldquo;install update and restart&rdquo;, with a
+couple commands to install the update, I do have three systems I want
+this on. I updated my
+<a href="http://community.opscode.com/cookbooks/iterm2">iterm2 cookbook</a> to
+support installing the tmux integration for iTerm2. This is disabled
+by default, so it needs to be enabled via a node attribute. For
+example, I have this in my <code>workstation</code> role applied to my OS X
+workstations.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s2">&quot;workstation&quot;</span>
+</span><span class='line'><span class="n">description</span> <span class="s2">&quot;Mac OS X workstations&quot;</span>
+</span><span class='line'><span class="n">run_list</span><span class="p">(</span><span class="s2">&quot;recipe[tmux]&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">default_attributes</span><span class="p">(</span>
+</span><span class='line'>  <span class="s2">&quot;iterm2&quot;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="s2">&quot;tmux_enabled&quot;</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Check out the iterm2 cookbook&rsquo;s README for more information.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/02/chef-report-handler-for-growl/">Chef Report Handler for Growl</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-02T20:37:00-07:00" pubdate data-updated="true">Jan 2<span>nd</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A few weeks ago, I listened to the
+<a href="http://thechangelog.com/post/11317828888/episode-0-6-8-growl-and-open-source-in-the-app-store-wit">Changelog Podcast</a>
+episode featuring Chris Forsythe, lead of the Growl project. I
+actually don&rsquo;t<sup>Wdidn</sup>&rsquo;t use Growl for a long time, because I really
+disliked notifications of any kind, as they are distracting. However,
+I do appreciate the project, and supporting them by purchasing Growl
+on the App Store seemed totally reasonable.</p>
+
+<p>Of course, buying the app means it was installed on the spot. I always
+resisted it in the past because it was bundled with so many apps, but
+I don&rsquo;t want unsolicited software to show up on my computer. Now, it
+seemed a bit more natural, and I made a few configuration tweaks (I
+should put those into Chef&hellip;). I&rsquo;m actually happy to use it now,
+especially since it has a nice network accessible API.</p>
+
+<h1>Growlnotify</h1>
+
+<p>Shortly after I started using Growl on my work system, I looked into
+ways I could get notifications fired off from the command-line after
+long running processes finished. In particular, I wanted to get a
+notification that <code>knife ec2 server create</code> was done. I found the
+<code>growlnotify</code> program, which is available via
+<a href="https://github.com/mxcl/homebrew">homebrew</a>. This is quite a nifty
+tool, and I set it to use immediately, doing things like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife ec2 server create <span class="se">\</span>
+</span><span class='line'>  -f m1.small -I <span class="nv">$lucid_small</span> -x ubuntu <span class="se">\</span>
+</span><span class='line'>  -r <span class="s1">&#39;role[base],role[webserver]&#39;</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
+</span><span class='line'>growlnotify -m <span class="s2">&quot;Finished launching 1 instance&quot;</span> <span class="o">||</span> <span class="se">\</span>
+</span><span class='line'>growlnotify -m <span class="s2">&quot;failed to launch instance&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I could kick off the server creation, switch focus to another
+workspace, and then know via growl if the instance was created.</p>
+
+<h1>Chef Handler</h1>
+
+<p>As many know, I
+<a href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef/">manage my workstations with Chef</a>.
+Chef has a pretty cool
+<a href="http://wiki.opscode.com/display/chef/Exception+and+Report+Handlers">exception and report handler API</a>
+that has a lot of flexibility. I thought it would be fun to throw
+together a simple report handler that would send a growl notification
+after a Chef run. In this case, it will report the elapsed time of the
+run if it was successful, or report an exception if it failed.</p>
+
+<p>Using the handler is pretty straightforward. Install the
+<code>chef-handler-growl</code> Gem, then configure chef-client (or solo).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s2">&quot;chef/handler/growl&quot;</span>
+</span><span class='line'><span class="n">report_handlers</span> <span class="o">&lt;&lt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Handler</span><span class="o">::</span><span class="no">Growl</span><span class="o">.</span><span class="n">new</span>
+</span><span class='line'><span class="n">exception_handlers</span> <span class="o">&lt;&lt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Handler</span><span class="o">::</span><span class="no">Growl</span><span class="o">.</span><span class="n">new</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then run Chef, and see something like this:</p>
+
+<p><img src="https://img.skitch.com/20120103-emxnsfht3557xjcp4rshxcufka.png" alt="Chef Handler Growl" /></p>
+
+<p>The handler is available as a
+<a href="http://rubygems.org/gems/chef-handler-growl">RubyGem</a>. You can also
+view the <a href="https://github.com/jtimberman/chef-handler-growl">source</a>. I
+created issues on the GitHub project for the two items on the roadmap, too.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/02/switching-to-dnsimple/">Switching to DNSimple</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-02T13:03:00-07:00" pubdate data-updated="true">Jan 2<span>nd</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><font size="-2">Reminder: this blog reflects my opinions and thoughts, and not
+those of my employer, Opscode, Inc.</font></p>
+
+<p>Like any good sysadmin, I have my own domain for email and other
+purposes. I actually have had a couple, but this post is about my
+current one. I originally set it up through Google Apps a couple years
+ago, including registering the new domain with Google Apps&#8217; default
+registrar, GoDaddy. For the most part, it was pretty simple and
+painless to set up, including private registration via Domains by
+Proxy. Yay!</p>
+
+<p>However, as I automated more components of my home network with Chef,
+I found the lack of API driven DNS rather frustrating. At last count,
+I had 15 distinct networked devices, counting all the computers,
+consoles, mobile devices, etc. This does not count the virtual
+machines that I manage as a part of my daily job in doing Chef
+cookbook development and testing, which should all have their own DNS
+entries, since I&rsquo;ll access them over the network, and remembering IPs
+is ridiculous.</p>
+
+<h1>Internal DNS Server</h1>
+
+<p>I use <a href="http://cr.yp.to/djbdns.html">DJB&rsquo;s tinydns</a> as my DNS server,
+and it is automated with the
+<a href="http://community.opscode.com/cookbooks/djbdns">Opscode Chef Cookbook</a>.
+The first incarnation of this setup was a single monolithic template
+file containing all the entries in my local network zone, delivered by
+the <code>djbdns::tinydns-internal</code> recipe, like so:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">template</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:tinydns_internal_dir</span><span class="o">]</span><span class="si">}</span><span class="s2">/root/data&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;tinydns-internal-data.erb&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">0644</span>
+</span><span class='line'>  <span class="n">notifies</span> <span class="ss">:run</span><span class="p">,</span> <span class="n">resources</span><span class="p">(</span><span class="s2">&quot;execute[build-tinydns-internal-data]&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This was great, and simple to manage for this single purpose setup. At
+some point, I wrote cookbooks for
+<a href="http://community.opscode.com/cookbooks/unbound">unbound</a> and
+<a href="http://community.opscode.com/cookbooks/pdns">powerdns</a>, as I was
+evaluating whether one or the other might be easier to modularize. In
+the process, I created a data bag of all my DNS entries that I could
+step through in templates, so I could use the same data without caring
+which software was going to consume it. In the end, I extended the
+djbdns cookbook with a lightweight resource and provider, and added
+usage to the <code>djbdns::tinydns-internal</code> recipe like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dns</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;djbdns&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:domain</span><span class="o">].</span><span class="n">gsub</span><span class="p">(</span><span class="sr">/\./</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">))</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="n">file</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:tinydns_internal_dir</span><span class="o">]</span><span class="si">}</span><span class="s2">/root/data&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="sx">%w{ ns host alias }</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">type</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">dns</span><span class="o">[</span><span class="n">type</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">record</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">fqdn</span><span class="p">,</span><span class="n">ip</span><span class="o">|</span>
+</span><span class='line'>      <span class="c1">#</span>
+</span><span class='line'>      <span class="n">djbdns_rr</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">fqdn</span><span class="si">}</span><span class="s2">.</span><span class="si">#{</span><span class="n">dns</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">cwd</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:tinydns_internal_dir</span><span class="o">]</span><span class="si">}</span><span class="s2">/root&quot;</span>
+</span><span class='line'>        <span class="n">ip</span> <span class="n">ip</span>
+</span><span class='line'>        <span class="n">type</span> <span class="n">type</span>
+</span><span class='line'>        <span class="n">action</span> <span class="ss">:add</span>
+</span><span class='line'>        <span class="n">notifies</span> <span class="ss">:run</span><span class="p">,</span> <span class="s2">&quot;execute[build-tinydns-internal-data]&quot;</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="c1">#</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The data bag itself looks something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;int_example_com&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;domain&quot;</span><span class="o">:</span> <span class="s2">&quot;example.com&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;ns&quot;</span><span class="o">:</span> <span class="p">[</span>
+</span><span class='line'>    <span class="p">{</span> <span class="s2">&quot;ns: &quot;</span><span class="mf">127.0</span><span class="p">.</span><span class="mf">0.1</span><span class="s2">&quot; }</span>
+</span><span class='line'><span class="s2">  ],</span>
+</span><span class='line'><span class="s2">  &quot;</span><span class="nx">alias</span><span class="s2">&quot;: [</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">gw</span><span class="s2">&quot;:         &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.1</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">smb</span><span class="s2">&quot;:        &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.20</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">files</span><span class="s2">&quot;:      &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.20</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">apt</span><span class="s2">&quot;:        &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.120</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">yum</span><span class="s2">&quot;:        &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.120</span><span class="s2">&quot; }</span>
+</span><span class='line'><span class="s2">  ],</span>
+</span><span class='line'><span class="s2">  &quot;</span><span class="nx">host</span><span class="s2">&quot;: [</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">tavern</span><span class="s2">&quot;:          &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.1</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">cask</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.20</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">cider</span><span class="s2">&quot;:           &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.101</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">merlot</span><span class="s2">&quot;:          &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.103</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">bourbon</span><span class="s2">&quot;:         &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.104</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">iphone</span><span class="s2">&quot;:          &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.105</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">doppelbock</span><span class="s2">&quot;:      &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.106</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">ipad</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.107</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">wii</span><span class="s2">&quot;:             &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.108</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">xbox</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.109</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">htpc</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.110</span><span class="s2">&quot; },</span>
+</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">virt1test</span><span class="s2">&quot;:       &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.120</span><span class="err">&quot;</span> <span class="p">}</span>
+</span><span class='line'>  <span class="p">]</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I am pretty pleased with this approach in that this data can be used
+no matter what DNS resolver software I choose. While this is great for
+the more static part of my network, as I mentioned I do have some
+dynamic usage where I create new virtual machines, and I really want
+them to register themselves in DNS automatically.</p>
+
+<h1>Enter DNSimple</h1>
+
+<p>A few months ago I decided to switch over to DNSimple. The service was
+compelling over the alternatives for a few reasons:</p>
+
+<ul>
+<li>Low cost ($3/mo) for my size of account.</li>
+<li>Very simple interface</li>
+<li>API for managing records (!)</li>
+<li>Reputation for great service</li>
+</ul>
+
+
+<p><a href="https://github.com/dje">Darrin Eden</a>
+wrote a <a href="http://community.opscode.com/cookbooks/dnsimple">cookbook</a>
+for automatically creating records through the API, too, so half my
+work for automating with Chef was already done!</p>
+
+<p>However, for various reasons I procrastinated the switchover. After
+all, my existing solution worked ok for my purposes. Then after seeing
+GoDaddy show up on the SOPA supporters list, and being one a
+contributing author to the legislation(*), I decided that was the last
+straw and I busted a move to finish the
+<a href="http://blog.dnsimple.com/godaddy-sopa-and-you/">switch</a>.</p>
+
+<p>Honestly, from the DNSimple side, it couldn&rsquo;t have been a better
+experience. They have one-click services for managing DNS records for
+a variety of common services &ndash; including Google Apps! It took some
+time and hassle to move my domain out of GoDaddy, since their
+interface is rather clunky, and I had to unprotect things through
+Domains by Proxy to make the move, but after a couple hours everything
+was fine. DNSimple has some
+<a href="http://blog.dnsimple.com/things-to-know-about-transferring-a-domain/">tips for migrating</a>,
+no matter who your current registrar is.</p>
+
+<p>Now for the truly fun part!</p>
+
+<h1>Automated DNS with Chef</h1>
+
+<p>Using the dnsimple cookbook is very straightforward. You create an &ldquo;A&rdquo;
+record like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple_record</span> <span class="s2">&quot;cask.example.com&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="nb">name</span> <span class="s2">&quot;cask&quot;</span>
+</span><span class='line'>  <span class="n">domain</span> <span class="s2">&quot;example.com&quot;</span>
+</span><span class='line'>  <span class="n">content</span> <span class="s2">&quot;10.10.20.20&quot;</span>
+</span><span class='line'>  <span class="n">type</span> <span class="s2">&quot;A&quot;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
+</span><span class='line'>  <span class="n">username</span> <span class="n">node</span><span class="o">[</span><span class="ss">:dnsimple</span><span class="o">][</span><span class="ss">:username</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">password</span> <span class="n">node</span><span class="o">[</span><span class="ss">:dnsimple</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">domain</span> <span class="n">node</span><span class="o">[</span><span class="ss">:dnsimple</span><span class="o">][</span><span class="ss">:domain</span><span class="o">]</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yes, that is a private network IP, and yes it is going to be
+registered in public DNS. It really doesn&rsquo;t matter that much in my
+(<a href="http://serverfault.com/questions/4458/private-ip-address-in-public-dns">and others&#8217;</a>)
+opinion. Especially given that zomg, I just created a DNS entry with
+Chef!</p>
+
+<p>By default, the cookbook does assume, and use, node attributes for
+storing the username and password. This can be set by a role, but it
+means that all nodes will have the data. For my use, I decided to put
+these values in a data bag, and because they are sensitive, I used an
+<a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags">encrypted data bag</a>.
+I also wanted to reuse the data bag from my earlier DNS example, so I
+wrote a recipe like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="n">encrypted_data_bag_item</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">dns</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;dns&quot;</span><span class="p">,</span> <span class="s2">&quot;int_example_com&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="sx">%w{ host alias }</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">type</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">dns</span><span class="o">[</span><span class="n">type</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">record_type</span> <span class="o">=</span> <span class="n">type</span> <span class="o">=~</span> <span class="sr">/^host$/</span> <span class="p">?</span> <span class="s2">&quot;A&quot;</span> <span class="p">:</span> <span class="s2">&quot;CNAME&quot;</span>
+</span><span class='line'>    <span class="n">record</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">hostname</span><span class="p">,</span><span class="n">ip</span><span class="o">|</span>
+</span><span class='line'>      <span class="c1">#</span>
+</span><span class='line'>      <span class="n">dnsimple_record</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">.</span><span class="si">#{</span><span class="n">dns</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
+</span><span class='line'>        <span class="nb">name</span> <span class="n">hostname</span>
+</span><span class='line'>        <span class="n">content</span> <span class="n">ip</span>
+</span><span class='line'>        <span class="n">type</span> <span class="n">record_type</span>
+</span><span class='line'>        <span class="n">action</span> <span class="ss">:create</span>
+</span><span class='line'>        <span class="n">username</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;username&#39;</span><span class="o">]</span>
+</span><span class='line'>        <span class="n">password</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;password&#39;</span><span class="o">]</span>
+</span><span class='line'>        <span class="n">domain</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="c1">#</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I put that recipe in my &ldquo;dnsserver&rdquo; role, ran Chef, and boom, all my
+DNS entries are updated on systems I don&rsquo;t have to manage, and all
+around the world.</p>
+
+<pre><code>% host cask.int.example.com 8.8.8.8
+Using domain server:
+Name: 8.8.8.8
+Address: 8.8.8.8#53
+Aliases:
+
+cask.int.example.com has address 10.10.20.20
+</code></pre>
+
+<p>What a wonderful redundant distributed key value store :&ndash;).</p>
+
+<p>Note that the <code>encrypted_data_bag_item</code> method used in the recipe is in a cookbook
+library. I wrote about that in an
+<a href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">earlier blog post</a>.
+It is pretty simple:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Chef</span>
+</span><span class='line'>  <span class="k">class</span> <span class="nc">Recipe</span>
+</span><span class='line'>    <span class="c1">#</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">encrypted_data_bag_item</span><span class="p">(</span><span class="n">bag</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">secret_file</span> <span class="o">=</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:EncryptedDataBagItem</span><span class="o">::</span><span class="no">DEFAULT_SECRET_FILE</span><span class="p">)</span>
+</span><span class='line'>      <span class="no">DataBag</span><span class="o">.</span><span class="n">validate_name!</span><span class="p">(</span><span class="n">bag</span><span class="o">.</span><span class="n">to_s</span><span class="p">)</span>
+</span><span class='line'>      <span class="no">DataBagItem</span><span class="o">.</span><span class="n">validate_id!</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">secret</span> <span class="o">=</span> <span class="no">EncryptedDataBagItem</span><span class="o">.</span><span class="n">load_secret</span><span class="p">(</span><span class="n">secret_file</span><span class="p">)</span>
+</span><span class='line'>      <span class="no">EncryptedDataBagItem</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">bag</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">rescue</span> <span class="no">Exception</span>
+</span><span class='line'>      <span class="no">Log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Failed to load data bag item: </span><span class="si">#{</span><span class="n">bag</span><span class="o">.</span><span class="n">inspect</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">item</span><span class="o">.</span><span class="n">inspect</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span class='line'>      <span class="k">raise</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="c1">#</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Drawbacks</h2>
+
+<p>While conveniently reusing the data I already had for my DNS entries,
+the <code>dnsimple_record</code> provider does take about a second on my internet
+connection for each entry to check if it&rsquo;s there. This makes the DNS
+server&rsquo;s Chef client run take over a minute, where it used to be less
+than 12 seconds. Many of the entries that are in the DNS data bag are
+on systems that can add their own records, and will soon once I
+refactor things a bit.</p>
+
+<h1>Other Uses</h1>
+
+<p>A number of the entries in the DNS data bag are CNAMEs for services
+that run on my home LAN server. I have internal services like
+Netatalk/Time Machine, Samba, or Munin. I also have external services
+like OpenVPN, SSH and Teamspeak. I&rsquo;ll add DNSimple records for each of
+these so the recipes can automatically register new DNS entries,
+eliminating a step in bringing up a new service.</p>
+
+<h1>Open Source is Awesome</h1>
+
+<p>Chef is open source, of course, as is the
+<a href="https://github.com/heavywater/chef-dnsimple/blob/master/LICENSE">dnsimple cookbook</a>
+that I&rsquo;m using. While working with the cookbook as describe above over
+the last couple days, I made some improvements and I sent a
+<a href="https://github.com/heavywater/chef-dnsimple/pull/1">pull request</a>,
+which has been merged and released. Thanks Darrin!</p>
+
+<p>If you use Chef and are looking for an API driven way to manage DNS
+entries for your systems, I strongly recommend DNSimple as a provider,
+and the <code>dnsimple</code> cookbook to tie it all together.</p>
+
+<p><font size="-2">(*) This isn&rsquo;t a political-blog-soap-box, but this
+really was the final motivator.</font></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/11/24/ruby-in-ubuntu-11-dot-10/">Ruby in Ubuntu 11.10</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-11-24T00:16:00-07:00" pubdate data-updated="true">Nov 24<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I was playing around with Ubuntu 11.10 the other day, to explore some of the
+changes that have happened to Ruby lately, and thought I&rsquo;d share my findings.</p>
+
+<p>First off, there are still Ruby 1.8(.7p352) packages. This is the
+default you get with the <code>ruby</code> package. However, the <code>ruby1.9.1</code> has
+Ruby 1.9.2p290 as the default version. This isn&rsquo;t the absolute latest
+released (officially, 1.9.3 is the latest stable release), but it&rsquo;s a
+widespread release that a lot of people are using in production.</p>
+
+<p>The main package for getting the Ruby executables is <code>ruby1.9.1</code>. It
+is now a &ldquo;full&rdquo; installation and includes:</p>
+
+<ul>
+<li>/usr/bin/gem1.9.1</li>
+<li>/usr/bin/rdoc1.9.1</li>
+<li>/usr/bin/rake1.9.1</li>
+<li>/usr/bin/erb1.9.1</li>
+<li>/usr/bin/ri1.9.1</li>
+<li>/usr/bin/ruby1.9.1</li>
+<li>/usr/bin/irb1.9.1</li>
+<li>/usr/bin/testrb1.9.1</li>
+</ul>
+
+
+<p>Previous versions had these as separate packages, and you had to
+remember to install everything to have a full Ruby installation
+available.</p>
+
+<p>In the package name and the above binaries, <code>1.9.1</code> indicates the Ruby
+library compatibility, <code>1.9.2</code> is compatible with <code>1.9.1</code>.</p>
+
+<p>The Debian alternatives system is used to set the default ruby, gem
+and irb binaries in the $PATH as links to the 1.9.1 versions, e.g.:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ls -l /usr/bin/ruby /etc/alternatives/ruby
+</span><span class='line'>lrwxrwxrwx 1 root root 18 2011-11-24 00:02 /etc/alternatives/ruby -&gt; /usr/bin/ruby1.9.1
+</span><span class='line'>lrwxrwxrwx 1 root root 22 2011-11-24 00:02 /usr/bin/ruby -&gt; /etc/alternatives/ruby</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Users can also update RubyGems via the <code>gem update --system</code> command,
+but a shell environment variable must be exported first.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">export </span><span class="nv">REALLY_GEM_UPDATE_SYSTEM</span><span class="o">=</span>yes
+</span><span class='line'>sudo -E gem update --system
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>-E</code> is significant so the variable is available via
+<code>sudo</code>. Without this variable set, this command will warn noisily
+that you should know what you&rsquo;re doing, and what this is up
+to. Personally, I&rsquo;m fine with RubyGems 1.3.7, as that is the version
+that the Chef <code>gem_package</code> provider uses for the API. With the
+default RubyGems, you also get binaries in <code>/usr/local/bin</code>, rather than
+the awkward <code>/var/lib/ruby</code> location in earlier versions.</p>
+
+<p>These changes are a result of work that has been going in
+<a href="http://wiki.debian.org/Teams/Ruby/Packaging">Debian Wheezy by the Ruby packaging team</a>,
+kicked off by
+<a href="http://lists.debian.org/debian-devel/2011/03/msg00210.html">Lucas Nussbaum</a>.</p>
+
+<p>That said, let&rsquo;s put this to use so we can have Chef running under the
+Ruby 1.9.2 available via APT.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo apt-get install ruby1.9.1 ruby1.9.1-dev build-essential
+</span><span class='line'>Reading package lists... Done
+</span><span class='line'>Building dependency tree
+</span><span class='line'>Reading state information... Done
+</span><span class='line'>build-essential is already the newest version.
+</span><span class='line'>Suggested packages:
+</span><span class='line'>  ruby1.9.1-examples ri1.9.1 graphviz
+</span><span class='line'>The following NEW packages will be installed:
+</span><span class='line'>  libruby1.9.1 ruby1.9.1 ruby1.9.1-dev
+</span><span class='line'>0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+</span><span class='line'>Need to get 0 B/5,027 kB of archives.
+</span><span class='line'>After this operation, 19.5 MB of additional disk space will be used.
+</span><span class='line'>Selecting previously deselected package libruby1.9.1.
+</span><span class='line'><span class="o">(</span>Reading database ... 141637 files and directories currently installed.<span class="o">)</span>
+</span><span class='line'>Unpacking libruby1.9.1 <span class="o">(</span>from .../libruby1.9.1_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
+</span><span class='line'>Selecting previously deselected package ruby1.9.1.
+</span><span class='line'>Unpacking ruby1.9.1 <span class="o">(</span>from .../ruby1.9.1_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
+</span><span class='line'>Selecting previously deselected package ruby1.9.1-dev.
+</span><span class='line'>Unpacking ruby1.9.1-dev <span class="o">(</span>from .../ruby1.9.1-dev_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
+</span><span class='line'>Processing triggers <span class="k">for </span>man-db ...
+</span><span class='line'>Setting up libruby1.9.1 <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
+</span><span class='line'>Setting up ruby1.9.1 <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
+</span><span class='line'>update-alternatives: using /usr/bin/gem1.9.1 to provide /usr/bin/gem <span class="o">(</span>gem<span class="o">)</span> in auto mode.
+</span><span class='line'>update-alternatives: using /usr/bin/ruby1.9.1 to provide /usr/bin/ruby <span class="o">(</span>ruby<span class="o">)</span> in auto mode.
+</span><span class='line'>Setting up ruby1.9.1-dev <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
+</span><span class='line'>Processing triggers <span class="k">for </span>libc-bin ...
+</span><span class='line'>ldconfig deferred processing now taking place
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One of Chef&rsquo;s dependency gems is <code>json</code>, which has native C
+extensions, so the development headers for Ruby, and build tools are
+required (though already installed on my system).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ruby --version
+</span><span class='line'>ruby 1.9.2p290 <span class="o">(</span>2011-07-09 revision 32553<span class="o">)</span> <span class="o">[</span>x86_64-linux<span class="o">]</span>
+</span><span class='line'>% gem --version
+</span><span class='line'>1.3.7
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, I can install Chef as a RubyGem.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo gem install chef
+</span><span class='line'>Building native extensions.  This could take a <span class="k">while</span>...
+</span><span class='line'><span class="o">[</span>Version 0.7.8<span class="o">]</span> <span class="nb">test </span>suite cleanup <span class="o">(</span>eliminated some race conditions related to queue.message_count<span class="o">)</span>
+</span><span class='line'>Building native extensions.  This could take a <span class="k">while</span>...
+</span><span class='line'>Successfully installed mixlib-config-1.1.2
+</span><span class='line'>Successfully installed mixlib-cli-1.2.2
+</span><span class='line'>Successfully installed mixlib-log-1.3.0
+</span><span class='line'>Successfully installed mixlib-authentication-1.1.4
+</span><span class='line'>Successfully installed yajl-ruby-1.1.0
+</span><span class='line'>Successfully installed systemu-2.2.0
+</span><span class='line'>Successfully installed ohai-0.6.10
+</span><span class='line'>Successfully installed mime-types-1.17.2
+</span><span class='line'>Successfully installed rest-client-1.6.7
+</span><span class='line'>Successfully installed bunny-0.7.8
+</span><span class='line'>Successfully installed json-1.5.2
+</span><span class='line'>Successfully installed polyglot-0.3.3
+</span><span class='line'>Successfully installed treetop-1.4.10
+</span><span class='line'>Successfully installed net-ssh-2.1.4
+</span><span class='line'>Successfully installed net-ssh-gateway-1.1.0
+</span><span class='line'>Successfully installed net-ssh-multi-1.1
+</span><span class='line'>Successfully installed erubis-2.7.0
+</span><span class='line'>Successfully installed moneta-0.6.0
+</span><span class='line'>Successfully installed highline-1.6.8
+</span><span class='line'>Successfully installed uuidtools-2.1.2
+</span><span class='line'>Successfully installed chef-0.10.4
+</span><span class='line'>21 gems installed
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And running Chef just works:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo chef-client
+</span><span class='line'><span class="o">[</span>Thu, 24 Nov 2011 14:02:38 -0700<span class="o">]</span> INFO: *** Chef 0.10.4 ***
+</span><span class='line'>...
+</span><span class='line'><span class="o">[</span>Thu, 24 Nov 2011 14:02:50 -0700<span class="o">]</span> INFO: Chef Run <span class="nb">complete </span>in 9.862972181 seconds
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The results of the node object on the Chef Server:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% knife node show virt1test -a languages.ruby
+</span><span class='line'>languages.ruby:
+</span><span class='line'>  bin_dir:        /usr/bin
+</span><span class='line'>  gem_bin:        /usr/bin/gem1.9.1
+</span><span class='line'>  gems_dir:       /var/lib/gems/1.9.1
+</span><span class='line'>  host:           x86_64-pc-linux-gnu
+</span><span class='line'>  host_cpu:       x86_64
+</span><span class='line'>  host_os:        linux-gnu
+</span><span class='line'>  host_vendor:    pc
+</span><span class='line'>  platform:       x86_64-linux
+</span><span class='line'>  release_date:   2011-07-09
+</span><span class='line'>  ruby_bin:       /usr/bin/ruby1.9.1
+</span><span class='line'>  target:         x86_64-pc-linux-gnu
+</span><span class='line'>  target_cpu:     x86_64
+</span><span class='line'>  target_os:      linux
+</span><span class='line'>  target_vendor:  pc
+</span><span class='line'>  version:        1.9.2
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Overall, I&rsquo;m happy with the changes that the Debian Ruby Packaging
+Team has made, and I&rsquo;m glad to see these come to Ubuntu in
+11.10+. It&rsquo;s not the absolute latest version available, but this is
+good forward progress for binary Linux distributions. I also like that
+the alternatives system is used, so users could choose to install and
+use other Ruby interpreters. Hopefully these changes quell some of the
+arguments about Debian and Ubuntu and their handling of Ruby.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/11/21/chef-on-windows-htpc/">Chef on Windows HTPC</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-11-21T07:15:00-07:00" pubdate data-updated="true">Nov 21<span>st</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Over the past 20 years, I always had a Windows (or DOS!) PC as the
+main system I use at home. The primary purpose was for gaming,
+although building my own systems is also a hobby. In 2007, I wanted to
+build a new system to use as a home theater PC. Originally, I built it
+with Windows Vista &ndash; Windows Media Center <em>was</em> Vista&rsquo;s killer app! I
+painstakingly installed software, tweaked system settings and tuned
+the registry. Then Windows 7 came along with further
+improvements. After almost 20 years of reinstalling from scratch for
+new versions of Windows, I treated this upgrade as no
+different.</p>
+
+<p>Unfortunately, I didn&rsquo;t capture all the system tweaks and settings. I
+didn&rsquo;t get all the software reinstalled. I did what I remembered, and
+W7 did have some improvements that made extra software and tweaks
+unnecessary. The thing I was lacking in the rebuild, and up until
+recently, was configuration management for Windows.</p>
+
+<h2>Enter Chef</h2>
+
+<p>Recently, my employer Opscode
+<a href="http://www.opscode.com/press-releases/opscode-delivers-cloud-infrastructure-automation-to-windows-environments/">announced broader Windows support</a>
+for Chef. The awesome Chef community, and our development team have
+added some key features to Chef in the form of core libraries and
+cookbooks. While I did get Chef running on my HTPC a few months ago, I
+had only used it to test out the
+<a href="http://community.opscode.com/cookbooks/powershell">powershell cookbook</a>,
+and also wrote a
+<a href="http://community.opscode.com/cookbooks/silverlight">silverlight cookbook</a>
+as a proof of concept. In the mean time, the
+<a href="http://community.opscode.com/cookbooks/windows">windows cookbook</a>
+cookbook received some serious leveling up thanks to
+<a href="http://twitter.com/schisamo">Seth Chisamore</a>.</p>
+
+<h2>Windows Cookbook</h2>
+
+<p>The Windows cookbook has a number of excellent &ldquo;primitives&rdquo; in the
+form of libraries and resources. You can read all about that on
+<a href="http://wiki.opscode.com/display/chef/Opscode+LWRP+Resources#OpscodeLWRPResources-windows">The Chef Wiki</a>. For
+now, I&rsquo;ll talk about how I captured some of the configuration so I
+don&rsquo;t have to remember next time (Windows 8, coming soon&hellip;). Of
+interest here are the <code>windows_registry</code> and <code>windows_auto_run</code> resources.</p>
+
+<h2>My HTPC&rsquo;s cookbooks</h2>
+
+<p>I wrote two cookbooks this weekend. First, is a general &ldquo;Windows Media
+Center&rdquo; cookbook called, aptly, &ldquo;<code>wmc</code>&rdquo;. This will capture the
+specific registry and other configuration related to Windows Media
+Center itself. The idea with this one is it manages only Windows Media
+Center. It&rsquo;s not ready for release, but I&rsquo;ll post some snippets
+of code here as I go.</p>
+
+<p>The second cookbook I created is specifically for the Home Theater PC
+itself, named <code>htpc</code>. This is going to contain all my preferences and
+biases of how I want my HTPC to look like in order to provide
+entertainment in my house.</p>
+
+<h2>Windows Media Center (wmc)</h2>
+
+<p>First and foremost, I want to make sure that Windows Media Center is
+running at boot time, and the <code>windows_auto_run</code> resource fits the
+bill. This resource modifies the registry to update the key
+<code>HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</code>, using the
+<code>windows_registry</code> resource. It does operate at the <em>machine</em> level,
+not just the current user, but I only have one user on my HTPC, so
+it&rsquo;s okay. Here&rsquo;s the resource:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_auto_run</span> <span class="s2">&quot;Windows Media Center&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">program</span> <span class="s2">&quot;RunDLL32.exe C:/Windows/ehome/ehuihlp.exe,BootMediaCenter&quot;</span>
+</span><span class='line'>  <span class="n">not_if</span> <span class="p">{</span> <span class="no">Registry</span><span class="o">.</span><span class="n">value_exists?</span><span class="p">(</span><span class="no">AUTO_RUN_KEY</span><span class="p">,</span> <span class="s1">&#39;Windows Media Center&#39;</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, I want to tweak a few other registry settings. Some of these I
+discovered through an
+<a href="http://blogs.msdn.com/b/astebner/archive/2006/04/29/586961.aspx">MSDN blog post</a>,
+others are from setting up WMC itself and observing the &ldquo;HKCU&rdquo;
+registry. Not the most sophisticated way, but I don&rsquo;t see a great
+&ldquo;diff&rdquo; tool for the registry. Because the name of the HKCU and HKLM keys for WMC are
+long, I set them to a couple local variables, via <code>cookbooks/attributes/default.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">default</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hkcu&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;HKCU\Software\Microsoft\Windows\CurrentVersion\Media Center&#39;</span>
+</span><span class='line'><span class="n">default</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hklm&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Media Center&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then in the recipe, I simply assign local variables.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">hkcu</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hkcu&#39;</span><span class="o">]</span>
+</span><span class='line'><span class="n">hklm</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hklm&#39;</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, for the registry changes. I use a 30 second skip forward and back
+with my remote during recorded TV shows, so I can avoid commercials.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_registry</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">hkcu</span><span class="si">}</span><span class="se">\\</span><span class="s2">Settings</span><span class="se">\\</span><span class="s2">VideoSettings&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">values</span><span class="p">(</span>
+</span><span class='line'>    <span class="s1">&#39;SkipAheadInterval&#39;</span> <span class="o">=&gt;</span> <span class="mh">0x7148</span><span class="p">,</span>
+</span><span class='line'>    <span class="s1">&#39;InstantReplayInterval&#39;</span> <span class="o">=&gt;</span> <span class="mh">0x7148</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I also optimize the display for LCD/Plasma (I have a RP DLP, but I
+digress).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_registry</span> <span class="n">hkcu</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">values</span> <span class="s1">&#39;TVSkin&#39;</span> <span class="o">=&gt;</span> <span class="mi">0</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>For now, that&rsquo;s all the <code>wmc</code> cookbook has going for it. I do have
+plans to enable additional features of WMC, install useful plugins,
+and improve playback quality and performance. Mainly, I need to find
+my old notes :&ndash;).</p>
+
+<h2>Home Theater PC (htpc)</h2>
+
+<p>The <code>htpc</code> cookbook will contain additional tweaks and settings for
+how I want my HTPC configured. I don&rsquo;t know if I&rsquo;ll release it
+publicly, as it is pretty specific to me, but it might be useful as
+examples for others, so stay tuned to my
+<a href="https://github.com/jtimberman">GitHub account</a> for updates.</p>
+
+<p>First up are some local performance tweaks. These are done to
+Explorer(.exe), and I don&rsquo;t remember the source.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_registry</span> <span class="s2">&quot;HKCU</span><span class="se">\\</span><span class="s2">Software</span><span class="se">\\</span><span class="s2">Microsoft</span><span class="se">\\</span><span class="s2">Windows</span><span class="se">\\</span><span class="s2">CurrentVersion</span><span class="se">\\</span><span class="s2">Policies</span><span class="se">\\</span><span class="s2">Explorer&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">values</span><span class="p">(</span>
+</span><span class='line'>    <span class="s1">&#39;NoLowDiskSpaceChecks&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span>
+</span><span class='line'>    <span class="s1">&#39;NoResolveSearch&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span>
+</span><span class='line'>    <span class="s1">&#39;NoResolveTrack&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Second, since this system is where all my music files live, I have
+iTunes installed for
+<a href="http://support.apple.com/kb/HT3819">Home Sharing</a>. It doesn&rsquo;t do much
+good if iTunes isn&rsquo;t running, however, so I use <code>windows_auto_run</code> to
+start it up.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_auto_run</span> <span class="s2">&quot;iTunes&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">program</span> <span class="s2">&quot;C:/Program\ Files/iTunes/iTunes.exe&quot;</span>
+</span><span class='line'>  <span class="n">not_if</span> <span class="p">{</span> <span class="no">Registry</span><span class="o">.</span><span class="n">value_exists?</span><span class="p">(</span><span class="no">AUTO_RUN_KEY</span><span class="p">,</span> <span class="s2">&quot;iTunes&quot;</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It&rsquo;s pretty simple so far, but I have some plans in store for my HTPC cookbook.</p>
+
+<h2>HTPC Cookbook Plans</h2>
+
+<p>I do plan to add some new features to the <code>htpc</code> cookbook. First, I
+want to make sure all the software I need is installed. While the
+system mainly sits in WMC (with iTunes in the background), I do have
+some additional software and utilities that I like to have for
+managing my media library.</p>
+
+<ul>
+<li>iTunes &ndash; I already have the software installed, but it would be nice
+to not have to do that during system setup (Windows 8, I say&hellip;).</li>
+<li>Google Chrome &ndash; there&rsquo;s no abc.com, nbc.com, etc plugins for WMC
+(yet?), so I need a browser to go to the respective web sites to
+catch up on older episodes.</li>
+<li>CDBurnerXP &ndash; decent CD/DVD burning software, rarely used but useful
+for backups.</li>
+<li>Logitech Harmony Remote Software &ndash; I have a
+<a href="http://www.logitech.com/en-us/remotes/universal-remotes/devices/6063">Harmony 700 universal remote</a>
+(and it&rsquo;s awesome!). This one might be tricky, but really I just
+want to make sure the software is installed. Configuration profiles
+are stored in an online support account with Logitech as far as I&rsquo;m
+aware.</li>
+<li>Netflix plugin for WMC &ndash; This will probably go into the <code>wmc</code>
+cookbook, though.</li>
+<li>Additional performance tweaks &ndash; There are a whole slew of tweaks
+that I <em>know</em> I made, I just don&rsquo;t remember them all. These will be
+added with <code>windows_registry</code> resources.</li>
+<li>Manage services &ndash; Everyone who has a gaming PC knows about
+<a href="http://www.blackviper.com/">Black Viper&rsquo;s Windows Service Guide(s)</a>.</li>
+<li>Windows Features &ndash; With the <code>windows_feature</code> resource, Chef can
+manage core features included in Windows installations.</li>
+<li>Logging, monitoring &ndash; What kind of system administrator would I be
+if I didn&rsquo;t also monitor my system for performance? :&ndash;)</li>
+</ul>
+
+
+<p>Some of the things I want to manage on my HTPC are covered by other
+cookbooks I have, or exist on the
+<a href="http://community.opscode.com">Chef Community Site</a>.</p>
+
+<ul>
+<li>Steam &ndash; This system is still capable of running some games, like
+StarCraft II, TeamFortress 2 and Left 4 Dead (1 &amp; 2). I have a Steam
+cookbook that works on OS X, it just isn&rsquo;t released (yet).</li>
+<li>Teamspeak 3 &ndash; I already have a
+<a href="http://community.opscode.com/cookbooks/teamspeak3">teamspeak3 cookbook</a>,
+I&rsquo;ll just need to add installation of the client for Windows there.</li>
+<li><a href="http://gnu.org/s/emacs">A text editor</a> &ndash; Since I have games, and
+games have configuration files, it makes sense to &hellip; wait, I should
+put those in Chef too! Or at least, in a Version Control System and
+check out the repository&hellip;</li>
+<li><a href="http://git-scm.org">Git</a> &ndash; For the above. This will likely be a
+contribution to Opscode&rsquo;s
+<a href="http://community.opscode.com/cookbooks/git">git cookbook</a>. Though
+I&rsquo;ll still install a <a href="http://notepad-plus-plus.org">text editor</a> of
+<a href="http://www.gnome.org/projects/gedit">some kind</a>.</li>
+</ul>
+
+
+<p>These changes, updates and releases will be announced on this blog,
+ mainly through my <a href="https://twitter.com/jtimberman">twitter</a> and
+ <a href="https://plus.google.com/100567271038100401523/">Google+</a>
+ accounts. Stay tuned!</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/09/29/blog-moved-to-github-pages/">Blog Moved to GitHub Pages</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-29T22:59:00-06:00" pubdate data-updated="true">Sep 29<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I moved my blog from Posterous to GitHub Pages. Posterous isn&rsquo;t a bad
+system and service. It just didn&rsquo;t fit the way I wanted to manage my
+site and the content. It was entirely adequate to get going but I was
+dissatisfied with the web form for creating new posts. It also loaded
+pages fairly slow.</p>
+
+<h2>GitHub is awesome.</h2>
+
+<p>Many others have migrated their technical blogs from services like
+Posterous, Wordpress, Tumblr, Blogger and so on over to GitHub
+Pages. Most often, this is because these services are database backed
+systems, use a web form for creating posts, and don&rsquo;t have a revision
+control system that we all know and love under the covers.</p>
+
+<p><a href="http://pages.github.com">GitHub Pages</a> is a great service by GitHub
+that allows you to serve up static content out of a Git
+repository. You can do simple static HTML pages, or you can use a
+static page generation framework to generate the content out of
+Markdown (or Textile, or HAML) files. There&rsquo;s a number of options for
+this, such as <a href="http://nanoc.stoneship.org/">Nanoc</a> or <a href="http://jekyllrb.com/">Jekyll</a>.</p>
+
+<h2>I chose Jekyll.</h2>
+
+<p><em>&ldquo;Jekyll is a blog-aware, static site generator in Ruby&rdquo;</em> &ndash;
+<a href="http://jekyllrb.com">http://jekyllrb.com/</a></p>
+
+<p>Jekyll fits the bill for me. It supports different markup languages,
+such as Markdown or Textile, and GitHub Pages has easy instructions on
+how to get going with it. Jekyll also includes a <em>fantastic</em> Posterous
+importer, which flawlessly imported all my
+<a href="/blog/archives">old posts</a>. Now I can start creating new posts as
+Markdown in Emacs, instead of using a web form, or editing HTML
+directly. I can also save revisions using Git, instead of saving a
+draft and monkeying with an interface to recover drafts or publish
+them.</p>
+
+<p>I sat down a few days ago and imported my old posts. Then I ran
+through trying to get them to look alright with a decent CSS
+theme. However, I&rsquo;m not a front end designer/developer, and I never
+remember how do do anything useful with CSS. So I went looking for
+canned ways to build a nice interface/theme for this blog.</p>
+
+<p>I remembered
+<a href="http://github.com/twitter/bootstrap">Twitter&rsquo;s Bootstrap</a> project,
+and thought that might be interesting. After looking at it I was
+confused about what to use, since it is a very complete solution,
+including iOS mobile layouts in addition to normal web pages. After
+looking elsewhere, I saw mention of <a href="http://octopress.org">Octopress</a>,
+a framework built on top of Jekyll. I queried
+<a href="http://junglist.gen.nz">some</a> <a href="http://likens.us/">people</a> that had
+experience with it, found that it would probably meet my needs, and
+gave it a whirl.</p>
+
+<p>Naturally if you&rsquo;re familiar with Octopress, you can see the result of
+that evaluation. It is a really nice system for managing the
+site.</p>
+
+<h2>I like my blogging workflow.</h2>
+
+<p>I like my new blogging workflow. It is very natural to me as a system
+engineer, as it uses Emacs, Rake, a Web Service, and Git. I&rsquo;ll walk
+through the steps I took in creating this post. I&rsquo;m going to skip the
+setup of Octopress, as that is
+<a href="http://octopress.org/docs/setup/">documented elsewhere</a>.</p>
+
+<pre><code>% rake new_post'[Blog Moved to GitHub Pages]'
+Creating new post: source/_posts/2011-09-29-blog-moved-to-github-pages.markdown
+</code></pre>
+
+<p>Then I load up the source file created by the rake task and enter all
+this content you see, saving my work along the way. I did, but could
+choose, to commit to the git repository as well. In order to preview
+the content, I can actually run the entire blog with Octopress&rsquo;s built
+in rake task:</p>
+
+<pre><code>% rake preview
+Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
+[2011-09-29 23:06:20] INFO  WEBrick 1.3.1
+[2011-09-29 23:06:20] INFO  ruby 1.9.2 (2011-07-09) [x86_64-darwin11.1.0]
+[2011-09-29 23:06:20] INFO  WEBrick::HTTPServer#start: pid=92373 port=4000
+Configuration from /Users/jtimberman/Development/jtimberman.github.com/_config.yml
+Auto-regenerating enabled: source -&gt; public
+[2011-09-29 23:06:21] regeneration: 107 files changed
+&gt;&gt;&gt; Compass is watching for changes. Press Ctrl-C to Stop.
+127.0.0.1 - - [29/Sep/2011 23:06:24] "GET / HTTP/1.1" 200 50231 0.0181
+</code></pre>
+
+<p>Now I can browse to <a href="http://localhost:4000">http://localhost:4000</a> and see exactly what the
+blog post will look like, and it loads lightning fast. This is of
+paramount importance for me, as I travel a lot and would really like
+to develop blog entries while I&rsquo;m on airplanes with no internet
+access.</p>
+
+<p>Once I am satisfied with the content and how it looks, I commit to the
+repository and push the source branch.</p>
+
+<pre><code>% git add source/_posts
+% git commit -m 'Blog moved to github pages'
+</code></pre>
+
+<p>Then, it is time to deploy the blog to GitHub Pages. Octopress makes
+this easy with another rake task:</p>
+
+<pre><code>% rake deploy
+</code></pre>
+
+<p>This takes care of all the repository work required, and pushes to
+GitHub. Then I push the actual source branch.</p>
+
+<pre><code>% git push origin source
+</code></pre>
+
+<h2>Nice things about Octopress</h2>
+
+<p>Besides the rake tasks and that works with Jekyll, Octopress has some
+really nice features.</p>
+
+<p>First of all, the default theme is really nice. One thing I wanted out
+of CSS on top of Jekyll was something large enough that I could read
+easily. I think this theme looks pretty good and is quite readable
+with my default browser settings. It is also nice and easily readable
+on my iPhone.</p>
+
+<p>Second, Octopress is very customizable. I can easily modify the layout
+by editing the <code>_config.yml</code> file. Of course I can change the theme,
+but I can add JavaScript, layouts and more. I modified the footer to
+include my Creative Commons license for the content of this site.</p>
+
+<p>Third, I really like the default layout in this theme. The recent
+posts, GitHub repo links and my last few tweets are a nice
+touch. Plus I have integrated Disqus for comments and set up Google
+Analytics easily, thanks to the ease of customizing the configuration.</p>
+
+<h2>Conclusion</h2>
+
+<p>In closing, I&rsquo;m very happy with this solution. I now have a blogging
+workflow that I&rsquo;m comfortable with, and that will hopefully result in
+more posts.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/5/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/3/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,1002 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="It has been a few months and several thousand page views since my original post on how I manage my workstations with Chef. I have made some changes &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/page/5">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/09/04/update-to-managing-my-workstations/">Update to Managing My Workstations</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-04T00:00:00-06:00" pubdate data-updated="true">Sep 4<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It has been a few months and several thousand page views since my original post on how I <a href="http://bit.ly/guCtmD" title="Managing My Workstations with Chef" target="_blank">manage my workstations with Chef</a>. I have made some changes to my repository, and have a few additional notes for working with Mac OS X Lion. I also added a new system in my network, an iMac.</p>
+<h2>Mac OS X Cookbook</h2>
+<p>First, I would like to point out the cookbook I created, <a href="http://ckbk.it/mac_os_x" title="Mac OS X Cookbook" target="_blank">mac_os_x</a>. In the original post, I discussed using Pivotal Lab&#8217;s workstation recipes, which use the Mac OS X user defaults system to update system preferences from the command-line (with an execute resource). One of the first things I did in the mac_os_x cookbook is create a lightweight resource and provider for managing user defaults. It can be used, for example, like this:</p>
+<div class="CodeRay">
+  <div class="code"><pre>mac_os_x_userdefaults &quot;dont show hard drives on the desktop&quot; do
+  domain &quot;com.apple.finder&quot;
+  key &quot;ShowHardDrivesOnDesktop&quot;
+  value &quot;false&quot;
+  type &quot;bool&quot;
+end</pre></div>
+</div>
+
+<p>While this does involve more typing than just entering the command, it has a couple advantages. First, it is easier to read for people not totally familiar with the defaults command. Second, behind the scenes it will check if the setting is already set and not update the resource if it isn&#8217;t. This isn&#8217;t a huge deal in terms of system resource usage, but depending on your Chef setup might end up with extra reporting on things that didn&#8217;t need to change if you&#8217;re using a report handler, which <a href="http://bit.ly/pdMawh" title="A Simple Report Handler" target="_blank">I do use</a>.</p>
+<p>This cookbook also includes a lightweight resource/provider for managing plist preferences files for <code>~/Library/Preferences</code>. All plists in OS X can be manipulated through the defaults system, but it can be cumbersome for highly customized applications such as your Adium or 1Password configuration. Usage is very simple:</p>
+<div class="CodeRay">
+  <div class="code"><pre>mac_os_x_plist_file &quot;ws.agile.1Password.plist&quot;</pre></div>
+</div>
+
+<p>This is in my local <a href="http://ckbk.it/1password" title="1Password Cookbook" target="_blank">1password cookbook</a>, which has the file in <code>files/default/ws.agile.1Password.plist</code>. If I make modifications to the preferences, I do have to copy it over to the cookbook and re-upload to the Chef Server, but since I now have 4 computers to change preferences on, this is much easier than remembering everywhere I clicked. I use this for managing my preferences for <a href="http://ckbk.it/ghmac" title="GitHub for Mac" target="_blank">ghmac (GitHub for Mac)</a>, <a href="http://ckbk.it/iterm2" target="_blank">iterm2</a> and alfredapp.</p>
+<h2>Mac OS X Lion</h2>
+<p>Lion brought a lot of changes. In particular along with Xcode 4, Apple changed the gcc compiler to llvm. I&#8217;m not a C programmer, and don&#8217;t really understand the differences yet, I just know that a number of things in <a href="http://github.com/mxcl/homebrew">Homebrew</a> fail to build. The main thing I installed with Homebrew that wasn&#8217;t working with Lion is <a href="http://bit.ly/jIYjkc">Emacs</a>. I actually only have Lion on my iMac, so I haven&#8217;t updated any recipes for installing it via Chef. In fact, I actually removed it from my &#8220;workstation&#8221; recipe and *gasp* installed it manually. The story there is enough for another post though, so stay tuned and I&#8217;ll write up my experience.</p>
+<p>Relevant to how I manage workstations with Chef, I had to make sure that on Lion, I take care of some additional new preferences using my handy-dandy &#8220;mac_os_x_userdefaults&#8221; LWRP. These are in the mac_os_x cookbook recipe, &#8220;lion_tweaks.&#8221; In my workstation recipe, I include this one only on Lion.</p>
+<h2>Conclusion</h2>
+<p>If you haven&#8217;t read it yet, go back and read my post on how I <a href="http://bit.ly/guCtmD" title="Managing My Workstations with Chef" target="_blank">manage my workstations with Chef</a>. I hope if you&#8217;re using Chef to manage a Mac that the <a href="http://ckbk.it/mac_os_x" title="Mac OS X Cookbook" target="_blank">mac_os_x</a> cookbook is useful to you. Also, stay tuned for an update later this week about my experiences installing Emacs on Lion.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/09/03/guide-to-writing-chef-cookbooks/">Guide to Writing Chef Cookbooks</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-03T00:00:00-06:00" pubdate data-updated="true">Sep 3<span>rd</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wanted smartmontools installed to monitor the disk health of my LAN server at home. This is not an uncommon thing to want to do, so I thought I&#8217;d write and share a Chef cookbook for it. I also took this opportunity to write up the experience so I can illustrate how easy it is to write a cookbook for Chef.</p>
+<p>The first thing to do when writing a cookbook is to create the cookbook directory structure with <code>knife cookbook create</code>. This command will create a README.rdoc by default, and I prefer Markdown, so I specify the <code>-r md</code> option.</p>
+<div class="CodeRay">
+  <div class="code"><pre>knife cookbook create smartmontools -r md</pre></div>
+</div>
+
+<p>By default, metadata and the default recipe are created with boilerplate content for author and copyright. I have configured the values in my knife.rb:</p>
+<div class="CodeRay">
+  <div class="code"><pre>cookbook_copyright &quot;Joshua Timberman&quot;
+cookbook_license   &quot;apachev2&quot;
+cookbook_email     &quot;cookbooks@housepub.org&quot;</pre></div>
+</div>
+
+<p>The resulting directory structure will be created:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree cookbooks/smartmontools
+cookbooks/smartmontools
+├── README.md
+├── attributes
+├── definitions
+├── files
+│   └── default
+├── libraries
+├── metadata.rb
+├── providers
+├── recipes
+│   └── default.rb
+├── resources
+└── templates
+    └── default
+
+10 directories, 3 files</pre></div>
+</div>
+
+<h2>README Driven Development</h2>
+<p>I&#8217;m a big fan of Tom Preston-Werner&#8217;s blog post on <a href="http://tom.preston-werner.com/2010/08/23/readme-driven-development.html" name="README Driven Development">README driven development</a>. I don&#8217;t write the complete README before I start writing code for a new cookbook. I do write it as I go.</p>
+<p>In order to write a proper README for a cookbook, and to write the cookbook itself, we&#8217;ll need to know a bit more about the software we&#8217;re installing. The best way to do that depends on the software, but often it is as simple as merely installing the package on a test system such as a virtual machine and explore its contents.</p>
+<div class="CodeRay">
+  <div class="code"><pre>apt-get install smartmontools
+dpkg -L smartmontools</pre></div>
+</div>
+
+<p>Of note for smartmontools, documentation is in <code>/usr/share/doc/smartmontools</code> and configuration is in <code>/etc</code>. In particular, <code>/etc/smartd.conf</code> and <code>/etc/smartmontools</code>.</p>
+<p>For now assume that the cookbook README.md is being written along the way.</p>
+<h3>List of Resources</h3>
+<p>One of the things I do when I am writing a new cookbook and exploring the contents of a package is to be mindful of <a href="http://wiki.opscode.com/display/chef/Resources" name="Chef Resources">Chef Resources</a> I want to manage in the recipe(s). In the case of smartmontools, at this point I have determined I need a few specific resources.</p>
+<h3>Install the Package</h3>
+<p>First, as I&#8217;ve installed the package, I clearly need a package. I&#8217;m pretty confident that this particular package will not break backwards compatibility, and can be safely upgraded to the latest version if necessary.</p>
+<p><script src="https://gist.github.com/1192321.js"></script></p>
+<h3>Configuration files are templates</h3>
+<p>The next resources in the recipe are the configuration files. I want to dynamically configure these, so I am going to use <a href="http://wiki.opscode.com/display/chef/Resources#Resources-Template" name="templates">templates</a>.</p>
+<p><script src="https://gist.github.com/1192326.js"></script></p>
+<p>I&#8217;m not going to write these from scratch. Instead, I will copy the source files from the installed package on my test system. These will go into <code>templates/default</code> in the cookbook.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree templates
+templates
+└── default
+    ├── smartd.conf.erb
+    └── smartmontools.default.erb</pre></div>
+</div>
+
+<p>Templates are dynamically generated using ERB, and they can use Node attributes. I can use the automatically detected attributes, or I can set new attributes for the node in the cookbook.</p>
+<h3>Attributes Used in the Templates</h3>
+<p>The attributes go in the <code>attributes/default.rb</code> file in the cookbook. The ones I use are:</p>
+<p><script src="https://gist.github.com/1192329.js"></script></p>
+<p>Attributes are definitely something to document in the README.</p>
+<p>In <code>templates/default/smartd.conf.erb</code>, I check if there&#8217;s a list of devices to monitor, and if so iterate over the list passing in the default options (<code>device_opts</code>). The cookbook doesn&#8217;t at this time support per-device options - the same ones are applied to all devices. If <code>devices</code> is empty, then the configuration will use DEVICESCAN.</p>
+<div class="CodeRay">
+  <div class="code"><pre>&lt;% if node['smartmontools']['devices'].length &gt; 0 -%&gt;
+&lt;%   node['smartmontools']['devices'].each do |device| -%&gt;
+&lt;%=    &quot;/dev/#{device} #{node['smartmontools']['device_opts']}&quot; %&gt;
+&lt;%   end -%&gt;
+&lt;% else -%&gt;
+
+DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
+&lt;% end -%&gt;</pre></div>
+</div>
+
+<p>In <code>templates/default/smartmontools.default.erb</code>, the smartmontools daemon will be enabled based on the <code>start_smartd</code> attribute. Additional options will be passed per <code>smartd_opts</code>:</p>
+<div class="CodeRay">
+  <div class="code"><pre>start_smartd=&lt;%= node['smartmontools']['start_smartd'] %&gt;
+ 
+&lt;% if node['smartmontools']['smartd_opts'].length &gt; 0 -%&gt;
+smartd_opts=&quot;&lt;%= node['smartmontools']['smartd_opts'] %&gt;&quot;
+&lt;% else -%&gt;
+#smartd_opts=&quot;--interval=1800&quot;
+&lt;% end -%&gt;</pre></div>
+</div>
+
+<p>Generally speaking when creating attributes and using them in a template, I use the default values that are found in the configuration file dropped off by the package. I also try to use the default settings over all.</p>
+<p>However, a cookbook is a place to express opinions. I made some with this cookbook, such as enabling DEVICESCAN if there are no devices, despite the configuration file&#8217;s comments indicating that the option shouldn&#8217;t be used. The best thing about attributes is they allow other people using the cookbook to change the behavior based on their preferences much easier than manually modifying things dropped off by a package.</p>
+<p>I strongly recommend documenting where a cookbook has behavior that is not default for the installed package or upstream documentation. I did this in the README for this cookbook discussing the DEVICESCAN option and otherwise where appropriate.</p>
+<h3>Static Files</h3>
+<p>This cookbook has only one static file which will be deployed to <code>/etc/smartmontools/run.d/10mail</code>. The smartmontools package allows creating a number of scripts that go in the directory, and I have created an attribute for the list of scripts. These generally don&#8217;t <code>cookbook_file</code> resources. Since the list is an attribute, I iterate over that with Ruby&#8217;s Array#each loop.</p>
+<p>The attribute:</p>
+<p><script src="https://gist.github.com/1192332.js"></script></p>
+<p>The loop of resources:</p>
+<p><script src="https://gist.github.com/1192334.js"></script></p>
+<p>Each filename in the array (currently only &#8216;10mail&#8217;) needs to have a corresponding file in the <code>files/default</code> directory of the cookbook.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree files
+files
+└── default
+    └── 10mail</pre></div>
+</div>
+
+<p>This file&#8217;s contents are not particularly exciting, I used the same one that came out of the package.</p>
+<p>Why would I want to manage a static file that came from the package? Perhaps I want to modify the script in some way that doesn&#8217;t make sense in an attribute. In this case I don&#8217;t, however creating the attribute and iterating over it makes it easy to extend this functonality in the cookbook.</p>
+<h3>Manage the Service</h3>
+<p>Smartmontools comes with a service. That is, there&#8217;s an init script that can be enabled and started to monitor disk devices. This is actually the whole point of the cookbook, so I&#8217;ll make sure there&#8217;s a resource to manage the service.</p>
+<p><script src="https://gist.github.com/1192336.js"></script></p>
+<p>In this resource, I used the meta parameter <code>supports</code> for the service. I found out what the init script can do by simply running it with no options on my test system.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% /etc/init.d/smartmontools
+Usage: /etc/init.d/smartmontools {start|stop|restart|reload|force-reload|status}</pre></div>
+</div>
+
+<p>The various options passed to the init script manage it in the familiar way. Telling Chef about it has a specific effect on the way the service provider functions when Chef manages it.</p>
+<ul>
+<li> status: Chef will use <code>/etc/init.d/SERVICE_NAME status</code> to determine if the service is running. If the return code is 0, its running. Otherwise, Chef checks the process table for a process running with the name of the service. </li>
+<li> reload: Chef can only take the <code>reload</code> action for a service if it actually supports reload. </li>
+<li> restart: When the <code>restart</code> action is sent to a service, if it supports restart then Chef will use <code>/etc/init.d/SERVICE_NAME restart</code>. Otherwise, Chef will use stop and start. </li>
+</ul>
+<p>Earlier when we wrote the template resources, we notified the service to reload. Since the resource supports reload, we can do this. Also note that the resource has an array of actions. Each of these actions will be taken if necessary when Chef manages it. In this case, it will be enabled at boot time, and then started if it is not already running.</p>
+<h2>Let&#8217;s Use the Recipe</h2>
+<p>Now that we&#8217;ve written a nice recipe and understand what it&#8217;s about to do, let&#8217;s actually use it on a node we&#8217;d like to have smartmontools. Before uploading, I remove the boilerplate directories that were created by knife. The actual cookbook contents for upload are:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree cookbooks/smartmontools
+cookbooks/smartmontools
+├── README.md
+├── attributes
+│   └── default.rb
+├── files
+│   └── default
+│       └── 10mail
+├── metadata.rb
+├── recipes
+│   └── default.rb
+└── templates
+    └── default
+        ├── smartd.conf.erb
+        └── smartmontools.default.erb
+
+6 directories, 7 files</pre></div>
+</div>
+
+<p>I didn&#8217;t mention the metadata yet as I haven&#8217;t modified it yet. The knife command will create a default metadata.rb file as mentioned before. It will also populate it with some boilerplate content. The main thing I&#8217;m going to modify is the version and the platforms supported.</p>
+<p><script src="https://gist.github.com/1192349.js"></script></p>
+<p>Now it is time to actually upload the cookbook and apply it to a node.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% knife cookbook upload smartmontools
+Uploading smartmontools             [0.5.0]
+upload complete
+ 
+% knife node run list add virt1test 'recipe[smartmontools]'
+run_list:
+    role[ubuntu]
+    recipe[smartmontools]</pre></div>
+</div>
+
+<h2>Run Chef</h2>
+<p>I&#8217;ll use <a href="http://wiki.opscode.com/display/chef/Knife#Knife-SSHSubcommand" name="knife ssh">knife ssh</a> to run chef-client on the nodes that have the smartmontools recipe applied.</p>
+<p><script src="https://gist.github.com/1239999.js"></script></p>
+<h2>Verify results</h2>
+<p>We can verify the results of running the recipe by examining the resources on the target system(s). Chef&#8217;s contract with you is that it will configure the resources in the manner specified in the recipe. You can be confident that it will completely configure every resource if it exits cleanly (which it did from the output above).</p>
+<div class="CodeRay">
+  <div class="code"><pre>% cat /etc/default/smartmontools
+...
+start_smartd=yes
+...
+% cat /etc/smartd.conf
+...
+DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
+...
+% sudo service smartmontools status
+ * smartd is running</pre></div>
+</div>
+
+<p>Now we can take this same recipe and apply it to other systems. I tested smartmontools on an Ubuntu system. Notice earlier that I had an <code>ubuntu</code> role on my node. I actually modified that role to include the smartmontools recipe, and then all my Ubuntu nodes were configured for smartmontools when they ran Chef again.</p>
+<h2>Conclusion</h2>
+<p>I hope this guide was helpful. I shared the cookbook on the <a href="http://community.opscode.com/cookbooks/smartmontools" name="Chef Community: Smartmontools">Chef Community web site</a>, and the source code is available on <a href="https://github.com/jtimberman/smartmontools-cookbook" name="GitHub">Chef Community web site</a>. Note that while I said this would be easy, it certainly isn&#8217;t trivial. There are a lot of steps involved in making cookbooks that are dynamic, easily customized and shareable with others. It takes practice, but after a few you get the hang of it. End to end, this cookbook took me about 2 hours to write, test, tweak (fix bugs) and document.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">Encrypted Data Bag for Postfix SASL Authentication</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-08-06T00:00:00-06:00" pubdate data-updated="true">Aug 6<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I recently had a chance to sit down and implemented an encrypted data bag in my personal environment. This should translate nicely to anyone that wants to use encrypted data bags in their environment.</p>
+<h3>The use case</h3>
+<p>I send mail out through an SASL authenticated SMTP server. My local network has a postfix SMTP relay that connects to the SASL auth relay. I&#8217;m using the Opscode postfix cookbook with the sasl_auth recipe, since I wrote it originally for this use case.</p>
+<p>The <a href="https://github.com/opscode/cookbooks/blob/master/postfix/recipes/sasl_auth.rb">postfix::sasl_auth recipe</a> is applied in an &#8220;operations master&#8221; role. The attributes for configuring the user and password for SASL are attributes. Relevant lines from the role:</p>
+<div class="CodeRay">
+  <div class="code"><pre>name &quot;ops_master&quot;
+run_list(&quot;recipe[postfix::sasl_auth]&quot;)
+override_attributes(
+  &quot;postfix&quot; =&gt; {
+    &quot;relayhost&quot; =&gt; &quot;[smtp.example.com]:587&quot;,
+    &quot;smtp_sasl_auth_enable&quot; =&gt; &quot;yes&quot;,
+    &quot;smtp_sasl_passwd&quot; =&gt; &quot;AWESOME!!&quot;,
+    &quot;smtp_sasl_user_name&quot; =&gt; &quot;MYUSER&quot;
+  }
+)</pre></div>
+</div>
+
+<h3>Encrypted Secrets</h3>
+<p>Chef&#8217;s data bags are a great way to store infrastructure wide, but not role or node specific information. <a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags"><em>Encrypted</em> data bags</a> are a great way to store sensitive information, like passwords. Here are the steps I followed to get the encrypted data bag set up.</p>
+<p>First, I created the secret key file that is used to encrypt the contents of the data bag item. This file will not be stored in source control, as it is highly sensitive, and only gets copied to the systems that need it.</p>
+<div class="CodeRay">
+  <div class="code"><pre>openssl rand -base64 512 &gt; ~/.chef/encrypted_data_bag_secret</pre></div>
+</div>
+
+<p>Next, I created the actual data bag.</p>
+<div class="CodeRay">
+  <div class="code"><pre>knife data bag create secrets</pre></div>
+</div>
+
+<p>Next I created the data bag item using the secret key. This is created directly on the Chef Server, rather than a plain text file.</p>
+<div class="CodeRay">
+  <div class="code"><pre>knife data bag create secrets postfix --secret-file ~/.chef/encrypted_data_bag_secret</pre></div>
+</div>
+
+<p>I&#8217;m not saving the plaintext data bag item, but will store the encrypted item, so I&#8217;ll retrieve it from the Chef Server and redirect the output to a JSON file.</p>
+<div class="CodeRay">
+  <div class="code"><pre>mkdir data_bags/secrets
+knife data bag show secrets postfix -Fj &gt; data_bags/secrets/postfix.json
+cat data_bags/secrets/postfix.json
+{
+  &quot;id&quot;: &quot;postfix&quot;,
+  &quot;user&quot;: &quot;encrypted string here&quot;,
+  &quot;passwd&quot;: &quot;encrypted string here&quot;
+}</pre></div>
+</div>
+
+<p>The current recipe doesn&#8217;t support using an encrypted data bag item, so I had to modify it. First, load the encrypted data bag item.</p>
+<div class="CodeRay">
+  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;, 
+  Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)</pre></div>
+</div>
+
+<p>This access the &#8220;secrets&#8221; data bag for the &#8220;postfix&#8221; item, and uses the default value for the secret key file (which is &#8220;/etc/chef/encrypted_data_bag_secret&#8221;.</p>
+<p>Next, I update the sasl_passwd template to pass in the user and password from the data bag item.</p>
+<div class="CodeRay">
+  <div class="code"><pre>template &quot;/etc/postfix/sasl_passwd&quot; do
+  #...
+  variables(:smtp_sasl_passwd =&gt; smtp_sasl['passwd'],
+            :smtp_sasl_user_name =&gt; smtp_sasl['user'])
+  #...
+end</pre></div>
+</div>
+
+<p>Finally, the template is updated to use the new values.</p>
+<div class="CodeRay">
+  <div class="code"><pre>&lt;%= node[:postfix][:relayhost] %&gt; &lt;%= @smtp_sasl_user_name %&gt;:&lt;%= @smtp_sasl_passwd %&gt;</pre></div>
+</div>
+
+<p>After uploading the cookbook and the role (I removed the username and password), I copied the secret key file over to the node I needed to run Chef on, then ran Chef Client.</p>
+<div class="CodeRay">
+  <div class="code"><pre>sudo cat /etc/postfix/sasl_passwd
+[smtp.example.com]:587 MYUSER:AWESOME!!</pre></div>
+</div>
+
+<p>Yay!</p>
+<p>The full recipe is:</p>
+<p><script src="https://gist.github.com/1130006.js"></script></p>
+<p>The library file
+  (cookbooks/helper_libs/libraries/encrypted_data_bag_item.rb)
+  is: </p>
+<p><script src="https://gist.github.com/2364164.js"></script></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/07/17/specify-chef-run-list-at-command-line-to-vagrant-up/">Specify Chef Run List at Command Line to Vagrant Up</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-07-17T00:00:00-06:00" pubdate data-updated="true">Jul 17<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wanted to dynamically set my run list for testing with Vagrant without editing the Vagrantfile. Since the Vagrantfile is just Ruby, and the run list is an array, I can split a string into an array and use it.</p>
+<p><script src="https://gist.github.com/1088459.js"></script></p>
+<p>If I don&#8217;t specify the run list, it will still configure the node with my base Ubuntu configuration. Then bring up a Vagrant box with a comma separated string of items in the run list.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% CHEF_RUN_LIST=&quot;role[ubuntu],recipe[apache2]&quot; vagrant up</pre></div>
+</div>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/06/22/github-for-mac-cookbook/">Github for Mac Cookbook</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-06-22T00:00:00-06:00" pubdate data-updated="true">Jun 22<span>nd</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Earlier today, GitHub <a href="https://github.com/blog/878-announcing-github-for-mac" title="GitHub for Mac Announcement" target="_blank">released</a> their native <a href="http://mac.github.com" title="GitHub for Mac" target="_blank">OS X client application</a>. As I automate <a href="https://twitter.com/#!/jtimberman/status/73450718429847552" target="_blank">everything</a> on my <a href="http://jtimberman.posterous.com/managing-my-workstations-with-chef">Macs with Chef</a>, I wrote a <a href="http://ckbk.it/ghmac">cookbook for Github for Mac</a>.</p>
+<p>In my chef-repo I did:</p>
+<div class="CodeRay">
+  <div class="code"><pre>knife cookbook site install ghmac
+knife cookbook upload ghmac
+#... add 'recipe[ghmac]' to my workstation role ...
+knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre></div>
+</div>
+
+<p>Since my Mac OS X workstations all have role[workstation], they all got GitHub for Mac installed automatically. I did have to do the configuration steps through the UI, and that made me cry a little, but I got over it. The application itself is quite nice.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/06/01/non-technical-analogy-for-as-a-service-providers/">Non-technical Analogy for &#8220;as a Service&#8221; Providers</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-06-01T00:00:00-06:00" pubdate data-updated="true">Jun 1<span>st</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wrote the following as a non-technical analogy for a variety of &#8220;as a service&#8221; cloud type providers.</p>
+<p>AWS gives you the entire play ground, for the most part. You can do pretty much anything you want, and they give you some really cool pre-made toys to put in it.</p>
+<p>Engine Yard is more like a sandbox. You can come play in the sandbox, but they make the rules and you have to use their buckets and shovels.</p>
+<p>Heroku is just the bucket. You can&#8217;t look inside, you just put your sand in and they mold it into the sandcastle.</p>
+<p>Rackspace is more like the entire park where the playground is. There&#8217;s other stuff there, and you can make use of it while you visit. They have a few sandboxes, and you can build your own section.</p>
+<p>Opscode is like the construction company. We provide the tools and materials needed to build all the sandboxes, buckets, and parks. Each of the others can use Opscode in whole or in part of building their playground or park.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/05/28/installing-virtualbox-on-osx-with-chef/">Installing Virtualbox on OSX With Chef</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-05-28T00:00:00-06:00" pubdate data-updated="true">May 28<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>There&#8217;s a rumor floating around that I automate everything on my laptop with Chef, including <a href="https://twitter.com/#!/jtimberman/status/73450718429847552" target="_blank">window maximizing</a>. While that&#8217;s not entirely true, I do automate as much as possible on my <a href="http://jtimberman.posterous.com/managing-my-workstations-with-chef" target="_blank">workstations with Chef</a>, as I have three laptops I use regularly. One application I like to have installed is VirtualBox, because I do some Chef recipe testing with it and <a href="http://vagrantup.com" target="_blank">Vagrant</a>.</p>
+<p>I did the most natural thing ever, I wrote a cookbook to automate installation of VirtualBox on OS X. The disk image file that Oracle distributes for VirtualBox on OSX uses an &#8220;mpkg&#8221; installer package, so I couldn&#8217;t just use the dmg_package LWRP I wrote to install it in /Applications. I extended the dmg_package provider to allow a type to be specified and pushed a new release of the <a href="http://community.opscode.com/cookbooks/dmg" target="_blank">dmg cookbook (v.0.6.0)</a>. The recipe in my cookbook builds the URL, which may seem convoluted (maybe it is), but it makes it more dynamic and customizable with fewer assumptions. The actual usage looks like this:</p>
+<p><script src="https://gist.github.com/997134.js"></script></p>
+<p>One thing to note about the mpkg type, is that these generally want to install in /Applications, which often requires root privileges. The dmg_package LWRP will use sudo when performing the mpkg installation, so if you&#8217;re like my and want to run chef-client as a non-root user for most things, it will prompt for your password, unless you unlock sudo in the same shell. Output of VirtualBox being installed:</p>
+<p><code>
+<div class="CodeRay">
+  <div class="code"><pre>INFO: Processing dmg_package[Virtualbox] action install (virtualbox::default line 41)
+INFO: Processing remote_file[/Users/jtimberman/.chef/cache/Virtualbox.dmg] action create (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 36)
+INFO: Processing execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg] action run (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 42)
+INFO: execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg] sh(hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg)
+/dev/disk1                  Apple_partition_scheme                 
+/dev/disk1s1                Apple_partition_map                    
+/dev/disk1s2                Apple_HFS                              /Volumes/VirtualBox
+INFO: execute[sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /] sh(sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /)
+Password: &lt;-- unlock sudo before running to avoid this prompt. &quot;sudo -l&quot; should be sufficient.
+installer: Package name is Oracle VM VirtualBox
+installer: Upgrading at base path /
+installer: The upgrade was successful.
+INFO: execute[hdiutil detach '/Volumes/Virtualbox'] sh(hdiutil detach '/Volumes/Virtualbox')
+&quot;disk1&quot; unmounted.
+&quot;disk1&quot; ejected.
+INFO: Processing file[/Applications/Virtualbox.app/Contents/MacOS/Virtualbox] action create (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 55)
+ERROR: file[/Applications/Virtualbox.app/Contents/MacOS/Virtualbox] (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 55) had an error: Operation not permitted - /Applications/Virtualbox.app/Contents/MacOS/Virtualbox
+INFO: Chef Run complete in 36.219113 seconds
+INFO: Running report handlers
+INFO: Resources updated this run:
+INFO:   execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg]
+INFO:   execute[sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /]
+INFO:   execute[hdiutil detach '/Volumes/Virtualbox']
+INFO: Report handlers complete</pre></div>
+</div>
+
+</code></p>
+<p>After writing and testing, the next thing I wanted to do is share the cookbook on the Opscode Chef Community site. However, I discovered that the good Chris Peplin already shared one! Since the site has a flat namespace, I would have to name mine differently. However, I think it would be better to collaborate in true Open Source fashion with Chris, and we&#8217;ll collaborate on this.&nbsp;</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/05/06/switching-to-gnu-emacs/">Switching to GNU Emacs</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-05-06T00:00:00-06:00" pubdate data-updated="true">May 6<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I have a confession to make.</p>
+<p>For those who follow me on <a href="http://twitter.com/jtimberman" target="_blank">Twitter</a>, you already know. For those who read the title of this post, you can make an educated guess.</p>
+<p>After ~16 years of using Vi/Vim/MacVim, I&#8217;m switching my primary editor to Emacs. Over the years, I have tried to use Emacs without much progress. I never really gave enough effort to learn it. In fact, only in the last year did I learn all the movement keys (C-f, C-b, C-n, C-p). To say I made uneducated disparaging comments about Emacs would be an understatement.</p>
+<p>I have a highly customized Vim/MacVim setup, with lots of bells and whistles like NERDtree, Command-T, language plugins <a href="https://github.com/jtimberman/dotvim" target="_blank">and more</a>&nbsp;derived from Adam Jacob&#8217;s <a href="https://github.com/adamhjk/adam-vim" target="_blank">repository</a>. I&#8217;ve spent countless hours tweaking and customizing it further to enhance productivity.</p>
+<p>So how did I come around and completely switch editors? It wasn&#8217;t easy, that&#8217;s for sure. First there&#8217;s the resistance to a new tool. However, I wanted to keep a truly open mind, and give it a real, honest attempt. I bought the <a href="http://amzn.com/0596006489" target="_blank">O&#8217;Reilly Learning GNU Emacs</a> book and started reading, with the editor open to one of my favorite things to edit, my ~/chef-repo.</p>
+<p>Actually the first thing I did was get a sensible and sane configuration started. I forked Phil Hagelberg&#8217;s excellent&nbsp;<a href="https://github.com/technomancy/emacs-starter-kit">Emacs Starter Kit</a>. I also thought AquaMacs would be the sensible place to start, since I&#8217;m using a Mac, and it uses a lot of familiar OS X hotkeys for copy/paste, opening and closing tabs and more. However, some fellow Opscode coworkers advised against AquaMacs, especially with the starter kit, because it leads one down a path of really &#8220;non-standard&#8221; Emacs settings. That isn&#8217;t entirely awful, since I manage my <a href="jtimberman.posterous.com/managing-my-workstations-with-chef" target="_blank">workstation(s) with Chef</a> and have my Emacs config available first thing on a new machine (now that its added in, anyway :)). However, I quickly became annoyed with some erratic behavior. For example, opening a tab, then having something like a completion window means that switching tabs will keep the completion window persisted, even though it was split on &#8220;a different tab&#8221;.&nbsp;</p>
+<p>So I switched to GNU Emacs, and have been using that for the last week. I have no measure of whether my productivity is increased or not, but I&#8217;m getting pretty comfortable with the editor, and able to do most of what I was really good at in Vim. I sometimes miss Command-T, but the default Emacs file fine (C-x C-f for those that don&#8217;t know) is really good. Some of the things that I have found to be totally essential and are what keep me using the editor:</p>
+<p>Buffers are totally sane, very fast to switch between, and easy to navigate between open files. Also related, the half hour or so I spent learning and practising the basics - create horizontal and veritical split, opening files in new windows, and more was totally worth it. I&#8217;m actually getting to be faster than the panels used in Vim, which I&#8217;ve been using for ~4 years.</p>
+<p>File navigation is awesome. I really liked &#8221;<img src="http://km.support.apple.com/library/APPLE/APPLECARE_ALLGEOS/HT1343/ks_command.gif" alt="" />-T&#8221; in the short time I used TextMate, and I loved <a href="http://weblog.jamisbuck.org/2008/10/10/coming-home-to-vim" target="_blank">FuzzyFileFinder</a> and <a href="http://www.vim.org/scripts/script.php?script_id=3025" target="_blank">Command-T plugins</a> for Vim. However the flexiblity of the built-in default file navigation in Emacs is really intuitive for me.</p>
+<p>With the Emacs starter-kit, some good modes are installed and available by default without modification. Most of the time I&#8217;m using Ruby, Markdown or Javascript modes. I anticipate starting in on org-mode at some point, but as I&#8217;m still getting comfortable with the basics, we&#8217;ll take some baby steps :).</p>
+<p>Emacs really is easy to customize. I never really did much with Vim. I certainly cargo culted other configs, went with what worked, and left it at that. With Emacs, I&#8217;m doing that, but the code I&#8217;m looking at is more sensible to me. I hope this doesn&#8217;t mean I&#8217;m going to go learn Lisp :). As I&#8217;ve forked emacs-starter-kit on GitHub, and made my own customizations, I&#8217;m also sharing those back on the site, so if you want to see what changes I&#8217;ve made and additional modes I&#8217;ve installed, <a href="https://github.com/jtimberman/emacs-starter-kit" target="_blank">take a peek</a>. If you look, there&#8217;s a chef.el the &#8220;jtimberman&#8221; directory with some shortcuts to drop off common Chef resources. As I learn more, I plan to make that a bit more useful as snippets or maybe even a chef-mode.</p>
+<p>Speaking of custom modes, even if I didn&#8217;t use it for anything else, Emacs is totally worth using for confluence-mode. We have two Confluence wikis, one for Chef, and an internal company wiki. Confluence mode seems to assume you only have one wiki, and I haven&#8217;t sorted out the details on how to easily switch between the two. For now I just put the confluence-url setting in the *scratch* buffer and do M-x eval-region to &#8220;switch&#8221;. That said, the ability to quickly search for a page and load the confluence wiki markup page in a buffer, then save the content back out to the wiki directly is *awesome*. No more 4 step process to copy/paste the markup into an editor window and back out to the form. Also, while there&#8217;s a Vim syntax plugin for Confluence, I had no end of error trying to use it.</p>
+<p>As I&#8217;ve only been using Emacs for a week, I&#8217;m still a novice. However, I&#8217;ve gotten to the point where I can get what I need done in writing Chef cookbooks and documentation. I&#8217;m enjoying the learning process, and pleased that I&#8217;m at a point where the editor is not only out of the way, but helping me get more done.</p>
+<p>The potential to devolve into an editor war is high, so please, no comments about how other editors are better or that I should switch back to Vim. I firmly believe that everyone should use tools that they enjoy, and that help them be productive. Snarky comments can be made on twitter, of course :).</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/04/24/a-simple-report-handler/">A Simple Report Handler</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-04-24T00:00:00-06:00" pubdate data-updated="true">Apr 24<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://tickets.opscode.com/browse/CHEF-2179" title="Exception and Report Handlers" target="_blank">Exception and report handlers</a> are a pretty cool feature of Chef. They have been around for several versions (<a href="http://www.opscode.com/blog/2010/06/21/chef-0-9-0-and-ohai-0-5-6-released/" title="Chef 0.9.0 Release Post" target="_blank">first appearing in 0.9.0</a>), but haven&#8217;t received a lot of attention. In the Chef Advanced training class, we go into greater detail about writing handlers, so I had a play with them a bit recently. Also, the default logging output for a chef-client run is a bit more verbose in Chef 0.10 than it was in previous versions. <a href="http://tickets.opscode.com/browse/CHEF-2179" title="CHEF-2179" target="_blank">I&#8217;ve been convinced</a> this is for the better overall, though all the &#8220;Processing&#8230;&#8221; lines can get in the way of things that are actually being configured. To make it clearer of what resources were actually configured in the Chef run, I wrote a very simple handler:</p>
+<p><script src="https://gist.github.com/940171.js"></script></p>
+<p>To use this in my chef-client, I drop it off as a file, say &#8220;/var/lib/chef/handler/updated_resources.rb&#8221; and then configure /etc/chef/client.rb:</p>
+<p><script src="https://gist.github.com/940176.js"></script></p>
+<p>Then when I run chef-client, after the run is complete it will display something like this:</p>
+<div class="CodeRay">
+  <div class="code"><pre>[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Chef Run complete in 15.297228 seconds
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Running report handlers
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Resources updated this run:
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO:   execute[apt-get update]
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO:   execute[index-gem-repository]
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO:   remote_directory[/srv/gems/gems]
+[Sun, 24 Apr 2011 22:50:58 -0600] INFO: Report handlers complete</pre></div>
+</div>
+
+<p><strong>Update</strong>: I released a <a href="https://rubygems.org/gems/chef-handler-updated-resources">gem for this handler</a>. You can now install the gem and then use <code>require 'chef/handler/updated_resources'</code> in /etc/chef/client.rb</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/04/22/chef-0-10-s-knife-plugins/">Chef 0.10&#8217;s Knife Plugins</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-04-22T00:00:00-06:00" pubdate data-updated="true">Apr 22<span>nd</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Earlier today^Wyesterday, Opscode previewed a new feature of the upcoming Chef 0.10, <a href="http://www.opscode.com/blog/2011/04/22/chef-0-10-preview-knife-plugins-and-ui/" title="Chef 0.10 Preview: Knife Plugins" target="_blank">Knife Plugins</a>. I&#8217;ve been excited about this feature since Dan DeLeo first created the <a href="http://tickets.opscode.com/browse/CHEF-1248" title="CHEF-1248" target="_blank">ticket for it</a>. I already created the &#8220;grep&#8221; plugin that Dan illustrates on the blog post, and it is quite useful already (and I only have a few systems!).</p>
+<p>A few months ago, I wrote a <a href="https://rubygems.org/gems/ubuntu_ami" title="UbuntuAmi RubyGem" target="_blank">silly library</a> that will retrieve the list of Canonical&#8217;s released AMIs. They make this available as a text file per distribution codename (lucid, maverick, etc), and my library supports that. For even greater silliness, but perhaps usefulness, I wrote a knife plugin to retrieve the AMI data. The code is really simple.</p>
+<p><script src="https://gist.github.com/938399.js"></script></p>
+<p>The run method processes the name_args (see the <a href="http://wiki.opscode.com/display/chef/Knife+Plugins" title="Knife Plugins" target="_blank">Knife Plugin Documentation</a>) for the distribution and optionally a type. Lets see an example of what this means.</p>
+<p>First, usage:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% knife ec2 amis ubuntu -h
+knife ec2 amis ubuntu DISTRO [TYPE]
+    -s, --server-url URL             Chef Server URL
+    -k, --key KEY                    API Client Key
+        --color                      Use colored output
+    -c, --config CONFIG              The configuration file to use
+        --defaults                   Accept default values for all questions
+    -e, --editor EDITOR              Set the editor to use for interactive commands
+    -E, --environment ENVIRONMENT    Set the Chef environment
+    -F, --format FORMAT              Which format to use for output
+        --no-color                   Don't use colors in the output
+    -n, --no-editor                  Do not open EDITOR, just accept the data as is
+    -u, --user USER                  API Client Username
+        --print-after                Show the data after a destructive operation
+    -V, --verbose                    More verbose output. Use twice for max verbosity
+    -v, --version                    Show chef version
+    -y, --yes                        Say yes to all prompts for confirmation
+    -h, --help                       Show this message</pre></div>
+</div>
+
+<p>The name_args we can pass are DISTRO and TYPE, TYPE being optional. The rest of the options are built into knife and available to every sub-command. Let&#8217;s pick a distro. My favorite these days is lucid:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% knife ec2 amis ubuntu lucid
+ap_northeast_large:      ami-580fa459
+ap_northeast_large_ebs:  ami-5e0fa45f
+ap_northeast_small:      ami-4c0fa44d
+ap_northeast_small_ebs:  ami-5c0fa45d
+ap_southeast_large:      ami-c692ec94
+ap_southeast_large_ebs:  ami-f092eca2
+ap_southeast_small:      ami-2492ec76
+ap_southeast_small_ebs:  ami-f292eca0
+eu_west_large:           ami-631f2b17
+eu_west_large_ebs:       ami-3d1f2b49
+eu_west_small:           ami-a11e2ad5
+eu_west_small_ebs:       ami-311f2b45
+us_east_large:           ami-fa01f193
+us_east_large_ebs:       ami-3202f25b
+us_east_small:           ami-7000f019
+us_east_small_ebs:       ami-3e02f257
+us_west_large:           ami-e1bfefa4
+us_west_large_ebs:       ami-f5bfefb0
+us_west_small:           ami-19bfef5c
+us_west_small_ebs:       ami-ebbfefae</pre></div>
+</div>
+
+<p>For the DISTRO, I can use any of the codenames that Canonical makes available, including karmic, lucid, maverick and even natty at the time of this writing. The value on the left is the TYPE. Lets see what happens when I pass one of those:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% knife ec2 amis ubuntu lucid us_west_small
+ami-19bfef5c</pre></div>
+</div>
+
+<p>This returns just the AMI. We can feed this into an environment variable or just copy and paste it into a &#8220;knife ec2 server create&#8221; command for the &#8220;-I ami&#8221; option.</p>
+<p>A note about the naming, I classed it under the ec2 sub-command space since it is most relevant there. Further, I used &#8220;amis ubuntu&#8221; rather than &#8220;ubuntu amis&#8221; because theoretically other plugins could be written to retrieve other platforms. There&#8217;s a couple bugs I know about already and will fix them later. Enjoy!</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/6/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/4/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: ruby | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/ruby/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Some Knife Plugins]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins/"/>
+    <updated>2012-11-29T19:11:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve shared my <code>~/.chef/plugins/knife</code> directory as a Git repository
+on <a href="https://github.com/jtimberman/chef-plugins-knife">GitHub</a>. There&rsquo;s
+only a few, but I hope you find them useful. They are licensed under
+the Apache 2.0 software license, but please only use them for awesome.</p>
+
+<h2>gem</h2>
+
+<p>This plugin will install a gem into the Ruby environment that knife is
+executing in. This is handy if you want to install knife plugins that
+are gems.</p>
+
+<p>If you have Ruby and Chef/Knife installed in an area where your user
+can write:</p>
+
+<p><code>
+knife gem install knife-config
+</code></p>
+
+<p>If you&rsquo;re using an Omnibus package install of Chef, or otherwise
+require root access to install:</p>
+
+<p><code>
+knife gem install knife-config
+</code></p>
+
+<p><strong>Note</strong> If you&rsquo;re trying to install a gem for <em>Chef</em> to use, you
+  should put it in a <code>chef_gem</code> resource in a recipe.</p>
+
+<h2>metadata</h2>
+
+<p>This plugin prints out information from a cookbook&rsquo;s metadata. It
+currently only works with <code>metadata.rb</code> files, and not <code>metadata.json</code>
+files.</p>
+
+<p>In a cookbook&rsquo;s directory, display the cookbook&rsquo;s dependencies:</p>
+
+<p><code>
+knife metadata dependencies
+</code></p>
+
+<p>Show the dependencies and supported platforms:</p>
+
+<p><code>
+knife metadata dependencies platforms
+</code></p>
+
+<p>Use the <code>-P</code> option to pass a path to a cookbook.</p>
+
+<p><code>
+knife metadata name dependencies -P ~/.berkshelf/cookbooks/rabbitmq-1.6.4
+</code></p>
+
+<h2>nukular</h2>
+
+<p><a href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/">I wrote on this blog about this plugin awhile ago</a>.</p>
+
+<p>This plugin cleans up after running <code>chef-client</code> on a VMware Fusion machine.</p>
+
+<p><code>
+knife nukular guineapig base guineapig.int.example.com
+</code></p>
+
+<h2>plugin_create</h2>
+
+<p>This creates a plugin scaffolding in <code>~/.chef/plugins/knife</code>. It will
+join underscored words as CamelCaseClasses.</p>
+
+<p>For example,</p>
+
+<p><code>
+knife plugin create awesometown
+</code></p>
+
+<p>Creates a plugin that is class <code>Awesometown</code> that can be executed with:</p>
+
+<p><code>
+knife awesometown
+</code></p>
+
+<p>Whereas this,</p>
+
+<p><code>
+knife plugin create awesome_town
+</code></p>
+
+<p>Creates a plugin that is class <code>AwesomeTown</code> that can be executed
+with:</p>
+
+<p><code>
+knife plugin awesome town
+</code></p>
+]]></content>
+  </entry>
+  
+</feed>

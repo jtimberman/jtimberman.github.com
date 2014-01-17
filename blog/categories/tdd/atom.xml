@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: tdd | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/tdd/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[TDD Cookbook Ticket]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket/"/>
+    <updated>2013-05-03T14:36:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket</id>
+    <content type="html"><![CDATA[<p>This post will briefly describe how I did a TDD update to Opscode&rsquo;s
+<a href="http://ckbk.it/runit">runit</a> to resolve an
+<a href="https://tickets.opscode.com/browse/COOK-2867">issue reported last night</a>.</p>
+
+<p>First, the issue manifests itself only on Debian systems. The runit
+cookbook&rsquo;s <code>runit_service</code> provider will write an
+<a href="http://tickets.opscode.com/browse/COOK-1576">LSB init.d script</a> on
+Debian, rather than symlinking to <code>/usr/bin/sv</code>. The problem raised in
+the new ticket is that the template will follow the link and write to
+<code>/usr/bin/sv</code>. This is bad, as it will end up in a forkbomb as
+runsvdir attempts to restart sv on
+<a href="http://drupal.org/files/x-all-the-things-template.png">all the things</a>.
+Oops! Sorry about that. Let&rsquo;s get it fixed, and practice some TDD.</p>
+
+<p>The runit cookbook includes support for test-kitchen, though I did
+need to
+<a href="https://github.com/opscode-cookbooks/runit/commit/8d2e0fcb9d6becf99c0d30694164e57d59fb667b">update it</a>
+for this effort. Part of this change was adding a box for Debian in
+the <code>.kitchen.yml</code>. I set about resolving this with TDD in mind.</p>
+
+<p>First, the runit cookbook includes a couple
+<a href="https://github.com/opscode-cookbooks/runit/tree/master/test/cookbooks">&ldquo;test&rdquo; cookbooks</a>
+to facilitate setting up the system with the <code>runit_service</code> resource
+so the outcome can be tested to ensure the behavior is correct. I
+started by adding a &ldquo;failing test&rdquo; in the <code>runit_test::service</code>
+recipe, meaning a link resource, and a <code>runit_service</code> resource that
+would overwrite <code>/usr/bin/sv</code>.</p>
+
+<p>```ruby
+link &ldquo;/etc/init.d/cook-2867&rdquo; do
+  to &ldquo;/usr/bin/sv&rdquo;
+end</p>
+
+<p>runit_service &ldquo;cook-2867&rdquo; do
+  default_logger true
+end
+```</p>
+
+<p>Then I ran <code>kitchen test</code> on the Debian box. As expected, the link was
+created, and then the runit service was configured. The service&rsquo;s
+provider will wait until the service is up. Since we&rsquo;ve destroyed the
+sv binary, that will never happen, so I destroyed it. I manually
+confirmed the behavior too, to make sure I wasn&rsquo;t seeing something
+weird. Due to its very nature, this is <em>really</em> hard to test for
+automatically, but it will happen consistently.</p>
+
+<p>Next, I had to write the code to implement the fix for this bug.
+Essentially, this means checking if the <code>/etc/init.d/cook-2867</code> file
+is a symbolink link, and removing it.</p>
+
+<p><code>ruby
+initfile = ::File.join( '/etc', 'init.d', new_resource.service_name)
+::File.unlink(initfile) if ::File.symlink?(initfile)
+</code></p>
+
+<p>Simple enough. Next I tested again by destroying the existing
+environment and rerunning it from scratch. This takes some time, but
+it verifies that everything is working properly. Here&rsquo;s the output on
+Debian:</p>
+
+<p><code>
+INFO: Processing link[/etc/init.d/cook-2867] action create (runit_test::service line 147)
+INFO: link[/etc/init.d/cook-2867] created
+INFO: Processing service[cook-2867] action nothing (dynamically defined)
+INFO: Processing runit_service[cook-2867] action enable (runit_test::service line 151)
+INFO: Processing directory[/etc/sv/cook-2867] action create (dynamically defined)
+INFO: Processing template[/etc/sv/cook-2867/run] action create (dynamically defined)
+INFO: Processing directory[/etc/sv/cook-2867/log] action create (dynamically defined)
+INFO: Processing directory[/etc/sv/cook-2867/log/main] action create (dynamically defined)
+INFO: Processing directory[/var/log/cook-2867] action create (dynamically defined)
+INFO: Processing file[/etc/sv/cook-2867/log/run] action create (dynamically defined)
+INFO: Processing template[/etc/init.d/cook-2867] action create (dynamically defined)
+INFO: template[/etc/init.d/cook-2867] updated content
+INFO: template[/etc/init.d/cook-2867] owner changed to 0
+INFO: template[/etc/init.d/cook-2867] group changed to 0
+INFO: template[/etc/init.d/cook-2867] mode changed to 755
+INFO: runit_service[cook-2867] configured
+INFO: Chef Run complete in 7.267132764 seconds
+INFO: Running report handlers
+</code></p>
+
+<p>I didn&rsquo;t feel I needed a specific test for this in minitest-chef,
+because it wouldn&rsquo;t have finished converging (earlier behavior I saw
+in the &ldquo;failing&rdquo; test).</p>
+
+<p>If you&rsquo;re contributing to cookbooks, and they have support for
+test-kitchen, it&rsquo;s awesome if you can open a bug report with a failing
+test. In this case, it was fairly easy to reproduce the bug.</p>
+]]></content>
+  </entry>
+  
+</feed>

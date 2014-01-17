@@ -1,0 +1,2450 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="I wanted to capture the minimal steps required to install a Chef
+version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
+Ubuntu 12.04. Similar &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/page/3">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/">Install Chef 10 Server on Ubuntu With Ruby 1.9</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-17T11:27:00-07:00" pubdate data-updated="true">Nov 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wanted to capture the minimal steps required to install a Chef
+version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
+Ubuntu 12.04.</p>
+
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
+
+<p>This does not include any customization to the
+installation and takes everything as default. This will all change
+when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
+
+<p>These steps were performed on a default server install of Ubuntu
+12.04.</p>
+
+<p>Update apt sources.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get update</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Install required packages.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get install ruby1.9.1-full build-essential wget ssl-cert curl</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Update RubyGems.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Install Chef.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo gem install chef --no-ri --no-rdoc</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Configure chef-solo.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo mkdir -p /etc/chef
+</span><span class='line'>sudo vi /etc/chef/solo.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The config file should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file_cache_path</span> <span class="s2">&quot;/tmp/chef-solo&quot;</span>
+</span><span class='line'><span class="n">cookbook_path</span> <span class="s2">&quot;/tmp/chef-solo/cookbooks&quot;</span>
+</span><span class='line'><span class="n">recipe_url</span> <span class="s2">&quot;http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">sudo</span> <span class="n">chef</span><span class="o">-</span><span class="n">solo</span> <span class="o">-</span><span class="n">o</span> <span class="n">chef</span><span class="o">-</span><span class="ss">server</span><span class="p">:</span><span class="ss">:rubygems</span><span class="o">-</span><span class="n">install</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo knife configure -i
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/home/jtimberman/.chef/jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/home/jtimberman/.chef/validation.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;http://10.1.1.100:4000&#39;</span>
+</span><span class='line'><span class="n">cache_type</span>               <span class="s1">&#39;BasicFile&#39;</span>
+</span><span class='line'><span class="n">cache_options</span><span class="p">(</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s1">&#39;/home/jtimberman/.chef/checksums&#39;</span> <span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">sudo</span> <span class="n">cp</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">validation</span><span class="o">.</span><span class="n">pem</span> <span class="o">~</span><span class="sr">/.chef</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Verify that the API client and configuration file work.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">client</span> <span class="n">list</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
+</span><span class='line'>  <span class="n">jtimberman</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/08/10/vagrant-multiple-provisioners/">Using Multiple Provisioners in Vagrant</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-08-10T11:39:00-06:00" pubdate data-updated="true">Aug 10<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><strong>Update</strong> Chef 10.14 is
+  <a href="http://www.opscode.com/blog/2012/09/07/chef-10-14-0-released/">released</a>.
+  I removed the &ldquo;<code>--pre</code>&rdquo; from the gem install commands but otherwise
+  left this post, since it was written by Past Me.</p>
+
+<p>As you may be aware, the next release of Chef, 10.14, is in
+<a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-07/msg00021.html">beta testing</a>.
+Most publicly available baseboxes for <a href="http://vagrantup.com">Vagrant</a>
+aren&rsquo;t built for the beta. But perhaps you want to try it out?</p>
+
+<p>Vagrant to the rescue! Besides the Chef solo and client provisioners,
+Vagrant has a shell provisioner, too. It allows you to pass in an
+inline command, or a shell script. This example builds on my
+<a href="/blog/2012/03/18/multivm-vagrantfile-for-chef/">MultiVM Vagrantfile for Chef post</a>.
+You may wish to refer to the full file in that post for complete
+context.</p>
+
+<p>First, the shell provisioner line looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It goes in the config block. Remember that <code>cookbook_testers</code> is a
+hash of data about the multiple VMs I&rsquo;m using, so they would all get
+launched with this provisioner.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+</span><span class='line'>      <span class="c1">### Use shell for great justice!</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc&quot;</span>
+</span><span class='line'>      <span class="c1">### chef-client (allthethings)</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:chef_client</span> <span class="k">do</span> <span class="o">|</span><span class="n">chef</span><span class="o">|</span>
+</span><span class='line'>        <span class="c1"># ... chef provisioner is the same as before</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And now, a <code>vagrant up</code> on my Ubuntu 12.04 VM, with the less
+interesting output truncated:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% vagrant </span><span class="n">up</span> <span class="n">precise</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="ss">provisioner</span><span class="p">:</span> <span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Provisioners</span><span class="o">::</span><span class="no">Shell</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="no">Successfully</span> <span class="n">installed</span> <span class="n">chef</span><span class="o">-</span><span class="mi">10</span><span class="o">.</span><span class="mi">14</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="mi">3</span>
+</span><span class='line'><span class="mi">1</span> <span class="n">gem</span> <span class="n">installed</span>
+</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="ss">provisioner</span><span class="p">:</span> <span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Provisioners</span><span class="o">::</span><span class="no">ChefClient</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="n">chef</span><span class="o">-</span><span class="n">client</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="no">Fri</span><span class="p">,</span> <span class="mi">10</span> <span class="no">Aug</span> <span class="mi">2012</span> <span class="mi">17</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">23</span> <span class="o">+</span><span class="mo">0000</span><span class="o">]</span> <span class="ss">INFO</span><span class="p">:</span> <span class="o">***</span> <span class="no">Chef</span> <span class="mi">10</span><span class="o">.</span><span class="mi">14</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="mi">3</span> <span class="o">***</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="no">Fri</span><span class="p">,</span> <span class="mi">10</span> <span class="no">Aug</span> <span class="mi">2012</span> <span class="mi">17</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">37</span> <span class="o">+</span><span class="mo">0000</span><span class="o">]</span> <span class="ss">INFO</span><span class="p">:</span> <span class="no">Chef</span> <span class="no">Run</span> <span class="n">complete</span> <span class="k">in</span> <span class="mi">11</span><span class="o">.</span><span class="mi">323208919</span> <span class="n">seconds</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One of the most compelling features of Chef 10.14 is the introduction
+of
+<a href="http://tickets.opscode.com/browse/CHEF-13">&ldquo;no-op&rdquo; or &ldquo;dry-run&rdquo; mode</a>,
+also called
+&ldquo;<a href="http://lists.opscode.com/sympa/arc/chef/2012-07/msg00025.html">Why Run Mode</a>&rdquo;.
+However, at this time, neither arbitrary command-line arguments nor why-run
+mode itself are supported in Vagrant. I opened a
+<a href="https://github.com/mitchellh/vagrant/pull/1067">pull request</a> for the
+former, which will allow the latter easily. Of course, vagrant is
+highly valuable for doing testing by <em>actually running</em> your recipes,
+but I think arbitrary command-line options will be a welcome feature
+for other purposes.</p>
+
+<p>Another use case for this particular method of using Vagrant
+provisioners is to update RubyGems inside an &ldquo;Omnibus&rdquo; full stack
+install, to resolve
+<a href="http://tickets.opscode.com/browse/CHEF-3295">this bug</a>, or
+<a href="http://tickets.opscode.com/browse/CHEF-2871">this request</a>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem update --system&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These two example commands can be combined in a single <code>:inline</code>, or
+as a shell script.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s2">&quot;gem-updater.sh&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the shell script, <code>gem-updater.sh</code> in the same directory as the Vagrantfile:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'>sudo /opt/chef/embedded/bin/gem update --system
+</span><span class='line'>sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/07/29/os-x-workstation-management-with-chef/">OS X Workstation Management With Chef</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-07-29T12:36:00-06:00" pubdate data-updated="true">Jul 29<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I have written
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">twice</a>
+<a href="/blog/2011/09/04/update-to-managing-my-workstations/">before</a> about
+managing my OS X workstations with Chef. The first post has one of my
+highest hit counts of any blog post, so it is certainly a topic of
+interest to people.</p>
+
+<p>This post is a rewrite of the original, and now has an
+<a href="https://github.com/jtimberman/workstation-chef-repo">accompanying Chef Repository</a>
+where all the code I talk about is available.</p>
+
+<h2>Background</h2>
+
+<p>The current incarnation of this repository lives in the more general
+private Chef Repository I use for my home network, since I manage more
+than just workstations with Chef. I have used the main recipe
+(workstation::default) with great success on several Mac OS X systems:
+Macbook Pro, iMac, and Macbook Air running various versions between
+10.6 and 10.8. I recently used it to configure a replacement Macbook
+Pro for work, and then again after upgrading to
+<a href="/blog/2012/07/27/mountain-lion-upgrade/">Mountain Lion</a>.</p>
+
+<h2>The Setup</h2>
+
+<p>Also known as &ldquo;bootstrapping Chef&rdquo;, the system needs to be set up to
+run Chef.</p>
+
+<ul>
+<li>Opscode Hosted Chef is my Chef Server</li>
+<li>I run everything as a non-privileged user</li>
+</ul>
+
+
+<h3>Installation</h3>
+
+<p>I use the Opscode
+<a href="http://opscode.com/chef/install">full-stack installer</a> on all my
+systems, including OS X, because it includes everything Chef needs,
+including Ruby.</p>
+
+<p>Whether you&rsquo;re unpacking a brand new Mac, or using an existing system,
+use this command:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>curl -L https://opscode.com/chef/install.sh | sudo bash
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Symbolic links are created for Chef&rsquo;s binaries in <code>/usr/bin</code>.</p>
+
+<p><strong>Mountain Lion Note</strong>: I did this on Lion before upgrading to
+  Mountain Lion. Apple removed X11 from Mountain Lion, and the
+  installer opens an xterm, so I don&rsquo;t know how/if this works the
+  same on a brand new Mountain Lion system.</p>
+
+<h3>Configuration</h3>
+
+<p>Next, create a configuration file for the Chef Server, and copy the
+validation key into place. If this is a new Mac, you&rsquo;ll need to get
+your validation key copied to the system.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo mkdir -p /etc/chef
+</span><span class='line'>sudo vi /etc/chef/client.rb
+</span><span class='line'>cp ~/Downloads/ORGNAME-validation.pem /etc/chef/validation.pem
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I am using Opscode Hosted Chef, and this is my <code>/etc/chef/client.rb</code>.
+The path options are so Chef writes its files in a location my user
+has write access.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">base_dir</span> <span class="o">=</span> <span class="s2">&quot;/Users/USERNAME/.chef&quot;</span>
+</span><span class='line'><span class="n">chef_server_url</span>         <span class="s1">&#39;https://api.opscode.com/organizations/ORGNAME&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>  <span class="s1">&#39;ORGNAME-validator&#39;</span>
+</span><span class='line'><span class="n">checksum_path</span>           <span class="s2">&quot;</span><span class="si">#{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">/checksum&quot;</span>
+</span><span class='line'><span class="n">file_cache_path</span>         <span class="s2">&quot;</span><span class="si">#{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">/cache&quot;</span>
+</span><span class='line'><span class="n">file_backup_path</span>        <span class="s2">&quot;</span><span class="si">#{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">/backup&quot;</span>
+</span><span class='line'><span class="n">cache_options</span><span class="p">({</span><span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">/cache/checksums&quot;</span><span class="p">,</span> <span class="ss">:skip_expires</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>The Repository</h2>
+
+<p>I have made
+<a href="https://github.com/jtimberman/workstation-chef-repo">the repository available on GitHub</a>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone git://github.com/jtimberman/workstation-chef-repo.git
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Normally, systems that are configured with Chef wouldn&rsquo;t have the Chef
+Repository on them. For the purpose of this post, clone the
+repository to the local system. Presumably, one might do further
+development to it.</p>
+
+<p>Before we upload it and run Chef, let&rsquo;s explore what is included.</p>
+
+<h2>Data Bags</h2>
+
+<p>The repository contains two data bags with a single item each. One is
+for the local user, the other is for the workstation setup.</p>
+
+<p>The USERNAME should be changed to the local user that is being
+configured on the workstation. To ensure that the correct value is
+used, run the following and use the value returned.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>% ruby -retc -e <span class="s1">&#39;puts Etc.getlogin&#39;</span>
+</span><span class='line'>jtimberman
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Thus, I use <code>jtimberman</code> for my systems.</p>
+
+<p>The user data bag item is used in two cookbooks, users and
+workstation. This is described below under Cookbooks.</p>
+
+<p>The workstation data bag item contains various data about the
+workstation itself, software that should be installed, property list
+files dropped off, etc. The JSON file in the repository contains several
+examples. Modify this as required for your own system.</p>
+
+<h2>Roles</h2>
+
+<p>There are three roles.</p>
+
+<h3>base</h3>
+
+<p>This is the role I apply on <em>all</em> my systems, not just workstations.
+Aside from the contents of the role file in the repository, I also set
+attributes across my systems for a variety of other purposes like
+postfix, munin, ntp and so forth. For the workstation setup purposes,
+it contains the attributes I use for installing Ruby under Rbenv, and
+the gems I want available on all my systems that aren&rsquo;t project
+specific (I use <a href="http://gembundler.com">bundler</a> for those).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s2">&quot;base&quot;</span>
+</span><span class='line'><span class="n">description</span> <span class="s2">&quot;Base role for all nodes&quot;</span>
+</span><span class='line'><span class="n">override_attributes</span><span class="p">(</span>
+</span><span class='line'>  <span class="s2">&quot;ruby_build&quot;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="s2">&quot;git_ref&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;v20120524&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="s2">&quot;upgrade&quot;</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span>
+</span><span class='line'>    <span class="s2">&quot;install_pkgs&quot;</span> <span class="o">=&gt;</span> <span class="o">[]</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="s2">&quot;rbenv&quot;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="s2">&quot;install_pkgs&quot;</span> <span class="o">=&gt;</span> <span class="o">[]</span><span class="p">,</span>
+</span><span class='line'>    <span class="s2">&quot;user_installs&quot;</span> <span class="o">=&gt;</span> <span class="o">[</span>
+</span><span class='line'>      <span class="p">{</span>
+</span><span class='line'>        <span class="s2">&quot;user&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;USERNAME&quot;</span><span class="p">,</span>
+</span><span class='line'>        <span class="s2">&quot;rubies&quot;</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="s2">&quot;1.9.3-p194&quot;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>        <span class="s2">&quot;global&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;1.9.3-p194&quot;</span><span class="p">,</span>
+</span><span class='line'>        <span class="s2">&quot;gems&quot;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>          <span class="s2">&quot;1.9.3-p194&quot;</span> <span class="o">=&gt;</span> <span class="o">[</span>
+</span><span class='line'>            <span class="p">{</span><span class="s2">&quot;name&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;bundler&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;1.1.1&quot;</span><span class="p">},</span>
+</span><span class='line'>            <span class="p">{</span><span class="s2">&quot;name&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;git-up&quot;</span><span class="p">},</span>
+</span><span class='line'>          <span class="o">]</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>    <span class="o">]</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Edit the list of gems as required for your preferences. The ones
+included in the role are what I find useful or required for my day to
+day work on Chef and Chef-related projects (like
+<a href="https://github.com/opscode-cookbooks">opscode-cookbooks</a>).</p>
+
+<p>The base role does not have a run list. It is included instead by OS
+specific roles that I apply to Ubuntu or OS X systems respectively. As
+this is a post for my OS X workstations, let&rsquo;s look at that role next.</p>
+
+<h3>mac_os_x</h3>
+
+<p>The <code>mac_os_x</code> role is applied on all my OS X systems. Of note, it
+includes the base role, and the homebrew recipe. The homebrew cookbook
+includes a package resource provider that replaces the Chef default
+for OS X, macports, with homebrew.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s2">&quot;mac_os_x&quot;</span>
+</span><span class='line'><span class="n">description</span> <span class="s2">&quot;Role applied to all Mac OS X systems.&quot;</span>
+</span><span class='line'><span class="n">run_list</span><span class="p">(</span>
+</span><span class='line'>  <span class="s2">&quot;role[base]&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;recipe[build-essential]&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;recipe[homebrew]&quot;</span>
+</span><span class='line'><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This role probably doesn&rsquo;t need to be edited.</p>
+
+<h3>workstation</h3>
+
+<p>This is the role of interest, which contains the workstation specific
+run list and attributes.</p>
+
+<p>The role itself is very long, so I won&rsquo;t include it here. You can view it
+<a href="https://github.com/jtimberman/workstation-chef-repo/tree/master/roles/workstation.rb">in the repository</a>.</p>
+
+<p>Do note that <code>recipe[mac_os_x::firewall]</code> requires root access, and
+will prompt for the sudo password (and pause the whole run until entered).</p>
+
+<p>Edit the <code>mac_os_x</code> settings as required for your own preferences.
+Edit other attributes as required for software you wish to use or
+install.</p>
+
+<h2>Cookbooks</h2>
+
+<p>The repository uses a number of cookbooks, most of which are published
+on the Chef Community site as well. I&rsquo;m not going to describe all the
+cookbooks in this post, just the ones that are most relevant for
+workstation setup.</p>
+
+<h3>Development Essentials</h3>
+
+<p>These are:</p>
+
+<ul>
+<li>build-essential</li>
+<li>homebrew</li>
+<li>git</li>
+<li>ruby_build</li>
+<li>rbenv</li>
+</ul>
+
+
+<p>On OS X, <code>build-essential</code> will install
+<a href="https://github.com/kennethreitz/osx-gcc-installer">Kenneth Reitz&rsquo;s OS X GCC installer</a>
+&ndash; XCode is <em>not required</em>. Of course, you may have other reasons why
+  you want to have XCode, and that is outside the scope of this
+  repository. If so, remove the build-essential recipe from the roles.</p>
+
+<p>The homebrew cookbook uses
+<a href="http://mxcl.github.com/homebrew/">Homebrew</a> as the default package
+provider on OS X. The default recipe will install Homebrew, Git with homebrew, and
+ensure that the formulae are updated.</p>
+
+<p><strong>IMPORTANT NOTE</strong> Homebrew recently &ldquo;broke&rdquo;
+  (<a href="https://github.com/mxcl/homebrew/issues/13299">in my opinion</a>) the
+  output of <code>brew info</code>. I manually patched <a href="https://github.com/mxcl/homebrew/pull/13300/files">my local copy of Library/Homebrew/cmd/info.rb</a> after discovering
+  this halfway through setup of my new system.</p>
+
+<p>The git cookbook installs git using
+<a href="https://code.google.com/p/git-osx-installer/">the Git OS X installer</a>,
+and the git binary will be <code>/usr/bin/git</code>. This is redundant with git
+installed from homebrew, but at some point I had issues and I don&rsquo;t
+remember if they were resolved. If you wish to use git from homebrew,
+use <code>/usr/local/bin/git</code> instead.</p>
+
+<p>The ruby_build and rbenv cookbooks are by Fletcher Nichol, and are
+quite excellent for installing per-user Rubies of a specific version,
+and gems using the <code>rbenv_gem</code> LWRP. The <code>base</code> role has the
+attributes set up for how I like this, YMMV.</p>
+
+<h3>users</h3>
+
+<p>I use an older, modified version of Opscode&rsquo;s <code>users</code> cookbook, pre
+<code>users_manage</code> LWRP. The recipe adds capability for distributing
+arbitrary files, such as dotfiles for users. To use this, create a
+&ldquo;files&rdquo; section of the users data bag item. The USERNAME.json item
+includes examples of this. Each file needs to be copied to
+<code>cookbooks/users/files/default/USERNAME/</code> as the source file name used
+in the data bag item.</p>
+
+<h3>workstation</h3>
+
+<p>The workstation cookbook has a recipe that does all the work of
+reading the workstation data bag item and setting up the system per
+the data available.</p>
+
+<p>The README.md in the cookbook contains detailed information about its
+use, and the data bag item already has the structure to get started.</p>
+
+<p>If the <code>plists</code> array is used, then each plist file should be copied
+into the <code>files/default/</code> directory.</p>
+
+<h3>mac_os_x</h3>
+
+<p>My <a href="http://community.opscode.com/cookbooks/mac_os_x">mac_os_x</a>
+cookbook has two LWRPs that I use elsewhere in this repository:</p>
+
+<ul>
+<li><code>mac_os_x_plist</code> &ndash; drops off property list (plist) files in <code>~/Library/Preferences</code></li>
+<li><code>mac_os_x_userdefaults</code> &ndash; writes OS X user settings with the <code>defaults(1)</code> system</li>
+</ul>
+
+
+<p>The plist files used by <code>mac_os_x_plist</code> should be added in the
+<code>files/default</code> directory of the cookbook where the resource is used
+in a recipe.</p>
+
+<p>The <code>mac_os_x::settings</code> recipe will read the
+<code>node['mac_os_x']['settings']</code> attribute for user defaults to apply.</p>
+
+<p>See the <code>mac_os_x</code> cookbook&rsquo;s README for more information.</p>
+
+<h3>Applications</h3>
+
+<p>The following are application specific cookbooks that I use:</p>
+
+<ul>
+<li>iterm2</li>
+<li>virtualbox</li>
+<li>ghmac</li>
+<li>1password</li>
+<li>xquartz</li>
+</ul>
+
+
+<p>The iTerm2 cookbook will set up iTerm 2 and optionally add tmux
+integration. I
+<a href="/blog/2012/01/28/iterm2-with-tmux/">wrote about this awhile back</a>.</p>
+
+<p>We use <a href="http://vagrantup.com">Vagrant</a> extensively at Opscode, which
+requires VirtualBox. This recipe will install it per the attributes
+set in the workstation role.</p>
+
+<p>Install <a href="http://mac.github.com">GitHub for Mac</a> with the ghmac
+cookbook. Local setup for it is on your own.</p>
+
+<p>I have 1password in here because I used to install it from the zip
+file, but I may remove this at some point since I install it from the
+Mac App Store now.</p>
+
+<p>Note that the versions of these apps may be old, but they have
+Sparkle.framework or can otherwise update themselves to newer versions
+easily. Click the buttons, it&rsquo;s cool.</p>
+
+<p>I don&rsquo;t have a recipe for managing application installation through
+the Mac App Store. It&rsquo;s really not that hard to fire up the app and
+click the &ldquo;Install&rdquo; button next to the apps you want though.
+Seriously, it would take longer to figure out a command-line or API
+way to do this, if it&rsquo;s even possible. Just click the button.</p>
+
+<h3>Others</h3>
+
+<p>The other cookbooks in the repository are there as dependencies and
+may or may not be used specifically.</p>
+
+<h2>Upload Repository, Run Chef</h2>
+
+<p>Once it is cloned, all the components need to be uploaded to the Chef
+Server with Knife. As that is installed with Chef, it will be
+available. The knife config file and user key do need to be copied to
+<code>.chef</code> in the chef-repo. If necessary, download them from Opscode
+Hosted Chef (or your Chef Server).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">cd </span>workstation-chef-repo
+</span><span class='line'>mkdir .chef
+</span><span class='line'>cp ~/Downloads/knife.rb .chef
+</span><span class='line'>cp ~/Downloads/USERNAME.pem .chef
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Make your changes to the data bags and roles. I&rsquo;ll wait here.</p>
+
+<p>Then, upload everything.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife data bag create users
+</span><span class='line'>knife data bag create apps
+</span><span class='line'>knife data bag from file users USERNAME.json
+</span><span class='line'>knife data bag from file apps workstation.json
+</span><span class='line'>knife role from file base.rb mac_os_x.rb workstation.rb
+</span><span class='line'>knife cookbook upload -a
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, run Chef!</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>% whoami
+</span><span class='line'>jtimberman
+</span><span class='line'>% chef-client
+</span><span class='line'>INFO: *** Chef 10.12.0 ***
+</span><span class='line'>... loads of output, hooray ...
+</span><span class='line'>INFO: Chef Run <span class="nb">complete </span>in 45.116912 seconds
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>FAQ</h2>
+
+<p>These aren&rsquo;t necessarily questions anyone asked, but a more preemptive
+FAQ :).</p>
+
+<h3>This seems heavyweight, why all this effort?</h3>
+
+<p>As a sysadmin, I want to do something once and automate it afterward.
+That includes all the stuff I need to do to have a useful, usable work
+environment. This means that when I get a new computer, or have to
+wipe and reinstall (rare, but happens), I can get back to a productive
+environment very quickly.</p>
+
+<p>I have three OS X systems I use regularly (work laptop, personal
+laptop, family iMac). Having them in a Chef Server gives me access to
+information about these systems easily with knife.</p>
+
+<p>Also, this post is focused specifically on OS X, however this setup
+works pretty much as is on Linux. I simply don&rsquo;t use Linux as a
+desktop OS, but I do have &ldquo;workstation-like&rdquo; systems that I SSH into,
+and this is generally fine for those.</p>
+
+<h3>Why Chef Server? Why not Chef Solo?</h3>
+
+<p>Honestly, I don&rsquo;t actually use Chef Solo except as a way to setup a
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">Chef Server</a>.
+Since I use Chef Client/Chef Server so often, it is second nature for
+me to do it. You&rsquo;re free to adapt this to work with Solo.</p>
+
+<h3>Will you support Windows with this repository?</h3>
+
+<p>No. I don&rsquo;t use Windows as a workstation/desktop anymore.</p>
+
+<p>It might just work on Windows though. It did once, but I haven&rsquo;t tried
+in a few months.</p>
+
+<h3>I want to make this moar awesome, will you merge my pull request?</h3>
+
+<p>Thank you. I appreciate that you want to help me, or other members of
+the community. However I consider this pretty much &ldquo;feature complete&rdquo;,
+as it meets all my needs, and I don&rsquo;t plan to merge any pull requests.</p>
+
+<p>For individual cookbooks, they have their own repositories linked from
+their pages on the Chef Community site.</p>
+
+<h3>Why do you have redundancy or inconsistent use?</h3>
+
+<p>Such as plist file location, dmg installation, etc.</p>
+
+<p>Because: Reasons. This codebase has been developed over ~2 years. It
+works for me.</p>
+
+<h3>How can I get help?</h3>
+
+<p>You can <a href="mailto:opensource@housepub.org">email me</a>. However, as I said
+before this is a free time project, so I might not respond right away.
+If you&rsquo;re an Opscode Hosted or Private Chef customer, please contact
+<a href="http://www.opscode.com/support/">Opscode support</a>. Finally, community
+based support is available through our
+<a href="http://community.opscode.com">community resources</a>.</p>
+
+<h1>Further resources</h1>
+
+<p>If this is a topic of interest to you, I&rsquo;d also like to point out a
+few similar projects that may be interesting. They have inspired me
+and things I have implemented in my own setup, so thank you Ben, Corey
+and Matthew and Brian at Pivotal!</p>
+
+<ul>
+<li><a href="https://github.com/bleything/bootstrap">Ben Bleything&rsquo;s OS X Bootstrap</a></li>
+<li><a href="http://www.atmos.org/cinderella/">Corey Donohoe&rsquo;s Cinderella</a></li>
+<li><a href="https://github.com/pivotal/pivotal_workstation/">Pivotal Labs workstation setup</a></li>
+</ul>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/07/27/mountain-lion-upgrade/">Mountain Lion Upgrade</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-07-27T16:25:00-06:00" pubdate data-updated="true">Jul 27<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I upgraded my work laptop to Mountain Lion today. It was not as smooth
+as previous OS X upgrades have been for me, despite my efforts in
+managing my workstation(s) with Chef.</p>
+
+<p>I received a replacement laptop for the one that was damaged at
+ChefConf a couple weeks ago (champagne spill &ndash; long story, maybe for
+another blog post). As this is a new laptop, it is eligible for the
+free Mountain Lion upgrade. So on ML release day, I submitted my
+information to Apple for the redemption code, which I received this
+morning. As I&rsquo;m actually on vacation this week, I thought there was no
+better time to upgrade.</p>
+
+<p>You may recall that I have managed my
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">workstations</a>
+<a href="/blog/2011/09/04/update-to-managing-my-workstations/">with Chef</a> for
+quite some time. This has been all well and good so far, though the
+Mountain Lion installation didn&rsquo;t seem to like something in my
+preferences along the way.</p>
+
+<p>After the installation finished and the system rebooted, I logged in,
+expecting to be greeted with my already configured system. This was
+not the case, however! My desktop was that light grey of the OS X boot
+screen, and the Dock was not running at all. I put on my
+<a href="http://sysadminday.com">sysadmin hat</a> (like I ever take it off?!),
+and started debugging. I found the issue pretty quickly.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Jul 27 08:42:35 champagne.local Dock[423]: -[__NSCFBoolean isEqualToString:]: unrecognized selector sent to instance 0x7fff75d0fab0
+</span><span class='line'>Jul 27 08:42:35 champagne.local Dock[423]: *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '-[__NSCFBoolean isEqualToString:]: unrecognized selector sent to instance 0x7fff75d0fab0'
+</span><span class='line'>        *** First throw call stack:
+</span><span class='line'>        (
+</span><span class='line'>                0   CoreFoundation                      0x00007fff8fca9716 __exceptionPreprocess + 198
+</span><span class='line'>                1   libobjc.A.dylib                     0x00007fff8dc63470 objc_exception_throw + 43
+</span><span class='line'>                2   CoreFoundation                      0x00007fff8fd3fd5a -[NSObject(NSObject) doesNotRecognizeSelector:] + 186
+</span><span class='line'>                3   CoreFoundation                      0x00007fff8fc97c3e ___forwarding___ + 414
+</span><span class='line'>                4   CoreFoundation                      0x00007fff8fc97a28 _CF_forwarding_prep_0 + 232
+</span><span class='line'>                5   Dock                                0x000000010da92786 Dock + 681862
+</span><span class='line'>                6   Dock                                0x000000010d9f10b2 Dock + 20658
+</span><span class='line'>                7   Dock                                0x000000010dab9aed Dock + 842477
+</span><span class='line'>                8   libdyld.dylib                       0x00007fff852c17e1 start + 0
+</span><span class='line'>        )
+</span><span class='line'>Jul 27 08:42:35 champagne com.apple.launchd.peruser.501[267] (com.apple.Dock.agent[423]): Job appears to have crashed: Abort trap: 6
+</span><span class='line'>Jul 27 08:42:35 champagne com.apple.launchd.peruser.501[267] (com.apple.Dock.agent): Throttling respawn: Will start in 1 seconds
+</span><span class='line'>Jul 27 08:42:35 champagne.local ReportCrash[302]: Saved crash report for Dock[423] version 1.8 (1168) to /Users/jtimberman/Library/Logs/DiagnosticReports/Dock_2012-07-27-084235_champagne.crash</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This happened every second, constantly crashing and restarting, and
+generating a new crash report. What is the problem? Well, let&rsquo;s look
+at one of the reports:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Process:         Dock [21816]
+</span><span class='line'>Path:            /System/Library/CoreServices/Dock.app/Contents/MacOS/Dock
+</span><span class='line'>Identifier:      Dock
+</span><span class='line'>Version:         1.8 (1168)
+</span><span class='line'>Code Type:       X86-64 (Native)
+</span><span class='line'>Parent Process:  launchd [1039]
+</span><span class='line'>User ID:         501
+</span><span class='line'>
+</span><span class='line'>Date/Time:       2012-07-27 11:26:58.819 -0600
+</span><span class='line'>OS Version:      Mac OS X 10.8 (12A269)
+</span><span class='line'>Report Version:  10
+</span><span class='line'>
+</span><span class='line'>Crashed Thread:  0  Dispatch queue: com.apple.main-thread
+</span><span class='line'>
+</span><span class='line'>Exception Type:  EXC_CRASH (SIGABRT)
+</span><span class='line'>Exception Codes: 0x0000000000000000, 0x0000000000000000
+</span><span class='line'>
+</span><span class='line'>Application Specific Information:
+</span><span class='line'>*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '-[__NSCFBoolean isEqualToString:]: unrecognized selector sent to instance 0x7fff7b2a2ab0'
+</span><span class='line'>abort() called
+</span><span class='line'>terminate called throwing an exception
+</span><span class='line'>
+</span><span class='line'>Application Specific Backtrace 1:
+</span><span class='line'>0   CoreFoundation                      0x00007fff8cd77716 __exceptionPreprocess + 198
+</span><span class='line'>1   libobjc.A.dylib                     0x00007fff8e6df470 objc_exception_throw + 43
+</span><span class='line'>2   CoreFoundation                      0x00007fff8ce0dd5a -[NSObject(NSObject) doesNotRecognizeSelector:] + 186
+</span><span class='line'>3   CoreFoundation                      0x00007fff8cd65c3e ___forwarding___ + 414
+</span><span class='line'>4   CoreFoundation                      0x00007fff8cd65a28 _CF_forwarding_prep_0 + 232
+</span><span class='line'>5   Dock                                0x000000010d1b6786 Dock + 681862
+</span><span class='line'>6   Dock                                0x000000010d1150b2 Dock + 20658
+</span><span class='line'>7   Dock                                0x000000010d1ddaed Dock + 842477
+</span><span class='line'>8   libdyld.dylib                       0x00007fff8d7827e1 start + 0</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I&rsquo;ll spare you the detail of the rest of the file. Suffice to say, it
+is less informative than one might want for troubleshooting the issue.
+I (foolishly) spent about an hour and a half trying to get to the root
+of the problem. I found out that the problem was isolated to my own
+user, and something between <code>~/Library/Preferences</code> and
+<code>~/Library/Application Support</code>. I&rsquo;m not sure what the problem was &ndash; I
+eventually decided to just do this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo rm -rf ~/Library/Preferences ~/Library/Application\ Support</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then I logged back in, and everything was well. I have a back up from
+before the upgrade (Yay, TimeMachine!), so I wasn&rsquo;t concerned with
+losing anything important, and I knew that Chef would bring back most
+of my settings anyway.</p>
+
+<p>The first thing I did was, of course, <code>/usr/bin/chef-client</code>. This
+worked great. Until the Dock was restarted as part of my recipes. The
+symptom was the same as before &ndash; the desktop went light grey, the dock
+wasn&rsquo;t running and launchd was respawning it contnually, with the same
+errors from above.</p>
+
+<p>I decided to have some quality time with my configuration and get to
+the bottom of the problem. I went through all the settings I modify
+through <code>recipe[mac_os_x::settings]</code> attributes, and did a careful
+comparison of manual settings through the OS X system preferences, and
+the files changed in <code>~/Library/Preferences</code>.</p>
+
+<p><strong>Side note</strong>: This handy hint comes from
+  <a href="http://twitter.com/bleything">Ben Bleything</a>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cd ~/Library/Preferences
+</span><span class='line'>git init
+</span><span class='line'>git add .
+</span><span class='line'>git commit -m 'initial commit'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, make a change in system preferences, you can use <code>git status</code> to
+see what plist files are updated. Of course, most of the plist files
+are binary so you can&rsquo;t really diff them, but the filename will
+indicate which domain to use with the <code>defaults(1)</code> command. Handy,
+thanks Ben! <strong>End side note.</strong></p>
+
+<p>Anyway, it took some time, but I tuned all my configuration for the
+things I wanted to ensure happened on any new system, and nothing
+else. I believe what happened is that some setting I had is no longer
+supported on Mountain Lion and its presence makes Dock.app grumpy, but
+that is purely speculation. The end result now, though, is that I have
+a pretty sane set of configuration that is automatically applied in a
+more data driven way, and I&rsquo;m not using settings that I don&rsquo;t know
+100% what they do.</p>
+
+<p>That aside, Mountain Lion is nice so far. The GCC Installer for 10.7
+seems to be working just fine, though I haven&rsquo;t tried installing a new
+Ruby under it yet. I am looking forward to wider use and adoption of
+the Notification Center as a replacement for Growl.</p>
+
+<p>I hope this post is helpful in some way. Unfortunately I don&rsquo;t have an
+answer to the Dock crash problem itself, but I have now remedied the
+issue for my own use. I&rsquo;m going to write a new post about how I&rsquo;m
+managing my workstations, to bring the
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">information posted</a>
+<a href="/blog/2011/09/04/update-to-managing-my-workstations/">previously up to date</a>,
+so stay tuned.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/07/26/autostarted-services/">Autostarted Services</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-07-26T22:11:00-06:00" pubdate data-updated="true">Jul 26<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It is quite common in Debian and Ubuntu that when installing a package
+that provides a daemon, said daemon is started by the init script(s)
+included in the package. This is a matter of
+<a href="http://www.debian.org/doc/debian-policy/ch-opersys.html#s-sysvinit">Debian Policy</a>,
+though I don&rsquo;t interpret that section to literally mean it is
+required. However, it is
+<a href="http://wiki.debian.org/LSBInitScripts/">common enough practice</a> that <a href="https://www.varnish-cache.org/trac/ticket/1004">several people</a>
+have <a href="http://ask.debian.net/questions/how-to-prevent-daemons-from-starting-at-installation-time">asked</a> (or <a href="https://gist.github.com/1721727">ranted</a>) about <a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-02/msg00017.html">the topic</a>.</p>
+
+<p>The main issue of course is that the default configuration for the
+software being installed may not be appropriate before starting up the
+service and making it available on the network. Users of other Linux
+distributions may be smugly smirking as their distribution doesn&rsquo;t
+start the service on package installation.</p>
+
+<p>This post isn&rsquo;t about that.</p>
+
+<p>Instead, this post describes how this problem is resolved using
+configuration management, specifically Chef. I&rsquo;m also going to discuss
+a couple nuances about service management, so watch carefully.</p>
+
+<p>For the example service I&rsquo;m going to use memcached, from the memcached
+package. It is started on package installation as demonstrated:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>vagrant@precise-housepub:~$ sudo apt-get install memcached
+</span><span class='line'>...
+</span><span class='line'>Setting up memcached (1.4.13-0ubuntu2) ...
+</span><span class='line'>Starting memcached: memcached.
+</span><span class='line'>vagrant@precise-housepub:~$ service memcached status
+</span><span class='line'> * memcached is running
+</span><span class='line'>vagrant@precise-housepub:~$ ps awux | grep memcached
+</span><span class='line'> memcache 15176  0.0  0.3 323212  1180 ?        Sl   04:32   0:00 /usr/bin/memcached -m 64 -p 11211 -u memcache -l 127.0.0.1</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As we can see, the memcached service is started. Of course, it is
+using the default configuration, which means that it has a very small
+memory size, and listens on localhost. While the recipe would be very
+simple:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">package</span> <span class="s2">&quot;memcached&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This wouldn&rsquo;t be very useful for discussion, or practical use
+purposes. For now, I&rsquo;m going to post the entire recipe I&rsquo;m going to
+discuss, and then break it down.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;memcached&#39;</span><span class="o">][</span><span class="s1">&#39;memory_max&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;memory&#39;</span><span class="o">][</span><span class="s1">&#39;total&#39;</span><span class="o">].</span><span class="n">to_i</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">0</span><span class="o">.</span><span class="mi">65</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">package</span> <span class="s2">&quot;memcached&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">service</span> <span class="s2">&quot;memcached&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">supports</span> <span class="ss">:restart</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">:status</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:enable</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/etc/memcached.conf&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;memcached.conf.erb&quot;</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;root&quot;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;root&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">00644</span>
+</span><span class='line'>  <span class="n">notifies</span> <span class="ss">:restart</span><span class="p">,</span> <span class="s2">&quot;service[memcached]&quot;</span>
+</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">:memory_max</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;memcached&#39;</span><span class="o">][</span><span class="s1">&#39;memory_max&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="ss">:ip_addr</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;ipaddress&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">service</span> <span class="s2">&quot;memcached&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:start</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This recipe is fairly straightforward. First, it sets a node attribute
+based on a calculation of the amount of memory installed in the
+system. Then, it will install the memcached package. This of course
+will start up the service with the unsuitable defaults already
+discussed.</p>
+
+<p>The first <code>service</code> resource occurance makes sure that the service is
+enabled. This is the default behavior of the package manager, but this
+also gives clear indication as to the intention of the recipe. Next,
+the configuration file is managed. The exact content of the
+<code>memcached.conf.erb</code> file isn&rsquo;t particularly important. Let us presume
+that the variables passed in are what we care about &ndash; that we want to
+use 65% of the system&rsquo;s total memory for memcached, and listen on the
+default IP address. Maybe other tuning is happening, maybe not. Of
+course, when the configuration is updated, we need to notify the
+memcached service to restart.</p>
+
+<p>Finally, the memcached service is started if it is not already
+running. This occurs at the end to help remedy an issue where the
+service might have been halted, or the configuration file was rendered
+incorrectly (a typo?), so that we can correct such configuration
+problems with Chef in a single subsequent run. This uses a feature of
+Chef where resources can be declared multiple times with different
+actions (or if desired, parameters).</p>
+
+<p>The first time this recipe is run on a node, memcached will be
+installed, started, configured, restarted. We&rsquo;re not aiming to prevent
+the auto-start from occurring at all, but we do automate the
+additional steps required for handling that easily.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/03/25/knife-config-plugin/">Knife Config Plugin</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-25T14:47:00-06:00" pubdate data-updated="true">Mar 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I created a plugin for knife that will display a specified option from
+Chef&rsquo;s configuration object, <code>Chef::Config</code>. It operates with the
+scope of the automatically detected
+<a href="http://wiki.opscode.com/display/chef/Knife#Knife-ConfiguringYourSystemForKnife">knife configuration file</a>,
+or by passing the <code>-c</code> option with a configuration file.</p>
+
+<h2>Installation</h2>
+
+<p>It&rsquo;s a gem.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem install knife-config</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can get the <a href="https://github.com/jtimberman/knife-config">source on GitHub</a>.</p>
+
+<h2>Examples</h2>
+
+<p>Without any options:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife config
+</span><span class='line'>WARNING: No knife configuration file found</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If an config option were specified, its default value would be printed.</p>
+
+<p>With a single option, <code>chef_server_url</code>, but no configuration file available:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife config chef_server_url
+</span><span class='line'>WARNING: No knife configuration file found
+</span><span class='line'>chef_server_url:  http://localhost:4000</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In a &ldquo;Chef Repository&rdquo; with a <code>.chef/knife.rb</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cd chef-repo
+</span><span class='line'>% knife config chef_server_url
+</span><span class='line'>chef_server_url:  https://api.opscode.com/organizations/MY_ORG</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With a few more options:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cd chef-repo
+</span><span class='line'>% knife config chef_server_url node_name validation_client_name
+</span><span class='line'>chef_server_url:  https://api.opscode.com/organizations/MY_ORG
+</span><span class='line'>node_name:        jtimberman
+</span><span class='line'>validation_client_name:  housepub-validator</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With a different config file (<code>/etc/chef/client.rb</code> on the same
+system):</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife config node_name -c /etc/chef/client.rb
+</span><span class='line'>node_name:  imac.int.example.com</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With <code>--all</code>, to show all the options:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife config --all
+</span><span class='line'>amqp_consumer_id:               default
+</span><span class='line'>amqp_host:                      0.0.0.0
+</span><span class='line'>amqp_pass:                      testing
+</span><span class='line'>amqp_port:                      5672
+</span><span class='line'>amqp_user:                      chef
+</span><span class='line'>amqp_vhost:                     /chef
+</span><span class='line'>authorized_openid_identifiers:
+</span><span class='line'>authorized_openid_providers:
+</span><span class='line'>cache_options:
+</span><span class='line'>  path:  /Users/jtimberman/.chef/checksums
+</span><span class='line'>cache_type:                     BasicFile
+</span><span class='line'>checksum_path:                  /var/chef/checksums
+</span><span class='line'>chef_server_url:                https://api.opscode.com/organizations/housepub
+</span><span class='line'>client_key:                     /Users/jtimberman/.chef/jtimberman.pem
+</span><span class='line'>client_registration_retries:    5
+</span><span class='line'>client_url:                     http://localhost:4042
+</span><span class='line'>[output truncated, trust me, it shows them all :)]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Show the &ldquo;knife&rdquo; configuration, which includes things like cloud
+provider authentication. This doesn&rsquo;t currently support showing
+sub-keys (like <code>knife[aws_access_key_id]</code>).</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife config knife
+</span><span class='line'>knife:
+</span><span class='line'>  aws_access_key_id:      ZOMGAWS_KEY
+</span><span class='line'>  aws_secret_access_key:  ZOMGAWS_SECRET</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Contributing</h2>
+
+<p>If you&rsquo;d like to contribute, that&rsquo;s awesome! Please create a fork,
+branch, and a pull request.
+<a href="https://github.com/jtimberman/knife-config/issues">Reporting issues</a>
+is helpful too.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/03/18/multivm-vagrantfile-for-chef/">MultiVM Vagrantfile for Chef</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-18T00:16:00-06:00" pubdate data-updated="true">Mar 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Most commonly, <a href="http://vagrantup.com">Vagrant&rsquo;s</a>
+Vagrantfile describes only a single VM. That&rsquo;s fine, but most
+environments separate functionality to different servers (e.g.,
+database and web app). For this reason, Vagrantfiles can be set up for
+<a href="http://docs.vagrantup.com/v2/multi-machine/index.html">multi-VM arrangements</a>.</p>
+
+<p>However, I&rsquo;m going to describe a different use case for multiple VMs.</p>
+
+<h2>Testing Multiple Distributions</h2>
+
+<p>As a cookbook developer for a variety of platforms and platform
+versions, I have to ensure changes do not break existing functionality
+across supported platforms &ndash; namely current releases of Ubuntu and
+CentOS (and their parents, Debian and RHEL).</p>
+
+<p>Enter Vagrant&rsquo;s Multi-VM Vagrantfile.</p>
+
+<p>While I <a href="/blog/2012/02/15/testing-with-fission/">posted recently</a>
+about testing with VMware Fusion, I am using Vagrant more. Primarily
+because Opscode uses Vagrant internally &ndash;
+<a href="http://twitter.com/schisamo">Seth Chisamore</a> built a multi-VM
+Vagrantfile for bringing up our full stack. The specifics in his
+Vagrantfile are tuned to that particular use case which is different
+than mine. However, there are similar patterns that I adapted.</p>
+
+<h2>Vagrantfile</h2>
+
+<p>The Vagrantfile configures four virtual machines:</p>
+
+<ul>
+<li>CentOS 5.7 and 6.2</li>
+<li>Ubuntu 10.04 and 11.10</li>
+</ul>
+
+
+<p>I built my VMs with <a href="https://github.com/jedi4ever/veewee">veewee</a>
+templates that install Chef via the
+<a href="http://opscode.com/chef/install">omnibus built chef-full package</a>.
+That way I have a consistent installation that reflects what Opscode
+will ship as the easiest and best supported way to install Chef.</p>
+
+<p>Part of the magic of this configuration is that I&rsquo;m going to reuse my
+knife configuration. The Vagrantfile itself goes into my cookbook
+testing Chef Repository.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>    <span class="nb">require</span> <span class="s1">&#39;chef&#39;</span>
+</span><span class='line'>    <span class="nb">require</span> <span class="s1">&#39;chef/config&#39;</span>
+</span><span class='line'>    <span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">current_dir</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">__FILE__</span><span class="p">)</span>
+</span><span class='line'>    <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s1">&#39;.chef&#39;</span><span class="p">,</span> <span class="s1">&#39;knife.rb&#39;</span><span class="p">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, I&rsquo;m going to describe data about the virtual machines that I&rsquo;m
+going to run. This is a hash of named VMs, <code>centos5</code>, <code>lucid</code>, etc. I
+assign their hostname, and give them a host only IP address. I also
+set an initial run list, since Vagrant will (noisily) complain if the
+run list is empty in a Chef provisioner.</p>
+
+<p><em>Note</em> I have a <code>base</code> role as a holder, the actual relevant things
+ are in the <code>base_redhat</code> and <code>base_debian</code> roles. The details really
+ don&rsquo;t matter, though.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook_testers</span> <span class="o">=</span> <span class="p">{</span>
+</span><span class='line'>  <span class="ss">:centos5</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos5-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.5&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:centos6</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos6-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.6&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:lucid</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;lucid-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.10&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:oneiric</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;oneiric-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.11&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, I&rsquo;m going to set up the <code>Vagrant::Config</code> object as &ldquo;global&rdquo;
+configuration for all the VMs, and then iterate over each of the VMs
+described above.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+</span><span class='line'>      <span class="n">vm_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="nb">name</span><span class="si">}</span><span class="s2">-cookbook-test&quot;</span>
+</span><span class='line'>      <span class="n">ipaddress</span> <span class="o">=</span> <span class="n">options</span><span class="o">[</span><span class="ss">:ipaddress</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I disable the shared folder, since I&rsquo;m going to use a Chef Server, and
+my recipes will download what they need from remote repositories, not
+my local system.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">share_folder</span><span class="p">(</span><span class="s2">&quot;v-root&quot;</span><span class="p">,</span> <span class="s2">&quot;/vagrant&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="ss">:disabled</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Set up some basic configuration for the box. Modify this to suit your
+environment. This section is on a per-VM basis. If particular tunables
+were required, I&rsquo;d create additional config in the <code>cookbook_testers</code>
+hash above, and use those values here.</p>
+
+<p><em>Note</em> <code>name</code> will be a symbol, but only in some contexts of
+ execution.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="nb">name</span><span class="o">.</span><span class="n">to_s</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">boot_mode</span> <span class="o">=</span> <span class="ss">:headless</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">host_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:hostonly</span><span class="p">,</span> <span class="n">ipaddress</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now I set up the Chef provisioner. Again, I&rsquo;m using Chef with a Server
+(<a href="http://opscode.com/hosted-chef">Opscode Hosted Chef</a>, of course). I
+use the <code>chef_server_url</code>, and <code>validation_client_name</code> settings from
+my <code>knife.rb</code>.</p>
+
+<p>The nodes&#8217; names will be <code>NAME-cookbook-test</code>, rather than their FQDN.
+I use this with a rake task that nukes them all from orbit
+consistently :).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">chef_server_url</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:chef_server_url</span><span class="o">]</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">validation_key_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">current_dir</span><span class="si">}</span><span class="s2">/.chef/</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span><span class="si">}</span><span class="s2">.pem&quot;</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">validation_client_name</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">node_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">provisioning_path</span> <span class="o">=</span> <span class="s2">&quot;/etc/chef&quot;</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">log_level</span> <span class="o">=</span> <span class="ss">:info</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The run list is going to be combined from the run lists defined from
+the <code>cookbook_testers</code> hash above, and a shell environment variable,
+<code>CHEF_RUN_LIST</code>, which is simply a comma-separated list of run list
+items, similar to that used by <code>knife bootstrap</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">run_list</span> <span class="o">=</span> <span class="o">[]</span>
+</span><span class='line'><span class="n">run_list</span> <span class="o">&lt;&lt;</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="no">ENV</span><span class="o">.</span><span class="n">has_key?</span><span class="p">(</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">run_list</span> <span class="o">=</span> <span class="o">[</span><span class="n">options</span><span class="o">[</span><span class="ss">:run_list</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">),</span> <span class="n">run_list</span><span class="o">].</span><span class="n">flatten</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To use the Vagrantfile, I export the shell variable with the
+role(s)/recipe(s) I am testing, then run <code>vagrant up</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% export </span><span class="no">CHEF_RUN_LIST</span><span class="o">=</span><span class="s2">&quot;recipe[apache2],recipe[apache2::mod_ssl]&quot;</span>
+</span><span class='line'><span class="sx">% vagrant </span><span class="n">up</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Vagrant will bring up each VM one at a time, going through the full
+cycle of provisioning. If there&rsquo;s an unhandled exception that causes
+Chef to exit, then Vagrant also halts execution. If <code>vagrant up</code> is
+rerun, then Vagrant continues to the <em>next</em> VM. To reprovision a
+failed VM, it can be specified:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% vagrant </span><span class="n">provision</span> <span class="n">centos5</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Without the VM name, vagrant would reprovision all the VMs. Likewise,
+<code>vagrant ssh NAME</code> can be used to open an SSH connection to the named
+VM. This is useful to reprovision a VM that failed early, while
+Vagrant is continuing on with the others.</p>
+
+<h2>Full Vagrantfile</h2>
+
+<p>The Vagrantfile is split up in the earlier section, but you can see
+the full thing below.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef&#39;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/config&#39;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'><span class="n">current_dir</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">__FILE__</span><span class="p">)</span>
+</span><span class='line'><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s1">&#39;.chef&#39;</span><span class="p">,</span> <span class="s1">&#39;knife.rb&#39;</span><span class="p">))</span>
+</span><span class='line'><span class="n">cookbook_testers</span> <span class="o">=</span> <span class="p">{</span>
+</span><span class='line'>  <span class="ss">:centos5</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos5-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.5&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:centos6</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos6-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.6&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:lucid</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;lucid-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.10&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:oneiric</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;oneiric-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.11&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+</span><span class='line'>      <span class="n">vm_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="nb">name</span><span class="si">}</span><span class="s2">-cookbook-test&quot;</span>
+</span><span class='line'>      <span class="n">ipaddress</span> <span class="o">=</span> <span class="n">options</span><span class="o">[</span><span class="ss">:ipaddress</span><span class="o">]</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">share_folder</span><span class="p">(</span><span class="s2">&quot;v-root&quot;</span><span class="p">,</span> <span class="s2">&quot;/vagrant&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="ss">:disabled</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="nb">name</span><span class="o">.</span><span class="n">to_s</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">boot_mode</span> <span class="o">=</span> <span class="ss">:headless</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">host_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:hostonly</span><span class="p">,</span> <span class="n">ipaddress</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:chef_client</span> <span class="k">do</span> <span class="o">|</span><span class="n">chef</span><span class="o">|</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">chef_server_url</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:chef_server_url</span><span class="o">]</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">validation_key_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">current_dir</span><span class="si">}</span><span class="s2">/.chef/</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span><span class="si">}</span><span class="s2">.pem&quot;</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">validation_client_name</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">node_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">provisioning_path</span> <span class="o">=</span> <span class="s2">&quot;/etc/chef&quot;</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">log_level</span> <span class="o">=</span> <span class="ss">:info</span>
+</span><span class='line'>        <span class="n">run_list</span> <span class="o">=</span> <span class="o">[]</span>
+</span><span class='line'>        <span class="n">run_list</span> <span class="o">&lt;&lt;</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="no">ENV</span><span class="o">.</span><span class="n">has_key?</span><span class="p">(</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">run_list</span> <span class="o">=</span> <span class="o">[</span><span class="n">options</span><span class="o">[</span><span class="ss">:run_list</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">),</span> <span class="n">run_list</span><span class="o">].</span><span class="n">flatten</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/03/04/github-is-classy/">Github Is Classy</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-04T18:42:00-07:00" pubdate data-updated="true">Mar 4<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Fact: GitHub is classy. This isn&rsquo;t just because
+<a href="https://github.com/schacon">Scott Chacon</a> works there, either. Their
+handling of a security issue today was very professional. That said, I
+have some words to say about the issue itself and the aftermath, and
+things you as an application developer can do to help, and to avoid
+this kind of problem.</p>
+
+<p><em>Disclaimer: I&rsquo;m not an application developer. I am a sysadmin with a
+ diverse background in operating system security, including previously
+ held GSEC and GCUX certifications from the SANS Institute/GIAC.</em></p>
+
+<p><em>Second disclaimer: This is not an anti-Rails post. All web frameworks
+ need to be conscious of security, and take bug reports for security
+ issues seriously.</em></p>
+
+<h1>Issue</h1>
+
+<p><em>Update &ndash; Preface: I am not talking about a security vulnerability (a
+la an exploit) in Rails. I am talking about a feature that allows
+automatically generated code to do things that are not secure and it
+is apparently on purpose and by design. This is the wrong thing to
+do. Deny by default with whitelisting is the right thing to do.</em></p>
+
+<p>There is a security issue in
+<a href="https://github.com/rails/rails/issues/5228">Ruby on Rails</a>. The bug
+is closed, but I haven&rsquo;t dug into find out if the actual problem is
+fixed.</p>
+
+<p>The bug itself is very serious. It allows a malicious user to send
+arbitrary parameters to a Rails application without requiring
+whitelisting up front. In fact,
+<a href="https://github.com/rails/rails/pull/4062">three months ago an issue</a>
+was opened in the Rails project to force new applications to enforce
+whitelist mode by default. That bug was subsequently closed just a few
+days ago. I&rsquo;m not going to do an analysis of the issue itself, you can go
+read the linked tickets and do further research on the issue.</p>
+
+<p><em>Update</em> I missed clarifying this. There is a second issue at hand.
+ GitHub resolved the mass assignment bug by fixing their application.
+ The second issue is that they had a vulnerability in their public key
+ form update.</p>
+
+<h2>Resolution and Aftermath</h2>
+
+<p>You can read all about the initial resolution and retrospective on the
+<a href="https://github.com/blog/1068-public-key-security-vulnerability-and-mitigation">GitHub blog</a>.
+You can also read their
+<a href="https://github.com/blog/1069-responsible-disclosure-policy">follow-up post</a>
+on responsible disclosure.</p>
+
+<p>The manner in which they handled the situation is a class act: they
+behaved like professionals. Here&rsquo;s why:</p>
+
+<ul>
+<li>A user reported a problem with their app.</li>
+<li>They worked with the user to resolve the problem.</li>
+<li>The same user exploited another vulnerability to prove a point to
+the Rails project, which is against the GitHub terms of service.</li>
+<li>GitHub suspended the user&rsquo;s account in accordance with their terms
+of service.</li>
+</ul>
+
+
+<p>As an unauthorized breach of a computer system, what Egor Homakov did
+is illegal in the United States. It was also irresponsible and
+unprofessional. However, his intent was not malicious. I think GitHub
+did the right thing by giving him another chance in reinstating
+Mr. Homakov&rsquo;s account several hours after the incident.</p>
+
+<p>GitHub has issued two apologies about this incident. First for the
+vulnerability existing in the first place, and second for not being
+clear how customers and users can responsibly disclose security
+vulnerabilities. They also committed to doing a security audit of
+their code base.</p>
+
+<p>GitHub is classy.</p>
+
+<h1>Security</h1>
+
+<p>After the above, I feel compelled to say some more things about
+security in general. You are responsible for a lot of things regarding
+the web applications in your infrastructure. One of those is security,
+and you should do everything you can to write stable, secure code.</p>
+
+<p>In a hackernews thread about this incident, Yehuda Katz said,
+&ldquo;<a href="http://news.ycombinator.com/item?id=3664334">Not all security vulnerabilities can be protected automatically by a web framework</a>.&rdquo;</p>
+
+<p>That is a fact. However, web frameworks should provide sane, secure
+settings by default. Those settings should be modifiable by the
+end-user, the developer. If a developer wishes to disable those
+controls, they totally have that right. I think that they need to
+understand the potential risk that they are accepting, and what impact
+that might have on the business/organization implementing the
+application.</p>
+
+<p>This is <em>exactly</em> like the default setting of Red Hat Enterprise Linux
+to enable SELinux by default on new installations. Whether you love or
+hate this default, it is sane and secure. System administrators can
+then use the system as is, or disable SELinux if that is an acceptable
+level of risk.</p>
+
+<p>Clearly in this incident, it is <em>not</em> an acceptable level of risk for
+GitHub, as they have repaired their application. It would have better
+to do that long ago, but at least it&rsquo;s fixed now.</p>
+
+<p>Security and convenience are quite often polar opposites and mutually
+exclusive. This is not always the case, but it is true much of the
+time, if not most of the time. The choice for Rails to not have
+whitelisting by default is in favor of developer convenience. Yes, it
+is up to the developer to make their application secure, but that was
+already the case. This simply creates extra work for them to do so.</p>
+
+<p>Deny-all by default is the sane, correct and secure posture to take
+when building systems. This is the practice of many tools and
+operating system defaults &ndash; SELinux as mentioned, or &ldquo;no open ports&rdquo;
+per Ubuntu&rsquo;s practice. You don&rsquo;t have to agree with it, and you
+certainly can change it, but that doesn&rsquo;t change the fact that it is
+<em>correct</em> and <em>sane</em>.</p>
+
+<h2>Vulnerability Disclosure</h2>
+
+<p>There is an entire field in information technology devoted to
+vulnerability disclosure. This is typically done by people performing
+&ldquo;ethical hacking&rdquo; and is one thing done when a code base goes through
+a security audit. This is a field that has responsible professionals
+participating in a variety of companies, and if it sounds interesting
+to you, I recommend the variety of courses offered by the SANS
+Institute:</p>
+
+<ul>
+<li><a href="https://www.sans.org/security-training/web-app-penetration-testing-ethical-hacking-942-mid">Web Application Penetration Testing (SEC542)</a></li>
+<li><a href="https://www.sans.org/security-training/network-penetration-testing-ethical-hacking-937-mid">Network Penetration Testing (SEC560)</a></li>
+<li><a href="https://www.sans.org/security-training/advanced-penetration-testing-exploits-ethical-hacking-1517-mid">Advanced Penetration Testing (SEC660)</a></li>
+</ul>
+
+
+<h1>What You Can Do</h1>
+
+<p>First of all, understand the security guidelines and best practices
+for the programming language you&rsquo;re using. Doing things that are
+typesafe, or avoid buffer overflows, that kind of thing. Also
+understand and follow the security guideslines and best practices for
+the web framework you&rsquo;re using. The Ruby on Rails project has a fairly
+detailed
+<a href="http://guides.rubyonrails.org/security.html">security guide</a>. If
+you&rsquo;re taking shortcuts, understand the possible risks with that. If
+you don&rsquo;t know the risks, or understand the guidelines, please ask
+someone in the community for help.</p>
+
+<p>I strongly recommend you also learn the security guidelines and
+associated best practices for the operating system or distribution
+that your application will run on in production. If your organization
+has operations staff, I&rsquo;m sure they can help you learn and understand.
+If they don&rsquo;t, they&rsquo;re not doing their job :).</p>
+
+<p>Every organization and every application is different. The security
+implications are going to vary by industry. Talk to the business
+owners and find out what the level of security risk they are
+comfortable accepting.</p>
+
+<p>Above all, be a professional. Don&rsquo;t flippantly close security bugs.
+Don&rsquo;t be a dick on discussions about security topics.</p>
+
+<p>In other words, be classy. Like GitHub.</p>
+
+<p>Thank you.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/26/xcode-command-line-tools/">Xcode Command Line Tools</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-26T00:07:00-07:00" pubdate data-updated="true">Feb 26<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Recently, Apple did the most awesome thing for non-Xcode developers.</p>
+
+<p>They made the development tools available as a
+<a href="https://developer.apple.com/library/ios/#documentation/DeveloperTools/Conceptual/WhatsNewXcode/Articles/xcode_4_3.html">standalone package!</a></p>
+
+<p>This is awesome news for those of us who only have<sup>Whad</sup> Xcode
+installed to install RubyGems that compile native extensions, or for
+installing software with Homebrew, MacPorts or similar.. You can
+download them by logging into the
+<a href="https://developer.apple.com/downloads">Developer Download</a> site.</p>
+
+<p>This appears to be work started by
+<a href="http://kennethreitz.com/xcode-gcc-and-homebrew.html">Kenneth Reitz</a>
+with his
+<a href="https://github.com/kennethreitz/osx-gcc-installer/">OSX GCC Installer</a>
+project. I did try that project out, but ran into issues I didn&rsquo;t
+resolve right away, so I reverted to using Xcode proper. However with
+the package from Apple I don&rsquo;t seem to have any issues so far.</p>
+
+<p>If you already have Xcode installed, you may want to remove it first.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo /Developer-3.2.6/Library/uninstall-devtools
+</span><span class='line'>sudo /Developer/Library/uninstall-devtools --mode<span class="o">=</span>all /thx
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>My understanding is that you can remove the <code>/Developer*</code>
+director(y|ies) when complete. I had ollllld Xcode on the system where
+I first did this.</p>
+
+<p>Next, download and install the package from Apple. It&rsquo;s about 170M and
+takes only a couple minutes to install; sorry I don&rsquo;t have a Chef
+recipe for this ;).</p>
+
+<p>I did run into an issue with Homebrew where it wasn&rsquo;t finding the
+right gcc binary. I had to run the following commands to fix
+<a href="https://github.com/mxcl/homebrew/issues/10245">that issue</a>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo xcode-select -switch /usr/bin
+</span><span class='line'>sudo ln -sf /usr/bin/llvm-gcc-4.2 /usr/bin/gcc-4.2
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You wouldn&rsquo;t think that something like an 8G installation would matter
+in 2012. However, disk space is a precious commodity on MacBook Airs
+and systems that have SSDs as the root volume. This is very welcome
+change for me, especially since it means that future Mac OS X
+installations do not require a large download before I can start doing
+things that get my
+<a href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef/">system ready to use</a>.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/25/recipe-for-building-emacs/">Recipe for Building Emacs</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-25T23:51:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It is no secret that
+<a href="http://jtimberman.housepub.org/blog/2011/05/06/switching-to-gnu-emacs/">I use GNU Emacs</a>
+as my default text editor. It is perhaps less evident but no less
+relevant that I use Emacs 24. I really like the built-in color theme
+support and the package management system for getting the various
+modes I like to use.</p>
+
+<p>Recently, I revamped my
+<a href="https://github.com/jtimberman/.emacs.d">Emacs configuration</a>. This
+post isn&rsquo;t about that topic. Instead, this post is about how I made
+sure that all the systems I want to use Emacs on have the latest
+version available.</p>
+
+<p>Unfortunately, Emacs 24 is still unreleased, so it is not available as
+the default package on the distributions I use for my personal systems
+(Ubuntu/Debian flavors). I wrote a recipe to install Emacs
+from source. This is easy enough to do, but since I already automate
+everything on my home network with Chef, it was a natural fit for a
+new recipe. I simply added this to my local <code>emacs</code> cookbook, in
+<code>recipes/source24.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">srcdir</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:file_cache_path</span><span class="o">]</span><span class="si">}</span><span class="s2">/emacs-source&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="sx">%w{ git-core build-essential texinfo autoconf libncurses-dev }</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span><span class="o">|</span><span class="n">prereq</span><span class="o">|</span> <span class="n">package</span> <span class="n">prereq</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">git</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:file_cache_path</span><span class="o">]</span><span class="si">}</span><span class="s2">/emacs-source&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">repository</span> <span class="s2">&quot;git://git.savannah.gnu.org/emacs.git&quot;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:checkout</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">bash</span> <span class="s2">&quot;build emacs24&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">cwd</span> <span class="n">srcdir</span>
+</span><span class='line'>  <span class="n">creates</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">srcdir</span><span class="si">}</span><span class="s2">/src/emacs&quot;</span>
+</span><span class='line'>  <span class="n">code</span> <span class="o">&lt;&lt;-</span><span class="no">EOH</span>
+</span><span class='line'><span class="sh">    ./autogen.sh &amp;&amp; \</span>
+</span><span class='line'><span class="sh">    ./configure --without-x &amp;&amp; \</span>
+</span><span class='line'><span class="sh">    make bootstrap &amp;&amp; \</span>
+</span><span class='line'><span class="sh">    make 2&gt;&amp;1 &gt;| make-#{node.name}-#{node[&#39;ohai_time&#39;]}</span>
+</span><span class='line'><span class="no">  EOH</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">execute</span> <span class="s2">&quot;install emacs24&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">cwd</span> <span class="n">srcdir</span>
+</span><span class='line'>  <span class="n">command</span> <span class="s2">&quot;make install 2&gt;&amp;1 &gt;| make-</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;ohai_time&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'>  <span class="n">creates</span> <span class="s2">&quot;/usr/local/bin/emacs&quot;</span>
+</span><span class='line'>  <span class="n">only_if</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">srcdir</span><span class="si">}</span><span class="s2">/src/emacs --version&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then I updated my base role to replace <code>recipe[emacs]</code> with
+<code>recipe[emacs::source24]</code> and ran Chef. It took about 25 minutes to do
+the build, but now I have the same version of Emacs everywhere, and
+there was much rejoicing.</p>
+
+<p>And yes, you&rsquo;re absolutely right, I could just build a package and
+install that. However, I don&rsquo;t want to set up and maintain a package
+management repository for my small network, as
+<a href="http://ckbk.it/reprepro">easy</a> as <a href="http://ckbk.it/apt">that</a> may be.</p>
+
+<p>My OS X systems are a special case because I&rsquo;m using Homebrew, but the
+<a href="http://ckbk.it/homebrew">homebrew cookbook</a> does not [yet?] support
+install-time options, and I didn&rsquo;t spend the time adding support for
+building the OS X Emacs w/ cocoa support from git. When I tackle that,
+I&rsquo;ll make another post, so stay tuned!</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/4/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/2/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

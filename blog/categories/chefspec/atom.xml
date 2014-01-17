@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: chefspec | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/chefspec/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-01-16T22:55:19-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Starting ChefSpec Example]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/09/starting-chefspec-example/"/>
+    <updated>2013-05-09T21:10:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/09/starting-chefspec-example</id>
+    <content type="html"><![CDATA[<p>This is a quick post to introduce what I&rsquo;m starting on testing with
+<a href="http://acrmp.github.io/chefspec/">ChefSpec</a>. This is from Opscode&rsquo;s
+Java cookbook. While the recipe tested is really trivial, it actually
+has some nuances that require detailed testing.</p>
+
+<p>First off, the whole thing is in
+<a href="https://gist.github.com/jtimberman/5552182">this gist</a>. I&rsquo;m going to
+break it down into sections below. The file is <code>spec/default_spec.rb</code>
+in the java cookbook (not committed/pushed yet).</p>
+
+<p>The chefspec gem is where all the magic comes from. You can read about
+ChefSpec on <a href="http://acrmp.github.io/chefspec/">its home page</a>. You&rsquo;ll
+need to install the gem, and from there, run <code>rspec</code> to run the tests.</p>
+
+<p><code>ruby
+require 'chefspec'
+</code></p>
+
+<p>Next, we&rsquo;re going to describe the default recipe. We&rsquo;re using the
+regular rspec &ldquo;let&rdquo; block to set up the runner to converge the recipe.
+Then, because we know/assume that the openjdk recipe is the default,
+we can say that this chef run should include the <code>java::openjdk</code> recipe.</p>
+
+<p>```ruby
+describe &lsquo;java::default&rsquo; do
+  let (:chef_run) { ChefSpec::ChefRunner.new.converge(&lsquo;java::default&rsquo;) }
+  it &lsquo;should include the openjdk recipe by default&rsquo; do</p>
+
+<pre><code>chef_run.should include_recipe 'java::openjdk'
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Next, this cookbook supports Windows. However, we have to set up the
+runner with the correct platform and version (this comes from
+<a href="https://github.com/customink/fauxhai">fauxhai</a>), and then set
+attributes that are required for it to work.</p>
+
+<p>```ruby
+context &lsquo;windows&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new(
+    'platform' =&gt; 'windows',
+    'version' =&gt; '2008R2'
+    )
+  runner.node.set['java']['install_flavor'] = 'windows'
+  runner.node.set['java']['windows']['url'] = 'http://example.com/windows-java.msi'
+  runner.converge('java::default')
+end
+it 'should include the windows recipe' do
+  chef_run.should include_recipe 'java::windows'
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Next are the contexts for other install flavors. The default recipe
+will include the right recipe based on the flavor, which is set by an
+attribute. So we set up an rspec context for each recipe, then set the
+install flavor attribute, and test that the right recipe was included.</p>
+
+<p>```ruby
+  context &lsquo;oracle&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new
+  runner.node.set['java']['install_flavor'] = 'oracle'
+  runner.converge('java::default')
+end
+it 'should include the oracle recipe' do
+  chef_run.should include_recipe 'java::oracle'
+end
+</code></pre>
+
+<p>  end
+  context &lsquo;oracle_i386&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new
+  runner.node.set['java']['install_flavor'] = 'oracle_i386'
+  runner.converge('java::default')
+end
+it 'should include the oracle_i386 recipe' do
+  chef_run.should include_recipe 'java::oracle_i386'
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Finally, a recent addition to this cookbook is support for
+<a href="http://tickets.opscode.com/browse/COOK-2897">IBM&rsquo;s Java</a>. In addition
+to setting the install flavor, we must set the URL where the IBM Java
+package is (see the README in the commit linked in that ticket for
+detail), and we can see that the <code>ibm</code> recipe is in fact included.</p>
+
+<p>```ruby
+  context &lsquo;ibm&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new
+  runner.node.set['java']['install_flavor'] = 'ibm'
+  runner.node.set['java']['ibm']['url'] = 'http://example.com/ibm-java.bin'
+  runner.converge('java::default')
+end
+it 'should include the ibm recipe' do
+  chef_run.should include_recipe 'java::ibm'
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>This is just the start of the testing for this cookbook. We&rsquo;ll need to
+test each individual recipe. However as I&rsquo;ve not written that code
+yet, I don&rsquo;t have examples. Stay tuned!</p>
+]]></content>
+  </entry>
+  
+</feed>

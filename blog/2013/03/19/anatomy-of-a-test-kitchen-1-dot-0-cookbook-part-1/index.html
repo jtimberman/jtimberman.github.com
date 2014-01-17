@@ -1,0 +1,541 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Anatomy of a Test Kitchen 1.0 Cookbook (Part 1) - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="DISCLAIMER Test Kitchen 1.0 is still in alpha at the time of this post. Update Remove Gemfile and Vagrantfile Let&rsquo;s take a look at the anatomy &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Topics include: Opscode Chef, configuration management, Ruby, Linux/Unix administration. Opinions expressed here are my own and do not reflect those of my employer (Opscode, Inc.).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Anatomy of a Test Kitchen 1.0 Cookbook (Part 1)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-19T09:28:00-06:00" pubdate data-updated="true">Mar 19<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
+  this post.</p>
+
+<p><strong>Update</strong> Remove Gemfile and Vagrantfile</p>
+
+<p>Let&rsquo;s take a look at the anatomy of a cookbook set up with
+test-kitchen 1.0-alpha.</p>
+
+<p><strong>Note</strong> It is outside the scope of this post to discuss how to write
+  minitest-chef tests or &ldquo;test cookbook&rdquo; recipes. Use the cookbook
+  described below as an example to get ideas for writing your own.</p>
+
+<p>This is the full directory tree of Opscode&rsquo;s
+&ldquo;<a href="http://ckbk.it/bluepill">bluepill</a>&rdquo; cookbook:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>├── .kitchen.yml
+</span><span class='line'>├── Berksfile
+</span><span class='line'>├── CHANGELOG.md
+</span><span class='line'>├── CONTRIBUTING
+</span><span class='line'>├── LICENSE
+</span><span class='line'>├── README.md
+</span><span class='line'>├── TESTING.md
+</span><span class='line'>├── attributes
+</span><span class='line'>│   └── default.rb
+</span><span class='line'>├── metadata.rb
+</span><span class='line'>├── providers
+</span><span class='line'>│   └── service.rb
+</span><span class='line'>├── recipes
+</span><span class='line'>│   ├── default.rb
+</span><span class='line'>│   └── rsyslog.rb
+</span><span class='line'>├── resources
+</span><span class='line'>│   └── service.rb
+</span><span class='line'>├── templates
+</span><span class='line'>│   └── default
+</span><span class='line'>│       ├── bluepill_init.fedora.erb
+</span><span class='line'>│       ├── bluepill_init.freebsd.erb
+</span><span class='line'>│       ├── bluepill_init.rhel.erb
+</span><span class='line'>│       └── bluepill_rsyslog.conf.erb
+</span><span class='line'>└── test
+</span><span class='line'>    └── cookbooks
+</span><span class='line'>        └── bluepill_test
+</span><span class='line'>            ├── README.md
+</span><span class='line'>            ├── attributes
+</span><span class='line'>            │   └── default.rb
+</span><span class='line'>            ├── files
+</span><span class='line'>            │   └── default
+</span><span class='line'>            │       └── tests
+</span><span class='line'>            │           └── minitest
+</span><span class='line'>            │               ├── default_test.rb
+</span><span class='line'>            │               └── support
+</span><span class='line'>            │                   └── helpers.rb
+</span><span class='line'>            ├── metadata.rb
+</span><span class='line'>            ├── recipes
+</span><span class='line'>            │   └── default.rb
+</span><span class='line'>            └── templates
+</span><span class='line'>                └── default
+</span><span class='line'>                    └── test_app.pill.erb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I&rsquo;ll assume the reader is familiar with basic components of cookbooks
+like &ldquo;recipes,&rdquo; &ldquo;templates,&rdquo; and the top-level documentation files, so
+let&rsquo;s trim this down to just the areas of concern for Test Kitchen.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>├── .kitchen.yml
+</span><span class='line'>├── Berksfile
+</span><span class='line'>└── test
+</span><span class='line'>    └── cookbooks
+</span><span class='line'>        └── bluepill_test
+</span><span class='line'>            ├── attributes
+</span><span class='line'>            │   └── default.rb
+</span><span class='line'>            ├── files
+</span><span class='line'>            │   └── default
+</span><span class='line'>            │       └── tests
+</span><span class='line'>            │           └── minitest
+</span><span class='line'>            │               ├── default_test.rb
+</span><span class='line'>            │               └── support
+</span><span class='line'>            │                   └── helpers.rb
+</span><span class='line'>            ├── recipes
+</span><span class='line'>            │   └── default.rb
+</span><span class='line'>            └── templates
+</span><span class='line'>                └── default
+</span><span class='line'>                    └── test_app.pill.erb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that this cookbook has a &ldquo;test&rdquo; cookbook. I&rsquo;ll get to that in a
+minute.</p>
+
+<p>First of all, we have the <code>.kitchen.yml</code>. This is the project
+definition that describes what is required to run test kitchen itself.
+This particular file tells Test Kitchen to bring up nodes of the
+platforms we&rsquo;re testing with Vagrant, and defines the boxes with their
+box names and URLs to download. You can view the full
+<a href="https://github.com/opscode-cookbooks/bluepill/blob/master/.kitchen.yml"><code>.kitchen.yml</code> in the Git repo</a>.
+For now, I&rsquo;m going to focus on the <code>suite</code> stanza in the
+<code>.kitchen.yml</code>. This defines how Chef will run when Test Kitchen
+brings up the Vagrant machine.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">default</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">run_list</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">recipe[minitest-handler]</span>
+</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">recipe[bluepill_test]</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">attributes</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span><span class="nv">bluepill</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span> <span class="nv">bin</span><span class="p-Indicator">:</span> <span class="s">&quot;/opt/chef/embedded/bin/bluepill&quot;</span> <span class="p-Indicator">}</span> <span class="p-Indicator">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Each platform has a recipe it will run with, in this case <code>apt</code> and
+<code>yum</code>. Then the suite&rsquo;s run list is appended, so for example, the final run list of
+the Ubuntu 12.04 node will be:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="p-Indicator">[</span><span class="s">&quot;recipe[apt]&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;recipe[minitest-handler]&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;recipe[bluepill_test]&quot;</span><span class="p-Indicator">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We have apt so the apt cache on the node is updated before Chef does
+anything else. This is pretty typical so we put it in the default run
+list of each Ubuntu box.</p>
+
+<p>The <code>minitest-handler</code> recipe existing in the run list means that the
+Minitest Chef Handler will be run at the end of the Chef run. In this
+case, it will use the tests from the test cookbook, <code>bluepill_test</code>.</p>
+
+<p>The bluepill cookbook itself does not depend on any of these
+cookbooks. So how does Test Kitchen know where to get them? Enter the
+next file in the list above, <code>Berksfile</code>. This informs
+<a href="http://berkshelf.com">Berkshelf</a> which cookbooks to download. The
+relevant excerpt from the Berksfile is:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apt&quot;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;yum&quot;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;minitest-handler&quot;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;bluepill_test&quot;</span><span class="p">,</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s2">&quot;./test/cookbooks/bluepill_test&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Based on the
+<a href="https://github.com/opscode-cookbooks/bluepill/blob/master/Berksfile">Berksfile</a>,
+it will download apt, yum, and minitest-handler from the Chef
+Community site. It will also use the
+<a href="https://github.com/opscode-cookbooks/bluepill/tree/master/test/cookbooks/bluepill_test">bluepill_test</a>
+included in the bluepill cookbook. This is transparent to the user, as
+I&rsquo;ll cover in a moment.</p>
+
+<p>Test Kitchen&rsquo;s Vagrant driver plugin handles all the configuration of
+Vagrant itself based on the entries in the <code>.kitchen.yml</code>. To get the
+Berkshelf integration in the Vagrant boxes, we need to install the
+vagrant-berkshelf plugin in Vagrant. Then, we automatically get
+Berkshelf&rsquo;s Vagrant integration, meaning all the cookbooks defined in
+the Berksfile are going to be available on the box we bring up.</p>
+
+<p>Remember the test cookbook mentioned above? It&rsquo;s the next component.
+The default <code>suite</code> in <code>.kitchen.yml</code> puts <code>bluepill_test</code> in the run
+list. This particular recipe will include the <code>bluepill</code> default
+recipe, then it sets up a test service using the <code>bluepill_service</code>
+LWRP. This means that when the nodes brought up by Test Kitchen via
+Vagrant converge, they&rsquo;ll have bluepill installed and set up, and then
+a service running that we can test the final behavior. Since Chef will
+exit with a non-zero return code if it encounters an exception, we
+know that a successful run means everything is configured as defined
+in the recipes, and we can run tests against the node.</p>
+
+<p>The tests we&rsquo;ll run are written with the
+<a href="https://github.com/calavera/minitest-chef-handler/">Minitest Chef Handler</a>.
+These are defined in the test cookbook, <code>files/default/tests/minitest</code>
+directory. The <code>minitest-handler</code> cookbook (also in the default suite
+run list) will execute the
+<a href="https://github.com/opscode-cookbooks/bluepill/blob/master/test/cookbooks/bluepill_test/files/default/tests/minitest/default_test.rb">default_test</a>
+tests.</p>
+
+<p>In the next post, we&rsquo;ll look at how to run Test Kitchen, and what all
+the output means.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-19T09:28:00-06:00" pubdate data-updated="true">Mar 19<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/test-kitchen/'>test-kitchen</a>, <a class='category' href='/blog/categories/testing/'>testing</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/02/16/last-check-in-time-for-nodes/" title="Previous Post: Last Check-in Time for Nodes">&laquo; Last Check-in Time for Nodes</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/" title="Next Post: Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)">Anatomy of a Test Kitchen 1.0 Cookbook (Part 2) &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
