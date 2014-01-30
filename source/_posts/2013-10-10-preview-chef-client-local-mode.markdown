@@ -71,7 +71,7 @@ another file in /tmp.
 
 ```sh
 mkdir -p data_bags/zero
-vi data_bags/zero/fluff
+vi data_bags/zero/fluff.json
 ```
 
 The data bag item:
