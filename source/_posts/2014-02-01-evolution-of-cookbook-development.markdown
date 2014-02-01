@@ -1,19 +1,20 @@
 ---
 layout: post
 title: "Evolution of Cookbook Development"
-date: 2014-01-18 11:42:26 -0700
+date: 2014-02-01 12:48:49 -0700
 comments: true
 categories: chef, cookbooks
 ---
 
 In this post, I will explore some development patterns that I've seen
 (and done!) with Chef cookbooks, and then explain how we can evolve to
-a new level of cookbook development. The examples here come from our
-new `chef-splunk` cookbook, which is a refactored version of our old
-`splunk42` cookbook. While there is a public `splunk` cookbook on the
-Chef community site, it shares some of the issues that I saw with our
-old one. We'll work with the maintainers of that one to see if we can
-consolidate cookbooks.
+a new level of cookbook development. The examples here come from
+Chef's new
+[chef-splunk cookbook](http://www.getchef.com/blog/2014/01/28/chefs-splunk-cookbook-2/),
+which is a refactored version of an old `splunk42` cookbook. While
+there is a public `splunk` cookbook on the Chef community site, it
+shares some of the issues that I saw with our old one, which are
+partially subject matter of this post.
 
 Anyway, on to the evolution!
 
@@ -28,6 +29,10 @@ These are the general patterns I'm going to address.
   searching for "`role:some-server`"
 * Repeated resources across multiple orthogonal recipes
 * Plaintext secrets in attributes or data bag items
+
+Cookbook development is a wide and varied topic, so there are many
+other patterns to consider, but these are the ones most relevant to
+the refactored cookbook.
 
 ## Composing URLs
 
@@ -56,7 +61,9 @@ We reused the filename variable, and composed the URL to the file to
 download. Then to upgrade, we can simply modify the `splunk_version`
 and `splunk_build`, as Splunk uses a consistent naming theme for their
 package URLs (thanks, Splunk!). The filename itself is built from a
-case statement (more on that in the next section).
+case statement (more on that in the next section). We could further
+make the version and build attributes, so users can update to newer
+versions by simply changing the attribute.
 
 So what is bad about this? Two things.
 
@@ -66,7 +73,7 @@ name, splunk vs splunkforwarder).
 2. Ruby has excellent libraries for manipulating URIs and paths as
 strings, and it is easier to break up a string than compose a new one.
 
-How can this be improved? First, we set attributes for the full URL.
+How can this be improved? First, we can set attributes for the full URL.
 The actual code for that is below, but suffice to say, it will look
 like this (note the version is different because the new cookbook installs
 a new Splunk version).
@@ -75,7 +82,7 @@ a new Splunk version).
 default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883-linux-2.6-amd64.deb'
 ```
 
-Then, we have
+Second, we have
 [helper libraries](https://github.com/opscode-cookbooks/chef-splunk/blob/master/libraries/helpers.rb)
 distributed with the cookbook that break up the URI so we can return
 just the package filename.
@@ -97,7 +104,9 @@ remote_file "/opt/#{splunk_file(node['splunk']['forwarder']['url'])}" do
 end
 ```
 
-More on that later, though.
+As a bonus, the helper methods are available in other places like
+other cookbooks and recipes, rather than the local scope of local
+variables.
 
 ## Conditional Logic Branches
 
@@ -134,10 +143,10 @@ splunk_file = case node['platform_family']
 
 Splunk itself supports many platforms, and not all of them are covered
 by this conditional, so it's easy to imagine how this can get further
-out of control. Also consider that this is just the `client` portion
-for the `splunkforwarder` package,
-this same block is repeated in the `server` recipe, for the `splunk`
-package.
+out of control and make the recipe even harder to follow. Also
+consider that this is just the `client` portion for the
+`splunkforwarder` package, this same block is repeated in the `server`
+recipe, for the `splunk` package.
 
 So why is this bad? There are three reasons.
 
@@ -146,14 +155,13 @@ reading a recipe.
 2. This logic isn't reusable elsewhere, so it has to be duplicated in
 the other recipe.
 3. This is only the logic for the package filename, but we care about
-the entire URL, though earlier I said that composing URLs isn't
-delightful.
+the entire URL. I've also covered that composing URLs isn't delightful.
 
 What is a better approach? Use the full URL as I mentioned before, and
 set it as an attribute. We will still have the gnarly case statement,
 but it will be tucked away in the `attributes/default.rb` file, and
-hidden from anyone reading the recipe (or, the thing they probably
-care most about reading).
+hidden from anyone reading the recipe (which is the thing they
+probably care most about reading).
 
 ```ruby
 case node['platform_family']
@@ -172,7 +180,7 @@ when 'debian'
 The the complete case block can be viewed in the
 [repository](https://github.com/opscode-cookbooks/chef-splunk/blob/master/attributes/default.rb#L46-L66).
 Also, since this is an attribute, consumers of this cookbook can set
-the URL to whatever they want.
+the URL to whatever they want, including a local HTTP server.
 
 Another example of gnarly conditional logic looks like this, also from
 the `splunk42::client` recipe.
@@ -197,9 +205,9 @@ Why is this bad? After all, we're selecting the proper package
 resource to install from a local file on disk. The main issue is the
 conditional creates different resources that can't be looked up in the
 resource collection. Our recipe doesn't do this, but perhaps a wrapper
-cookbook would want to do this. Then the consumer wrapping the
-cookbook has to duplicate this logic in their own cookbook. Instead,
-it is better to select the provider for a single `package` resource.
+cookbook would. The consumer wrapping the cookbook has to duplicate
+this logic in their own. Instead, it is better to select the provider
+for a single `package` resource.
 
 ```ruby
 package "/opt/#{splunk_file(node['splunk']['forwarder']['url'])}" do
@@ -216,15 +224,17 @@ end
 
 ## Definitions Aren't Bad
 
-Definitions are simply "macros" of resources. They are not actually
-Chef Resources themselves, they just look like them. This has some
-disadvantages, such as lack of metaparameters (like action), which has
-lead people to prefer using the "Lightweight Resource/Provider" (LWRP)
-DSL instead. In fact, some feel that definitions are bad, and that one
-should feel bad for using them. I argue that they have their place.
+Definitions are simply defined as recipe "macros." They are not
+actually Chef Resources themselves, they just look like them, and
+contain their own Chef resources. This has some disadvantages, such as
+lack of metaparameters (like action), which has lead people to prefer
+using the "Lightweight Resource/Provider" (LWRP) DSL instead. In fact,
+some feel that definitions are bad, and that one should feel bad for
+using them. I argue that they have their place. One advantage is their
+relative simplicity.
 
 In our `splunk42` cookbook, the client and server recipes duplicate a
-lot of logic, as mentioned a lot of this is case statements for the
+lot of logic. As mentioned a lot of this is case statements for the
 Splunk package file. They also repeat the same logic for installing
 the package. I snipped the content from the `when "omnios"` block, but
 it looks like this:
@@ -274,14 +284,25 @@ end
 ```
 
 How is this better than an LWRP? Simply that there was less ceremony
-in creating it. To create an LWRP, we need `resources` and `providers`
+in creating it. There is less cognitive load for a cookbook developer
+to worry about. Definitions by their very nature of containing
+resources are already idempotent and convergent with no additional
+effort. They also automatically support why-run mode, whereas in an
+LWRP that must be done by the developer. Finally, between resources in
+the definition and the rest of the Chef run, notifications may be
+sent.
+
+Contrast this to an LWRP, we need `resources` and `providers`
 directories, and the attributes of the resource need to be defined in
 the resource. Then the action methods need to be written in the
 provider. If we're using inline resources (which we are) we need to
-declare those so any notifications work, and why-run works properly.
+declare those so any notifications work. Finally, we should ensure
+that why-run works properly.
 
 The actual definition is ~40 lines, and can be viewed in the cookbook
 [repository](https://github.com/opscode-cookbooks/chef-splunk/blob/master/definitions/splunk_installer.rb).
+I don't have a comparable LWRP for this, but suffice to say that it
+would be longer and more complicated than the definition.
 
 ## Reasonability About Search
 
@@ -297,7 +318,7 @@ splunk_servers = search(:node, "role:splunk-server")
 
 Then we do something with `splunk_servers`, like send it to a
 template. What if someone doesn't like the [role name](http://bikeshed.io)?
-Then we have to do something like this in a community
+Then we have to do something like this:
 
 ```ruby
 splunk_servers = search(:node, "role:#{node['splunk']['server_role']}")
@@ -316,7 +337,9 @@ splunk_servers = search(:node, "#{node['splunk']['server_search_query']}")
 
 The problem with the first is similar to the problem with the first
 (`role:splunk-server`), we need knowledge about the run list in order
-to search properly.
+to search properly. The problem with the second is that we now have to
+worry about constructing a query properly as a string that gets
+interpolated correctly.
 
 How can we improve this? I think it is more "Chef-like" to use an
 attribute on the server's node object itself that informs queries the
@@ -336,22 +359,27 @@ This reads clearly, and the `is_server` attribute can be set in one of
 In the past, it was deemed okay to repeat resources across recipes
 when those recipes were not included on the same node. For example,
 client and server recipes that have similar resource requirements, but
-may pass in separate data.
+may pass in separate data. Another example is in the
+[haproxy](http://community.opscode.com/cookbooks/haproxy)) cookbook I
+wrote where one recipe statically manages the configuration files, and
+the other uses a Chef search to populate the configuration.
 
 As I have mentioned above, a lot of code was duplicated between the
 client and server recipes for our `splunk42` cookbook: user and group,
-the case statements, package resources, execute statements that
-haven't been shared here, and the service resource. It is definitely
-important to ensure that all the resources needed to converge a
-recipe are defined, particularly when using notifications. That is why
-sometimes a recipe will have:
+the case statements, package resources, execute statements (that
+haven't been shared here), and the service resource. It is definitely
+important to ensure that all the resources needed to converge a recipe
+are defined, particularly when using notifications. That is why
+sometimes a recipe will have a `service` resource with no actions like
+this:
 
 ```ruby
 service 'mything'
 ```
 
-in a recipe. However in Chef 11, this will generate a warning about
-[cloned resources](http://tickets.opscode.com/browse/CHEF-3694).
+However Chef 11will generate a warning about
+[cloned resources](http://tickets.opscode.com/browse/CHEF-3694) when
+they are repeated in the same Chef run.
 
 Why is this bad? Well, CHEF-3694 explains in more detail that
 particular issue, of cloned resources. The other reason is that it
@@ -398,14 +426,16 @@ include the others they need. If someone doesn't share our opinion on
 this for their use case, they can pick and choose the ones they want.
 Perhaps they have the `splunk` user and group created on systems
 through some other means. They won't need the `chef-splunk::user`
-recipe, and can write their own wrapper to handle that.
+recipe, and can write their own wrapper to handle that. Overall this
+is good, though it does mean there are multiple places where a user
+must look to follow a recipe.
 
 ## Plaintext Secrets
 
 Managing secrets is one of the hardest problems to solve in system
-administration and configuration management. It is very easy to simply
-set attributes, or use data bag items for authentication credentials.
-Our old `splunk42` cookbook had this:
+administration and configuration management. In Chef, it is very easy
+to simply set attributes, or use data bag items for authentication
+credentials. Our old `splunk42` cookbook had this:
 
 ```ruby
 splunk_password = node[:splunk][:auth].split(':')[1]
@@ -413,10 +443,11 @@ splunk_password = node[:splunk][:auth].split(':')[1]
 
 Where `node[:splunk][:auth]` was set in a role with the
 `username:password`. This isn't particularly *bad* since our Chef
-server runs on a private network and all that, but a defense in depth
-security posture has more controls in place for secrets.
+server runs on a private network and is secured with HTTPS and RSA
+keys, but a defense in depth security posture has more controls in
+place for secrets.
 
-How can this be improved? Well, we started using
+How can this be improved? At Chef, we started using
 [Chef Vault](https://github.com/Nordstrom/chef-vault) to manage
 secrets. I wrote a
 [post about chef-vault](http://www.getchef.com/blog/2013/09/19/managing-secrets-with-chef-vault/)
@@ -446,16 +477,26 @@ convenient local variables, and change the password from Splunk's
 built-in default. Then, we control convergence of the execute by
 writing a file that indicates that the password has been set.
 
+The advantage of this over attributes or data bag items is that the
+content is encrypted. The advantage over regular encrypted data bags
+is that we don't need to distribute the secret key out to every
+system, we can update the list of nodes that have access with a knife
+command.
+
 # Conclusion
 
-Chef (the company) isn't here to tell anyone how to write cookbooks.
-One of the benefits of Chef (the product) is its flexibility, allowing
-users to write blocks of Ruby code in recipes that quickly solve an
-immediate problem. That's how we got to where we were with `splunk42`,
-and we certainly have other cookbooks that can be refactored
-similarly. When it comes to sharing cookbooks with the community,
-well-factored, easy to follow, understand, and use code is preferred.
+Neither Chef (the company), nor I aren't here to tell anyone how to
+write cookbooks. One of the benefits of Chef (the product) is its
+flexibility, allowing users to write blocks of Ruby code in recipes
+that quickly solve an immediate problem. That's how we got to where we
+were with `splunk42`, and we certainly have other cookbooks that can
+be refactored similarly. When it comes to sharing cookbooks with the
+community, well-factored, easy to follow, understand, and use code is
+preferred.
+
 Many of the ideas here came from community members like Miah Johnson,
-Noah Kantrowitz, Jamie Winsor, and Mike Feidler. Together we can build
-a better community, and better automation, and I hope this information
-is helpful to those goals.
+Noah Kantrowitz, Jamie Winsor, and Mike Feidler. I owe them thanks for
+challenging me over the years on a lot of the older patterns that I
+held onto. Together we can build better automation through cookbooks,
+and a strong collaborative community. I hope this information is
+helpful to those goals.
