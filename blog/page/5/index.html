@@ -9,7 +9,8 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="It has been a few months and several thousand page views since my original post on how I manage my workstations with Chef. I have made some changes &hellip;">
+  <meta name="description" content="I moved my blog from Posterous to GitHub Pages. Posterous isn&rsquo;t a bad
+system and service. It just didn&rsquo;t fit the way I wanted to manage &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +80,179 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/09/29/blog-moved-to-github-pages/">Blog Moved to GitHub Pages</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-29T22:59:00-06:00" pubdate data-updated="true">Sep 29<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I moved my blog from Posterous to GitHub Pages. Posterous isn&rsquo;t a bad
+system and service. It just didn&rsquo;t fit the way I wanted to manage my
+site and the content. It was entirely adequate to get going but I was
+dissatisfied with the web form for creating new posts. It also loaded
+pages fairly slow.</p>
+
+<h2>GitHub is awesome.</h2>
+
+<p>Many others have migrated their technical blogs from services like
+Posterous, Wordpress, Tumblr, Blogger and so on over to GitHub
+Pages. Most often, this is because these services are database backed
+systems, use a web form for creating posts, and don&rsquo;t have a revision
+control system that we all know and love under the covers.</p>
+
+<p><a href="http://pages.github.com">GitHub Pages</a> is a great service by GitHub
+that allows you to serve up static content out of a Git
+repository. You can do simple static HTML pages, or you can use a
+static page generation framework to generate the content out of
+Markdown (or Textile, or HAML) files. There&rsquo;s a number of options for
+this, such as <a href="http://nanoc.stoneship.org/">Nanoc</a> or <a href="http://jekyllrb.com/">Jekyll</a>.</p>
+
+<h2>I chose Jekyll.</h2>
+
+<p><em>&ldquo;Jekyll is a blog-aware, static site generator in Ruby&rdquo;</em> &ndash;
+<a href="http://jekyllrb.com">http://jekyllrb.com/</a></p>
+
+<p>Jekyll fits the bill for me. It supports different markup languages,
+such as Markdown or Textile, and GitHub Pages has easy instructions on
+how to get going with it. Jekyll also includes a <em>fantastic</em> Posterous
+importer, which flawlessly imported all my
+<a href="/blog/archives">old posts</a>. Now I can start creating new posts as
+Markdown in Emacs, instead of using a web form, or editing HTML
+directly. I can also save revisions using Git, instead of saving a
+draft and monkeying with an interface to recover drafts or publish
+them.</p>
+
+<p>I sat down a few days ago and imported my old posts. Then I ran
+through trying to get them to look alright with a decent CSS
+theme. However, I&rsquo;m not a front end designer/developer, and I never
+remember how do do anything useful with CSS. So I went looking for
+canned ways to build a nice interface/theme for this blog.</p>
+
+<p>I remembered
+<a href="http://github.com/twitter/bootstrap">Twitter&rsquo;s Bootstrap</a> project,
+and thought that might be interesting. After looking at it I was
+confused about what to use, since it is a very complete solution,
+including iOS mobile layouts in addition to normal web pages. After
+looking elsewhere, I saw mention of <a href="http://octopress.org">Octopress</a>,
+a framework built on top of Jekyll. I queried
+<a href="http://junglist.gen.nz">some</a> <a href="http://likens.us/">people</a> that had
+experience with it, found that it would probably meet my needs, and
+gave it a whirl.</p>
+
+<p>Naturally if you&rsquo;re familiar with Octopress, you can see the result of
+that evaluation. It is a really nice system for managing the
+site.</p>
+
+<h2>I like my blogging workflow.</h2>
+
+<p>I like my new blogging workflow. It is very natural to me as a system
+engineer, as it uses Emacs, Rake, a Web Service, and Git. I&rsquo;ll walk
+through the steps I took in creating this post. I&rsquo;m going to skip the
+setup of Octopress, as that is
+<a href="http://octopress.org/docs/setup/">documented elsewhere</a>.</p>
+
+<pre><code>% rake new_post'[Blog Moved to GitHub Pages]'
+Creating new post: source/_posts/2011-09-29-blog-moved-to-github-pages.markdown
+</code></pre>
+
+<p>Then I load up the source file created by the rake task and enter all
+this content you see, saving my work along the way. I did, but could
+choose, to commit to the git repository as well. In order to preview
+the content, I can actually run the entire blog with Octopress&rsquo;s built
+in rake task:</p>
+
+<pre><code>% rake preview
+Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
+[2011-09-29 23:06:20] INFO  WEBrick 1.3.1
+[2011-09-29 23:06:20] INFO  ruby 1.9.2 (2011-07-09) [x86_64-darwin11.1.0]
+[2011-09-29 23:06:20] INFO  WEBrick::HTTPServer#start: pid=92373 port=4000
+Configuration from /Users/jtimberman/Development/jtimberman.github.com/_config.yml
+Auto-regenerating enabled: source -&gt; public
+[2011-09-29 23:06:21] regeneration: 107 files changed
+&gt;&gt;&gt; Compass is watching for changes. Press Ctrl-C to Stop.
+127.0.0.1 - - [29/Sep/2011 23:06:24] "GET / HTTP/1.1" 200 50231 0.0181
+</code></pre>
+
+<p>Now I can browse to <a href="http://localhost:4000">http://localhost:4000</a> and see exactly what the
+blog post will look like, and it loads lightning fast. This is of
+paramount importance for me, as I travel a lot and would really like
+to develop blog entries while I&rsquo;m on airplanes with no internet
+access.</p>
+
+<p>Once I am satisfied with the content and how it looks, I commit to the
+repository and push the source branch.</p>
+
+<pre><code>% git add source/_posts
+% git commit -m 'Blog moved to github pages'
+</code></pre>
+
+<p>Then, it is time to deploy the blog to GitHub Pages. Octopress makes
+this easy with another rake task:</p>
+
+<pre><code>% rake deploy
+</code></pre>
+
+<p>This takes care of all the repository work required, and pushes to
+GitHub. Then I push the actual source branch.</p>
+
+<pre><code>% git push origin source
+</code></pre>
+
+<h2>Nice things about Octopress</h2>
+
+<p>Besides the rake tasks and that works with Jekyll, Octopress has some
+really nice features.</p>
+
+<p>First of all, the default theme is really nice. One thing I wanted out
+of CSS on top of Jekyll was something large enough that I could read
+easily. I think this theme looks pretty good and is quite readable
+with my default browser settings. It is also nice and easily readable
+on my iPhone.</p>
+
+<p>Second, Octopress is very customizable. I can easily modify the layout
+by editing the <code>_config.yml</code> file. Of course I can change the theme,
+but I can add JavaScript, layouts and more. I modified the footer to
+include my Creative Commons license for the content of this site.</p>
+
+<p>Third, I really like the default layout in this theme. The recent
+posts, GitHub repo links and my last few tweets are a nice
+touch. Plus I have integrated Disqus for comments and set up Google
+Analytics easily, thanks to the ease of customizing the configuration.</p>
+
+<h2>Conclusion</h2>
+
+<p>In closing, I&rsquo;m very happy with this solution. I now have a blogging
+workflow that I&rsquo;m comfortable with, and that will hopefully result in
+more posts.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -767,100 +941,6 @@ INFO: Report handlers complete</pre></div>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/04/22/chef-0-10-s-knife-plugins/">Chef 0.10&#8217;s Knife Plugins</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-04-22T00:00:00-06:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Earlier today^Wyesterday, Opscode previewed a new feature of the upcoming Chef 0.10, <a href="http://www.opscode.com/blog/2011/04/22/chef-0-10-preview-knife-plugins-and-ui/" title="Chef 0.10 Preview: Knife Plugins" target="_blank">Knife Plugins</a>. I&#8217;ve been excited about this feature since Dan DeLeo first created the <a href="http://tickets.opscode.com/browse/CHEF-1248" title="CHEF-1248" target="_blank">ticket for it</a>. I already created the &#8220;grep&#8221; plugin that Dan illustrates on the blog post, and it is quite useful already (and I only have a few systems!).</p>
-<p>A few months ago, I wrote a <a href="https://rubygems.org/gems/ubuntu_ami" title="UbuntuAmi RubyGem" target="_blank">silly library</a> that will retrieve the list of Canonical&#8217;s released AMIs. They make this available as a text file per distribution codename (lucid, maverick, etc), and my library supports that. For even greater silliness, but perhaps usefulness, I wrote a knife plugin to retrieve the AMI data. The code is really simple.</p>
-<p><script src="https://gist.github.com/938399.js"></script></p>
-<p>The run method processes the name_args (see the <a href="http://wiki.opscode.com/display/chef/Knife+Plugins" title="Knife Plugins" target="_blank">Knife Plugin Documentation</a>) for the distribution and optionally a type. Lets see an example of what this means.</p>
-<p>First, usage:</p>
-<div class="CodeRay">
-  <div class="code"><pre>% knife ec2 amis ubuntu -h
-knife ec2 amis ubuntu DISTRO [TYPE]
-    -s, --server-url URL             Chef Server URL
-    -k, --key KEY                    API Client Key
-        --color                      Use colored output
-    -c, --config CONFIG              The configuration file to use
-        --defaults                   Accept default values for all questions
-    -e, --editor EDITOR              Set the editor to use for interactive commands
-    -E, --environment ENVIRONMENT    Set the Chef environment
-    -F, --format FORMAT              Which format to use for output
-        --no-color                   Don't use colors in the output
-    -n, --no-editor                  Do not open EDITOR, just accept the data as is
-    -u, --user USER                  API Client Username
-        --print-after                Show the data after a destructive operation
-    -V, --verbose                    More verbose output. Use twice for max verbosity
-    -v, --version                    Show chef version
-    -y, --yes                        Say yes to all prompts for confirmation
-    -h, --help                       Show this message</pre></div>
-</div>
-
-<p>The name_args we can pass are DISTRO and TYPE, TYPE being optional. The rest of the options are built into knife and available to every sub-command. Let&#8217;s pick a distro. My favorite these days is lucid:</p>
-<div class="CodeRay">
-  <div class="code"><pre>% knife ec2 amis ubuntu lucid
-ap_northeast_large:      ami-580fa459
-ap_northeast_large_ebs:  ami-5e0fa45f
-ap_northeast_small:      ami-4c0fa44d
-ap_northeast_small_ebs:  ami-5c0fa45d
-ap_southeast_large:      ami-c692ec94
-ap_southeast_large_ebs:  ami-f092eca2
-ap_southeast_small:      ami-2492ec76
-ap_southeast_small_ebs:  ami-f292eca0
-eu_west_large:           ami-631f2b17
-eu_west_large_ebs:       ami-3d1f2b49
-eu_west_small:           ami-a11e2ad5
-eu_west_small_ebs:       ami-311f2b45
-us_east_large:           ami-fa01f193
-us_east_large_ebs:       ami-3202f25b
-us_east_small:           ami-7000f019
-us_east_small_ebs:       ami-3e02f257
-us_west_large:           ami-e1bfefa4
-us_west_large_ebs:       ami-f5bfefb0
-us_west_small:           ami-19bfef5c
-us_west_small_ebs:       ami-ebbfefae</pre></div>
-</div>
-
-<p>For the DISTRO, I can use any of the codenames that Canonical makes available, including karmic, lucid, maverick and even natty at the time of this writing. The value on the left is the TYPE. Lets see what happens when I pass one of those:</p>
-<div class="CodeRay">
-  <div class="code"><pre>% knife ec2 amis ubuntu lucid us_west_small
-ami-19bfef5c</pre></div>
-</div>
-
-<p>This returns just the AMI. We can feed this into an environment variable or just copy and paste it into a &#8220;knife ec2 server create&#8221; command for the &#8220;-I ami&#8221; option.</p>
-<p>A note about the naming, I classed it under the ec2 sub-command space since it is most relevant there. Further, I used &#8220;amis ubuntu&#8221; rather than &#8220;ubuntu amis&#8221; because theoretically other plugins could be written to retrieve other platforms. There&#8217;s a couple bugs I know about already and will fix them later. Enjoy!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -895,6 +975,10 @@ ami-19bfef5c</pre></div>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
       </li>
     
@@ -908,10 +992,6 @@ ami-19bfef5c</pre></div>
     
       <li class="post">
         <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a>
       </li>
     
   </ul>
