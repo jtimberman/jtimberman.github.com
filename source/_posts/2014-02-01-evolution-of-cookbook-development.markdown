@@ -485,7 +485,7 @@ command.
 
 # Conclusion
 
-Neither Chef (the company), nor I aren't here to tell anyone how to
+Neither Chef (the company), nor I are here to tell anyone how to
 write cookbooks. One of the benefits of Chef (the product) is its
 flexibility, allowing users to write blocks of Ruby code in recipes
 that quickly solve an immediate problem. That's how we got to where we
