@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chef, | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-02-01T13:13:40-07:00</updated>
+  <updated>2014-02-01T17:46:32-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -540,7 +540,7 @@ command.</p>
 
 <h1>Conclusion</h1>
 
-<p>Neither Chef (the company), nor I aren&rsquo;t here to tell anyone how to
+<p>Neither Chef (the company), nor I are here to tell anyone how to
 write cookbooks. One of the benefits of Chef (the product) is its
 flexibility, allowing users to write blocks of Ruby code in recipes
 that quickly solve an immediate problem. That&rsquo;s how we got to where we
