@@ -235,9 +235,9 @@ relative simplicity.
 
 In our `splunk42` cookbook, the client and server recipes duplicate a
 lot of logic. As mentioned a lot of this is case statements for the
-Splunk package file. They also repeat the same logic for installing
-the package. I snipped the content from the `when "omnios"` block, but
-it looks like this:
+Splunk package file. They also repeat the same logic for choosing the
+provider to install the package. I snipped the content from the `when
+"omnios"` block, but it looks like this:
 
 ```ruby
 cache_dir = Chef::Config[:file_cache_path]
@@ -264,6 +264,8 @@ package "splunkforwarder" do
   provider Chef::Provider::Package::Solaris
 end
 ```
+
+(Note: the logic for setting the provider is required since we're not using the default over-the-network package providers, and installing from a local file on the system.)
 
 This isn't *too* bad on its own, but needs to be repeated again in the
 server recipe if one wanted to run a Splunk server on OmniOS. The
