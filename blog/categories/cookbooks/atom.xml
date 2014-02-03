@@ -4,7 +4,7 @@
   <title><![CDATA[Category: cookbooks | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/cookbooks/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-02-01T17:46:32-07:00</updated>
+  <updated>2014-02-03T10:51:37-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -286,9 +286,9 @@ relative simplicity.</p>
 
 <p>In our <code>splunk42</code> cookbook, the client and server recipes duplicate a
 lot of logic. As mentioned a lot of this is case statements for the
-Splunk package file. They also repeat the same logic for installing
-the package. I snipped the content from the <code>when "omnios"</code> block, but
-it looks like this:</p>
+Splunk package file. They also repeat the same logic for choosing the
+provider to install the package. I snipped the content from the <code>when
+"omnios"</code> block, but it looks like this:</p>
 
 <p>`&ldquo;ruby
 cache_dir = Chef::Config[:file_cache_path]
@@ -317,6 +317,8 @@ end</p>
   provider Chef::Provider::Package::Solaris
 end
 ```</p>
+
+<p>(Note: the logic for setting the provider is required since we&rsquo;re not using the default over-the-network package providers, and installing from a local file on the system.)</p>
 
 <p>This isn&rsquo;t <em>too</em> bad on its own, but needs to be repeated again in the
 server recipe if one wanted to run a Splunk server on OmniOS. The
