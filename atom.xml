@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-02-03T10:51:37-07:00</updated>
+  <updated>2014-02-15T10:26:14-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -649,7 +649,7 @@ community, well-factored, easy to follow, understand, and use code is
 preferred.</p>
 
 <p>Many of the ideas here came from community members like Miah Johnson,
-Noah Kantrowitz, Jamie Winsor, and Mike Feidler. I owe them thanks for
+Noah Kantrowitz, Jamie Winsor, and Mike Fiedler. I owe them thanks for
 challenging me over the years on a lot of the older patterns that I
 held onto. Together we can build better automation through cookbooks,
 and a strong collaborative community. I hope this information is
