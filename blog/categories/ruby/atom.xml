@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-02-15T10:26:14-07:00</updated>
+  <updated>2014-05-07T21:55:42-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,269 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ChefDK and Ruby]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/04/30/chefdk-and-ruby/"/>
+    <updated>2014-04-30T22:32:18-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/04/30/chefdk-and-ruby</id>
+    <content type="html"><![CDATA[<p>Recently, Chef <a href="http://www.getchef.com/blog/2014/04/15/chef-development-kit/">released ChefDK</a>, the &ldquo;Chef Development Kit.&rdquo; This is a self-contained package of everything required to run Chef, work with Chef cookbooks, and includes the best of breed community tools, test frameworks, and other utility programs that are commonly used when working with Chef in infrastructure as code. <a href="http://www.getchef.com/blog/2014/04/29/chefdk-0-1-0-released/">ChefDK version 0.1.0 was released last week</a>. A new feature mentioned in the <a href="https://github.com/opscode/chef-dk/blob/master/README.md#using-chefdk-as-your-primary-development-environment">README.md</a> is very important, in my opinion.</p>
+
+<p><strong>Using ChefDK as your primary development environment</strong></p>
+
+<p>What does that mean?</p>
+
+<p>It means that if the only reason you have Ruby installed on your local system is to do Chef development or otherwise work with Chef, <em>you no longer have to maintain a separate Ruby installation</em>. That means you won&rsquo;t need any of these:</p>
+
+<ul>
+<li><a href="https://github.com/sstephenson/rbenv">rbenv</a></li>
+<li><a href="http://rvm.io">rvm</a></li>
+<li><a href="https://github.com/postmodern/chruby">chruby</a> (*note)</li>
+<li>&ldquo;system ruby&rdquo; (e.g., OS X&rsquo;s included /usr/bin/ruby, or the <code>ruby</code> package from your Linux distro)</li>
+<li><a href="https://github.com/poise/poise-ruby">poise ruby</a>)</li>
+</ul>
+
+
+<p>(*note: You can optionally use chruby with ChefDK if it&rsquo;s part of your workflow and you have other Rubies installed.)</p>
+
+<p>Do not misunderstand me: These are all extremely good solutions for getting and using Ruby on your system. They definitely have their place if you do other Ruby development, such as <a href="http://www.sinatrarb.com/">web applications</a>. This is especially true if you have to work with multiple versions of Ruby. However, if you&rsquo;re like me and mainly use Ruby for Chef, then ChefDK has you covered.</p>
+
+<p>In this post, I will describe how I have set up my system with ChefDK, and use its embedded Ruby by default.</p>
+
+<h2>Getting Started</h2>
+
+<p>Download ChefDK from the <a href="http://www.getchef.com/downloads/chef-dk/">downloads page</a>. At the time of this blog post, the available builds are limited to OS X and Linux (Debian/Ubuntu or RHEL), but Chef is <a href="http://www.getchef.com/blog/2014/05/06/chefdk-for-windows-progress-update/">working on Windows packages</a>.</p>
+
+<p>For example, here&rsquo;s what I did on my Ubuntu 14.04 system:</p>
+
+<p><code>
+wget https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/13.10/x86_64/chefdk_0.1.0-1_amd64.deb
+sudo dpkg -i /tmp/chefdk_0.1.0-1_amd64.deb
+</code></p>
+
+<p>OS X users will be happy to know that the download is a .DMG, which includes a standard OS X .pkg (complete with developer signing). Simply install it like many other products on OS X.</p>
+
+<p>For either Linux or OS X, in <a href="https://github.com/opscode/omnibus-ruby/">omnibus</a> fashion, the post-installation creates several symbolic links in <code>/usr/bin</code> for tools that are included in ChefDK:</p>
+
+<p><code>
+% ls -l /usr/bin | grep chefdk
+lrwxrwxrwx 1 root root 21 Apr 30 22:13 berks -&gt; /opt/chefdk/bin/berks
+lrwxrwxrwx 1 root root 20 Apr 30 22:13 chef -&gt; /opt/chefdk/bin/chef
+lrwxrwxrwx 1 root root 26 Apr 30 22:13 chef-apply -&gt; /opt/chefdk/bin/chef-apply
+lrwxrwxrwx 1 root root 27 Apr 30 22:13 chef-client -&gt; /opt/chefdk/bin/chef-client
+lrwxrwxrwx 1 root root 26 Apr 30 22:13 chef-shell -&gt; /opt/chefdk/bin/chef-shell
+lrwxrwxrwx 1 root root 25 Apr 30 22:13 chef-solo -&gt; /opt/chefdk/bin/chef-solo
+lrwxrwxrwx 1 root root 25 Apr 30 22:13 chef-zero -&gt; /opt/chefdk/bin/chef-zero
+lrwxrwxrwx 1 root root 23 Apr 30 22:13 fauxhai -&gt; /opt/chefdk/bin/fauxhai
+lrwxrwxrwx 1 root root 26 Apr 30 22:13 foodcritic -&gt; /opt/chefdk/bin/foodcritic
+lrwxrwxrwx 1 root root 23 Apr 30 22:13 kitchen -&gt; /opt/chefdk/bin/kitchen
+lrwxrwxrwx 1 root root 21 Apr 30 22:13 knife -&gt; /opt/chefdk/bin/knife
+lrwxrwxrwx 1 root root 20 Apr 30 22:13 ohai -&gt; /opt/chefdk/bin/ohai
+lrwxrwxrwx 1 root root 23 Apr 30 22:13 rubocop -&gt; /opt/chefdk/bin/rubocop
+lrwxrwxrwx 1 root root 20 Apr 30 22:13 shef -&gt; /opt/chefdk/bin/shef
+lrwxrwxrwx 1 root root 22 Apr 30 22:13 strain -&gt; /opt/chefdk/bin/strain
+lrwxrwxrwx 1 root root 24 Apr 30 22:13 strainer -&gt; /opt/chefdk/bin/strainer
+</code></p>
+
+<p>These should cover the 80% use case of ChefDK: using the various Chef and Chef Community tools so users can follow their favorite workflow, without shaving the yak of managing a Ruby environment.</p>
+
+<p>But, as I noted, and the thesis of this post, is that one could use this Ruby environment included in ChefDK as their own! So where is that?</p>
+
+<h2>ChefDK&rsquo;s Ruby</h2>
+
+<p>Tucked away in every &ldquo;omnibus&rdquo; package is a directory of &ldquo;embedded&rdquo; software &ndash; the things that were required to meet the end goal. In the case of Chef or ChefDK, this is Ruby, openssl, zlib, libpng, and so on. This is a fully contained directory tree, complete with lib, share, and yes indeed, bin.</p>
+
+<p><code>
+% ls /opt/chefdk/embedded/bin
+(there's a bunch of commands here, trust me)
+</code></p>
+
+<p>Of particular note are <code>/opt/chefdk/embedded/bin/ruby</code> and <code>/opt/chefdk/embedded/bin/gem</code>.</p>
+
+<p>To use ChefDK&rsquo;s Ruby as default, simply edit the <code>$PATH</code>.</p>
+
+<p><code>
+export PATH="/opt/chefdk/embedded/bin:${HOME}/.chefdk/gem/ruby/2.1.0/bin:$PATH"
+</code></p>
+
+<p>Add that, or its equivalent, to a login shell profile/dotrc file, and rejoice. Here&rsquo;s what I have now:</p>
+
+<p>```
+$ which ruby
+/opt/chefdk/embedded/bin/ruby
+$ which gem
+/opt/chefdk/embedded/bin/gem
+$ ruby &mdash;version
+ruby 2.1.1p76 (2014-02-24 revision 45161) [x86_64-linux]
+$ gem &mdash;version
+2.2.1
+$ gem env
+RubyGems Environment:
+  &ndash; RUBYGEMS VERSION: 2.2.1
+  &ndash; RUBY VERSION: 2.1.1 (2014-02-24 patchlevel 76) [x86_64-linux]
+  &ndash; INSTALLATION DIRECTORY: /opt/chefdk/embedded/lib/ruby/gems/2.1.0
+  &ndash; RUBY EXECUTABLE: /opt/chefdk/embedded/bin/ruby
+  &ndash; EXECUTABLE DIRECTORY: /opt/chefdk/embedded/bin
+  &ndash; SPEC CACHE DIRECTORY: /home/ubuntu/.gem/specs
+  &ndash; RUBYGEMS PLATFORMS:</p>
+
+<pre><code>- ruby
+- x86_64-linux
+</code></pre>
+
+<ul>
+<li>GEM PATHS:
+
+<ul>
+<li>/opt/chefdk/embedded/lib/ruby/gems/2.1.0</li>
+<li>/home/ubuntu/.chefdk/gem/ruby/2.1.0</li>
+</ul>
+</li>
+<li>GEM CONFIGURATION:
+
+<ul>
+<li>:update_sources => true</li>
+<li>:verbose => true</li>
+<li>:backtrace => false</li>
+<li>:bulk_threshold => 1000</li>
+<li>&ldquo;install&rdquo; => &ldquo;&mdash;user&rdquo;</li>
+<li>&ldquo;update&rdquo; => &ldquo;&mdash;user&rdquo;</li>
+</ul>
+</li>
+<li>REMOTE SOURCES:
+
+<ul>
+<li><a href="https://rubygems.org/">https://rubygems.org/</a></li>
+</ul>
+</li>
+<li>SHELL PATH:
+
+<ul>
+<li>/opt/chefdk/embedded/bin</li>
+<li>/home/ubuntu/.chefdk/gem/ruby/2.1.0/bin</li>
+<li>/usr/local/sbin</li>
+<li>/usr/local/bin</li>
+<li>/usr/sbin</li>
+<li>/usr/bin</li>
+<li>/sbin</li>
+<li>/bin</li>
+<li>/usr/games</li>
+<li>/usr/local/games
+```</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Note that this is the current stable release of Ruby, version 2.1.1 patchlevel 76, and the {almost} latest version of RubyGems, version 2.2.1. Also note the Gem paths &ndash; the first is the embedded gems path, which is where gems installed by <code>root</code> with the <code>chef gem</code> command will go. The other is in my home directory &ndash; ChefDK is set up so that gems can be installed as a non-root user within the <code>~/.chefdk/gems</code> directory.</p>
+
+<h2>Installing Gems</h2>
+
+<p>Let&rsquo;s see this in action. Install a gem using the <code>gem</code> command.</p>
+
+<p><code>
+$ gem install knife-solve
+Fetching: knife-solve-1.0.1.gem (100%)
+Successfully installed knife-solve-1.0.1
+Parsing documentation for knife-solve-1.0.1
+Installing ri documentation for knife-solve-1.0.1
+Done installing documentation for knife-solve after 0 seconds
+1 gem installed
+</code></p>
+
+<p>And as I said, this will be installed in the home directory:</p>
+
+<p><code>
+$ gem content knife-solve
+/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/LICENSE
+/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/README.md
+/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/Rakefile
+/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/chef/knife/solve.rb
+/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/knife-solve.rb
+/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/knife-solve/version.rb
+</code></p>
+
+<h2>Using Bundler</h2>
+
+<p>ChefDK also includes <a href="http://bundler.io/">bundler</a>. As a &ldquo;non-Chef, Ruby use case&rdquo;, I installed octopress for this blog.</p>
+
+<p><code>
+% bundle install --path vendor --binstubs
+Fetching gem metadata from https://rubygems.org/.......
+Fetching additional metadata from https://rubygems.org/..
+Installing rake (0.9.6)
+Installing RedCloth (4.2.9)
+Installing chunky_png (1.2.9)
+Installing fast-stemmer (1.0.2)
+Installing classifier (1.3.3)
+Installing fssm (0.2.10)
+Installing sass (3.2.12)
+Installing compass (0.12.2)
+Installing directory_watcher (1.4.1)
+Installing haml (3.1.8)
+Installing kramdown (0.14.2)
+Installing liquid (2.3.0)
+Installing maruku (0.7.0)
+Installing posix-spawn (0.3.6)
+Installing yajl-ruby (1.1.0)
+Installing pygments.rb (0.3.7)
+Installing jekyll (0.12.1)
+Installing rack (1.5.2)
+Installing rack-protection (1.5.0)
+Installing rb-fsevent (0.9.3)
+Installing rdiscount (2.0.7.3)
+Installing rubypants (0.2.0)
+Installing sass-globbing (1.0.0)
+Installing tilt (1.4.1)
+Installing sinatra (1.4.3)
+Installing stringex (1.4.0)
+Using bundler (1.5.2)
+Updating files in vendor/cache
+  * classifier-1.3.3.gem
+  * fssm-0.2.10.gem
+  * sass-3.2.12.gem
+  * compass-0.12.2.gem
+  * directory_watcher-1.4.1.gem
+  * haml-3.1.8.gem
+  * kramdown-0.14.2.gem
+  * liquid-2.3.0.gem
+  * maruku-0.7.0.gem
+  * posix-spawn-0.3.6.gem
+  * yajl-ruby-1.1.0.gem
+  * pygments.rb-0.3.7.gem
+  * jekyll-0.12.1.gem
+  * rack-1.5.2.gem
+  * rack-protection-1.5.0.gem
+  * rb-fsevent-0.9.3.gem
+  * rdiscount-2.0.7.3.gem
+  * rubypants-0.2.0.gem
+  * sass-globbing-1.0.0.gem
+  * tilt-1.4.1.gem
+  * sinatra-1.4.3.gem
+  * stringex-1.4.0.gem
+Your bundle is complete!
+It was installed into ./vendor
+</code></p>
+
+<p>Then I can use for example the rake task to preview things while writing this post.</p>
+
+<p><code>
+$ ./bin/rake preview
+Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
+directory source/stylesheets/
+   create source/stylesheets/screen.css
+[2014-05-07 21:46:35] INFO  WEBrick 1.3.1
+[2014-05-07 21:46:35] INFO  ruby 2.1.1 (2014-02-24) [x86_64-linux]
+[2014-05-07 21:46:35] INFO  WEBrick::HTTPServer#start: pid=10815 port=4000
+</code></p>
+
+<h2>Conclusion</h2>
+
+<p>I&rsquo;ve used Chef before it was even released. As the project has evolved, and as the Ruby community around it has established new best practices installing and maintaining Ruby development environments, I&rsquo;ve followed along. I&rsquo;ve used all the version managers listed above. I&rsquo;ve spent untold hours getting the right set of gems installed just to have to upgrade everything again and debug my workstation. I&rsquo;ve written blog posts, <a href="http://wiki.opscode.com">wiki</a> pages, and helped countless users do this on their own systems.</p>
+
+<p>Now, we have an all-in-one environment that provides a great solution. Give ChefDK a whirl on your workstation &ndash; I think you&rsquo;ll like it!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Some Knife Plugins]]></title>

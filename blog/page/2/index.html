@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="DISCLAIMER Test Kitchen 1.0 is still in alpha at the time of this post. Update Remove Gemfile and Vagrantfile Let&rsquo;s take a look at the anatomy &hellip;">
+  <meta name="description" content="DISCLAIMER Test Kitchen 1.0 is still in alpha at the time of this post. Update We&rsquo;re no longer required to use bundler, and in fact recommend &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,508 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/">Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-19T09:28:00-06:00" pubdate data-updated="true">Mar 19<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
+  this post.</p>
+
+<p><strong>Update</strong> We&rsquo;re no longer required to use bundler, and in fact
+  recommend installing the required RubyGems in your globalRuby
+  environment (#3 below).</p>
+
+<p><strong>Update</strong> The log output from the various kitchen commands is not
+  updated with the latest and greatest. Play along at home, it&rsquo;ll be
+  okay :&ndash;).</p>
+
+<p>This is a continuation from <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">part 1</a></p>
+
+<p>In order to run the tests then, we need a few things on our machine:</p>
+
+<ol>
+<li>VirtualBox and Vagrant (1.1+)</li>
+<li>A compiler toolchain with XML/XSLT development headers (for building Gem dependencies)</li>
+<li>A sane, working Ruby environment (Ruby 1.9.3 or greater)</li>
+<li>Git</li>
+</ol>
+
+
+<p>It is outside the scope of this post to cover how to get all those
+installed.</p>
+
+<p>Once those are installed:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% vagrant plugin install vagrant-berkshelf
+</span><span class='line'>% gem install berkshelf
+</span><span class='line'>% gem install test-kitchen --pre
+</span><span class='line'>% gem install kitchen-vagrant</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Test Kitchen combines the suite (default) with the platform names
+(e.g., ubuntu-12.04). To run all the suites on all platforms, simply do:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% kitchen test</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will take awhile, especially if you don&rsquo;t already have the
+Vagrant boxes on your system, as it will download each one. To make
+this faster, we&rsquo;ll just run Ubuntu 12.04:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% kitchen test default.*1204</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Test Kitchen 1.0 can take a regular expression for the instances to
+test. This will match the box <code>default-ubuntu-12.04</code>. I could also
+just say <code>12</code> as that will match the single entry in my kitchen list
+(above).</p>
+
+<p>It will take a few minutes to run Test Kitchen. Those familiar with
+Chef know that if it encounters an unhandled exception, it exits with
+a non-zero return code. This is important, because we know at the end
+of a successful run, Chef did the right thing, assuming our recipe is
+the right thing :&ndash;).</p>
+
+<p>To recap the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a>, we have a run list like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s break down the output of our successful run. I&rsquo;ll show the
+output first, and explain it after:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Starting Kitchen
+</span><span class='line'>Cleaning up any prior instances of &lt;default-ubuntu-1204&gt;
+</span><span class='line'>Destroying &lt;default-ubuntu-1204&gt;
+</span><span class='line'>Finished destroying &lt;default-ubuntu-1204&gt; (0m0.00s).
+</span><span class='line'>Testing &lt;default-ubuntu-1204&gt;
+</span><span class='line'>Creating &lt;default-ubuntu-1204&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is basic setup to ensure that &ldquo;The Kitchen&rdquo; is clean beforehand
+and we don&rsquo;t have existing state interfering with the run.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[vagrant command] BEGIN (vagrant up default-ubuntu-1204 --no-provision)
+</span><span class='line'>[default-ubuntu-1204] Importing base box 'canonical-ubuntu-12.04'...
+</span><span class='line'>[default-ubuntu-1204] Matching MAC address for NAT networking...
+</span><span class='line'>[default-ubuntu-1204] Clearing any previously set forwarded ports...
+</span><span class='line'>[default-ubuntu-1204] Forwarding ports...
+</span><span class='line'>[default-ubuntu-1204] -- 22 =&gt; 2222 (adapter 1)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will look familiar to Vagrant users, we&rsquo;re just getting some
+basic setup from Vagrant initializing the box defined in the
+<code>.kitchen.yml</code> (passed to the Vagrantfile by the kitchen-vagrant
+plugin). This step does a <code>vagrant up --no-provision</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[Berkshelf] installing cookbooks...
+</span><span class='line'>[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
+</span><span class='line'>[Berkshelf] Using apt (1.8.4)
+</span><span class='line'>[Berkshelf] Using yum (2.0.0)
+</span><span class='line'>[Berkshelf] Using minitest-handler (0.1.2)
+</span><span class='line'>[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
+</span><span class='line'>[Berkshelf] Using rsyslog (1.5.0)
+</span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Remember from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that we&rsquo;re using Berkshelf? This is
+the integration with Vagrant that ensures that the cookbooks are
+available. The first four, <code>apt</code>, <code>yum</code>, <code>minitest-handler</code> and
+bluepill_test are defined in the Berksfile. The next, <code>rsyslog</code> is a
+dependency of the <code>bluepill</code> cookbook (for rsyslog integration), and the
+last, <code>chef_handler</code> is a dependency of <code>minitest-handler</code>. Berkshelf
+extracts the dependencies from the cookbook metadata of each cookbook
+defined in the Berksfile.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[default-ubuntu-1204] Creating shared folders metadata...
+</span><span class='line'>[default-ubuntu-1204] Clearing any previously set network interfaces...
+</span><span class='line'>[default-ubuntu-1204] Running any VM customizations...
+</span><span class='line'>[default-ubuntu-1204] Booting VM...
+</span><span class='line'>[default-ubuntu-1204] Waiting for VM to boot. This can take a few minutes.
+</span><span class='line'>[default-ubuntu-1204] VM booted and ready for use!
+</span><span class='line'>[default-ubuntu-1204] Setting host name...
+</span><span class='line'>[default-ubuntu-1204] Mounting shared folders...
+</span><span class='line'>[default-ubuntu-1204] -- v-root: /vagrant
+</span><span class='line'>[default-ubuntu-1204] -- v-csc-1: /tmp/vagrant-chef-1/chef-solo-1/cookbooks
+</span><span class='line'>[vagrant command] END (0m48.76s)
+</span><span class='line'>Vagrant instance &lt;default-ubuntu-1204&gt; created.
+</span><span class='line'>Finished creating &lt;default-ubuntu-1204&gt; (0m53.12s).</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Again, this is familiar output to Vagrant users, where Vagrant is
+making the cookbooks available to the instance.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Converging &lt;default-ubuntu-1204&gt;
+</span><span class='line'>[vagrant command] BEGIN (vagrant ssh default-ubuntu-1204 --command 'should_update_chef() {\n...')
+</span><span class='line'>Installing Chef Omnibus (11.4.0)
+</span><span class='line'>Downloading Chef 11.4.0 for ubuntu...
+</span><span class='line'>Installing Chef 11.4.0
+</span><span class='line'>Selecting previously unselected package chef.
+</span><span class='line'>g database ...        60513 files and directories currently installed.)
+</span><span class='line'>Unpacking chef (from .../chef_11.4.0_amd64.deb) ...
+</span><span class='line'>Setting up chef (11.4.0-1.ubuntu.11.04) ...
+</span><span class='line'>Thank you for installing Chef!
+</span><span class='line'>[vagrant command] END (0m34.85s)
+</span><span class='line'>[vagrant command] BEGIN (vagrant provision default-ubuntu-1204)
+</span><span class='line'>[Berkshelf] installing cookbooks...
+</span><span class='line'>[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
+</span><span class='line'>[Berkshelf] Using apt (1.8.4)
+</span><span class='line'>[Berkshelf] Using yum (2.0.0)
+</span><span class='line'>[Berkshelf] Using minitest-handler (0.1.2)
+</span><span class='line'>[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
+</span><span class='line'>[Berkshelf] Using rsyslog (1.5.0)
+</span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This part is interesting, in that we&rsquo;re going to install the Full
+Stack Chef (Omnibus) package. This means it doesn&rsquo;t matter what the
+underlying base box has installed, we get the right version of Chef.
+This is defined in the <code>.kitchen.yml</code>. This is done through <code>vagrant
+ssh</code> (second line). Then, Test Kitchen does <code>vagrant provision</code>. The
+provisioning step is where Berkshelf happens, so we do see this happen
+again (perhaps a bug?).</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[default-ubuntu-1204] Running provisioner: Vagrant::Provisioners::ChefSolo...
+</span><span class='line'>[default-ubuntu-1204] Generating chef JSON and uploading...
+</span><span class='line'>[default-ubuntu-1204] Running chef-solo...
+</span><span class='line'>INFO: *** Chef 11.4.0 ***
+</span><span class='line'>INFO: Setting the run_list to ["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"] from JSON
+</span><span class='line'>INFO: Run List is [recipe[apt], recipe[minitest-handler], recipe[bluepill_test]]
+</span><span class='line'>INFO: Run List expands to [apt, minitest-handler, bluepill_test]
+</span><span class='line'>INFO: Starting Chef Run for default-ubuntu-1204.vagrantup.com</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is the start of the actual Chef run, using Chef Solo by Vagrant&rsquo;s
+provisioner. Note that we have our suite&rsquo;s run list. I&rsquo;m going to skip
+a lot of the Chef output because it isn&rsquo;t required. Note that a few
+resources in the minitest&mdash;handler will report as failed, but they can
+be ignored because it means that those tests were simply not implemented.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing directory[/var/chef/minitest/bluepill_test] action create (minitest-handler::default line 50)
+</span><span class='line'>INFO: directory[/var/chef/minitest/bluepill_test] created directory /var/chef/minitest/bluepill_test
+</span><span class='line'>INFO: Processing cookbook_file[tests-bluepill_test-default] action create (minitest-handler::default line 53)
+</span><span class='line'>INFO: cookbook_file[tests-bluepill_test-default] created file /var/chef/minitest/bluepill_test/default_test.rb
+</span><span class='line'>INFO: Processing remote_directory[tests-support-bluepill_test-default] action create (minitest-handler::default line 60)
+</span><span class='line'>INFO: remote_directory[tests-support-bluepill_test-default] created directory /var/chef/minitest/bluepill_test/support
+</span><span class='line'>INFO: Processing cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] action create (dynamically defined)
+</span><span class='line'>INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] mode changed to 644
+</span><span class='line'>INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] created file /var/chef/minitest/bluepill_test/support/helpers.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These are the relevant parts of the minitest-handler recipe, where it
+has copied the tests from the <code>bluepill_test</code> cookbook into place.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing gem_package[i18n] action install (bluepill::default line 20)
+</span><span class='line'>INFO: Processing gem_package[bluepill] action install (bluepill::default line 24)
+</span><span class='line'>INFO: Processing directory[/etc/bluepill] action create (bluepill::default line 34)
+</span><span class='line'>INFO: directory[/etc/bluepill] created directory /etc/bluepill
+</span><span class='line'>INFO: directory[/etc/bluepill] owner changed to 0
+</span><span class='line'>INFO: directory[/etc/bluepill] group changed to 0
+</span><span class='line'>INFO: Processing directory[/var/run/bluepill] action create (bluepill::default line 34)
+</span><span class='line'>INFO: directory[/var/run/bluepill] created directory /var/run/bluepill
+</span><span class='line'>INFO: directory[/var/run/bluepill] owner changed to 0
+</span><span class='line'>INFO: directory[/var/run/bluepill] group changed to 0
+</span><span class='line'>INFO: Processing directory[/var/lib/bluepill] action create (bluepill::default line 34)
+</span><span class='line'>INFO: directory[/var/lib/bluepill] created directory /var/lib/bluepill
+</span><span class='line'>INFO: directory[/var/lib/bluepill] owner changed to 0
+</span><span class='line'>INFO: directory[/var/lib/bluepill] group changed to 0
+</span><span class='line'>INFO: Processing file[/var/log/bluepill.log] action create_if_missing (bluepill::default line 41)
+</span><span class='line'>INFO: entered create
+</span><span class='line'>INFO: file[/var/log/bluepill.log] owner changed to 0
+</span><span class='line'>INFO: file[/var/log/bluepill.log] group changed to 0
+</span><span class='line'>INFO: file[/var/log/bluepill.log] mode changed to 755
+</span><span class='line'>INFO: file[/var/log/bluepill.log] created file /var/log/bluepill.log</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Recall from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that the <code>bluepill_test</code> recipe includes
+the <code>bluepill</code> recipe. This is the basic setup of bluepill.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing package[nc] action install (bluepill_test::default line 4)
+</span><span class='line'>INFO: Processing template[/etc/bluepill/test_app.pill] action create (bluepill_test::default line 16)
+</span><span class='line'>INFO: template[/etc/bluepill/test_app.pill] updated content
+</span><span class='line'>INFO: Processing bluepill_service[test_app] action enable (bluepill_test::default line 18)
+</span><span class='line'>INFO: Processing bluepill_service[test_app] action load (bluepill_test::default line 18)
+</span><span class='line'>INFO: Processing bluepill_service[test_app] action start (bluepill_test::default line 18)
+</span><span class='line'>INFO: Processing link[/etc/init.d/test_app] action create (/tmp/vagrant-chef-1/chef-solo-1/cookbooks/bluepill/providers/service.rb line 30)
+</span><span class='line'>INFO: link[/etc/init.d/test_app] created
+</span><span class='line'>INFO: Chef Run complete in 81.099185824 seconds</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And this is the rest of the <code>bluepill_test</code> recipe. It sets up a test
+service that will basically be a netcat process listening on a port.
+Let&rsquo;s take a moment here and discuss what we have.</p>
+
+<p>First, we have successfully converged the default recipe in the
+<code>bluepill</code> cookbook via its inclusion in <code>bluepill_test</code>. This is
+awesome, because we know the recipe works exactly as we defined it,
+since Chef resources are declarative, and Chef exits if there&rsquo;s a
+problem.</p>
+
+<p>Second, we have successfully setup a service managed by bluepill
+itself using the LWRP included in the <code>bluepill</code> cookbook,
+<code>bluepill_service</code>. This means we know that the underlying provider
+configured all the resources correctly.</p>
+
+<p>At this point, we could say &ldquo;Ship it!&rdquo; and release the cookbook,
+knowing it will do what we require. However, this may be disingenuous
+because we don&rsquo;t know if the behavior of the system after all this
+runs is actually correct. Therefore we look to the next segment of
+output from Chef, from minitest:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Running report handlers
+</span><span class='line'>Run options: -v --seed 38794
+</span><span class='line'>\# Running tests:
+</span><span class='line'>recipe::bluepill_test::default#test_0001_the_default_log_file_must_exist_cook_1295_ =
+</span><span class='line'>0.00 s = .
+</span><span class='line'>recipe::bluepill_test::default::create a bluepill configuration file#test_0001_anonymous =
+</span><span class='line'>0.00 s = .
+</span><span class='line'>recipe::bluepill_test::default::create a bluepill configuration file#test_0002_must_be_valid_ruby =
+</span><span class='line'>0.06 s = .
+</span><span class='line'>recipe::bluepill_test::default::runs the application as a service#test_0001_anonymous =
+</span><span class='line'>0.72 s = .
+</span><span class='line'>recipe::bluepill_test::default::runs the application as a service#test_0002_anonymous =
+</span><span class='line'>0.71 s = .
+</span><span class='line'>recipe::bluepill_test::default::spawn a netcat tcp client repeatedly#test_0001_should_receive_a_tcp_connection_from_netcat =
+</span><span class='line'>2.24 s = .
+</span><span class='line'>Finished tests in 3.746002s, 1.6017 tests/s, 1.8687 assertions/s.
+</span><span class='line'>6 tests, 7 assertions, 0 failures, 0 errors, 0 skips</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is performed by the minitest-handler, which runs the tests copied
+from the <code>bluepill_test</code> cookbook before. It&rsquo;s outside the scope of
+this post to describe how to write minitest-chef tests, but we can
+talk about the output.</p>
+
+<p>We have 6 separate tests that perform 7 assertions, and they all
+passed. The tests are asserting:</p>
+
+<ol>
+<li>The log file is created, and by the full name of the test, this is
+to check for a regression from
+<a href="http://tickets.opscode.com/browse/COOK-1295">COOK-1295</a>.</li>
+<li>The <code>.pill</code> config file for the service must exist and be valid
+Ruby.</li>
+<li>The bluepill service must actually be enabled and running, thereby
+testing that those actions in the LWRP work.</li>
+<li>The running service, which listens on a TCP port, must be up and
+available, thereby testing that bluepill started the service
+correctly.</li>
+</ol>
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[vagrant command] END (1m29.24s)
+</span><span class='line'>Finished converging &lt;default-ubuntu-1204&gt; (2m15.45s).
+</span><span class='line'>Setting up &lt;default-ubuntu-1204&gt;
+</span><span class='line'>Finished setting up &lt;default-ubuntu-1204&gt; (0m0.00s).
+</span><span class='line'>Verifying &lt;default-ubuntu-1204&gt;
+</span><span class='line'>Finished verifying &lt;default-ubuntu-1204&gt; (0m0.00s).
+</span><span class='line'>Destroying &lt;default-ubuntu-1204&gt;
+</span><span class='line'>[vagrant command] BEGIN (vagrant destroy default-ubuntu-1204 -f)
+</span><span class='line'>[default-ubuntu-1204] Forcing shutdown of VM...
+</span><span class='line'>[Berkshelf] cleaning Vagrant's shelf
+</span><span class='line'>[default-ubuntu-1204] Destroying VM and associated drives...
+</span><span class='line'>[vagrant command] END (0m3.68s)
+</span><span class='line'>Vagrant instance &lt;default-ubuntu-1204&gt; destroyed.
+</span><span class='line'>Finished destroying &lt;default-ubuntu-1204&gt; (0m4.04s).
+</span><span class='line'>Finished testing &lt;default-ubuntu-1204&gt; (3m12.62s).
+</span><span class='line'>Kitchen is finished. (3m12.62s)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This output shows Test Kitchen cleaning up after itself. We destroy
+the Vagrant instance on a successful convergence and test run in Chef,
+because further investigation is not required. If the test failed for
+some reason, Test Kitchen leaves it running so you can log into the
+machine and poke around to find out what went wrong. Then simply
+correct the required part of the cookbook (recipes, tests, etc) and
+rerun Test Kitchen. For example:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle exec kitchen login 1204
+</span><span class='line'>vagrant@ubuntu-1204$ ... run some commands
+</span><span class='line'>vagrant@ubuntu-1204$ ^D
+</span><span class='line'>% bundle exec kitchen converge 1204</span></code></pre></td></tr></table></div></figure>
+
+
+<p>My goal with these posts is to get some information out for folks to
+consider when examining Test Kitchen 1.0 alpha for their own projects.
+There&rsquo;s a lot more to Test Kitchen, such as managing non-cookbook
+projects, or even using other kinds of tests. We&rsquo;ll have more
+documentation and guides as we get the 1.0 release out.</p>
+
+<p>Enjoy!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2137,282 +2639,6 @@ with:</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/11/19/chef-repository-berkshelf-conversion/">Chef Repository Berkshelf Conversion</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-11-19T22:10:00-07:00" pubdate data-updated="true">Nov 19<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I&rsquo;ve been managing my personal systems with Chef since Chef was
-created, though I didn&rsquo;t always use the same chef-repo for them. For
-about two years though, I&rsquo;ve used pretty much the same repository,
-which has grown and accumulated cruft over time. Fortunately since
-it&rsquo;s only me working on it, and I only have a few systems, it is
-really easy to make drastic changes.</p>
-
-<p>I have a number of to do items that I&rsquo;ve put off, so this weekend I
-decided to spend some time cleaning house, and convert the repository
-to have cookbooks managed by <a href="http://berkshelf.com/">Berkshelf</a>.</p>
-
-<h1>Rationale</h1>
-
-<p>There are other cookbook management tools, including the built in
-&ldquo;<code>knife cookbook site install</code>&rdquo;,
-<a href="https://github.com/applicationsonline/librarian">librarian-chef</a>, and
-<a href="https://github.com/kisoku/whisk">whisk</a>. I have used the knife
-command as long as it has existed, and it worked well for awhile. The
-buzz in the community since the
-<a href="http://wiki.opscode.com/display/chef/Opscode+Community+Summit+2">Chef Summit</a>
-has been around &ldquo;library&rdquo; vs &ldquo;application&rdquo; cookbooks, especially in
-conjunction with Berkshelf so I thought I&rsquo;d give it a go.</p>
-
-<h1>Before Berkshelf</h1>
-
-<p>Before I started on this migration, here are some numbers about
-cookbooks in my chef-repo.</p>
-
-<ul>
-<li>113 total cookbooks</li>
-<li>33 &ldquo;chef-vendor&rdquo; branches (<code>knife cookbook site install</code> creates a
-branch for each cookbook)</li>
-<li>50 &ldquo;cookbook site&rdquo; tags</li>
-</ul>
-
-
-<p>Overall, I had about a half dozen cookbooks that I actually modified
-from their &ldquo;upstream&rdquo; versions on the community site. Most of those
-customizations were adding munin plugins, changing a couple minor
-settings in a template, or long term workarounds that are actually
-fixed in the current released versions.</p>
-
-<h1>The Conversion</h1>
-
-<p>The conversion was fairly straight-forward. It required some preparation:</p>
-
-<ul>
-<li>Determine the cookbooks that would be managed by Berkshelf.</li>
-<li>Refactor customizations into &ldquo;application&rdquo; cookbooks or otherwise.</li>
-<li>Remove all those cookbooks, and the completely unused cookbooks.</li>
-</ul>
-
-
-<h2>Cookbooks in Berkshelf</h2>
-
-<p>Determining the cookbooks that would be managed by Berkshelf was
-simple. I started with all the cookbooks that had been installed via
-<code>knife cookbook site install</code>. Since the command creates a branch for
-each one, I had a nice list already. I did review that for cookbooks I
-know I wasn&rsquo;t using anymore, or didn&rsquo;t plan to use for long, to
-simplify matters.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>git branch | grep 'chef-vendor' | awk -F- '{print $3}'</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I also looked at the cookbooks that are applied to node&rsquo;s expanded run
-lists. This <code>knife exec</code> one-liner will return such a list.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E "nodes.find('recipes:*').map {|n| n[:recipes]}.flatten.map {|r| r.gsub(/::.*/, '')}.sort.uniq"</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Refactoring Customization</h2>
-
-<p>My repository has a fair amount of customization to the cookbooks from
-the community site. Rather than go through all the changes, I&rsquo;ll
-summarize with the more interesting parts.</p>
-
-<p>First, I use Samba for filesharing from an Ubuntu server. I originally
-changed the <code>samba::server</code> recipe so the services used upstart as the
-provider and set a <code>start_command</code> on Ubuntu, which looked like this
-(<code>s</code> is smbd or nmbd):</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">service</span> <span class="n">s</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">pattern</span> <span class="s2">&quot;smbd|nmbd&quot;</span> <span class="k">if</span> <span class="n">node</span><span class="o">[</span><span class="s2">&quot;platform&quot;</span><span class="o">]</span> <span class="o">=~</span> <span class="sr">/^arch$/</span>
-</span><span class='line'>  <span class="n">provider</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Provider</span><span class="o">::</span><span class="ss">Service</span><span class="p">:</span><span class="ss">:Upstart</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">start_command</span> <span class="s2">&quot;/usr/bin/service </span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2"> start&quot;</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">action</span> <span class="o">[</span><span class="ss">:enable</span><span class="p">,</span> <span class="ss">:start</span><span class="o">]</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The upstream cookbook doesn&rsquo;t have this change, so I added an
-&ldquo;application&rdquo; cookbook, <code>housepub-samba</code>, which has this as the
-default recipe:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="o">[</span><span class="s2">&quot;smbd&quot;</span><span class="p">,</span> <span class="s2">&quot;nmbd&quot;</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">s</span><span class="o">|</span>
-</span><span class='line'>  <span class="n">srv</span> <span class="o">=</span> <span class="n">resource</span><span class="p">(</span><span class="s2">&quot;service[</span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">srv</span><span class="o">.</span><span class="n">provider</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Provider</span><span class="o">::</span><span class="ss">Service</span><span class="p">:</span><span class="ss">:Upstart</span>
-</span><span class='line'>  <span class="n">srv</span><span class="o">.</span><span class="n">start_command</span> <span class="s2">&quot;/usr/bin/service </span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2"> start&quot;</span>
-</span><span class='line'><span class="k">end</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>For each of the Samba services, we look up the resource in the
-resource collection, then change the provider to upstart, and set the
-<code>start_command</code> to use upstart&rsquo;s service command.</p>
-
-<p>Next, I use OpenVPN. I also want to modify the template used for the
-<code>/etc/openvpn/server.conf</code> and <code>/etc/openvpn/server.up.sh</code> resources.
-Again, I create an &ldquo;application&rdquo; cookbook, <code>housepub-openvpn</code>, and the
-default recipe looks like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">resources</span><span class="p">(</span><span class="s2">&quot;template[/etc/openvpn/server.conf]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cookbook</span> <span class="s2">&quot;housepub-openvpn&quot;</span>
-</span><span class='line'><span class="n">resources</span><span class="p">(</span><span class="s2">&quot;template[/etc/openvpn/server.up.sh]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cookbook</span> <span class="s2">&quot;housepub-openvpn&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is a shorter form of what was done for Samba&rsquo;s services above.
-The <code>#resources</code> method does the lookup and returns the resource, and
-any of the resource parameter attributes can be used as a method, so I
-send the <code>cookbook</code> method to both template resources, setting this
-cookbook, <code>housepub-openvpn</code> as the cookbook that contains the
-template to use. Then, I copy my customized templates into
-<code>cookbooks/housepub-openvpn/templates/default</code>, and Chef will do the
-right thing.</p>
-
-<p>Other cookbook changes I made were:</p>
-
-<ul>
-<li>Change the data bag name used in <code>djbdns::internal_server</code>, which I
-changed back so I could use the upstream recipe.</li>
-<li>Add munin plugins to various cookbooks. As I&rsquo;m planning to move
-things to Graphite, this is unnecessary and removed.</li>
-<li>A few of my OS X cookbooks have the plist file for use with
-<code>mac_os_x_plist</code> LWRP. These are simply moved to my
-<a href="https://github.com/jtimberman/workstation-chef-repo/blob/master/cookbooks/workstation/recipes/default.rb#L72-L76">workstation data bag</a>.</li>
-</ul>
-
-
-<p>Finally, one special case is
-<a href="http://fnichol.github.com/chef-rbenv/">Fletcher Nichol&rsquo;s rbenv cookbook</a>.
-The <code>rbenv::user_install</code> recipe manages <code>/etc/profile.d/rbenv.sh</code>,
-which requires root privileges. However, on my workstations where I
-use this particular cookbook, I run Chef as my user, so I had to
-comment this resource out. To allow for a non-privileged user running
-Chef, the better approach is to determine whether to manage that file
-by using an attribute, so I
-<a href="https://github.com/fnichol/chef-rbenv/pull/20">opened a pull request</a>,
-which is now merged. Now I just have the attribute set to <code>false</code> in
-my workstation role, and can use the cookbook unmodified.</p>
-
-<h2>Remove Unused and Berkshelf Cookbooks</h2>
-
-<p>Removing the unused cookbooks, and the cookbooks managed by Berkshelf
-was simple. First, each cookbook gained an entry in the Berksfile. For
-example, <code>apache2</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apache2&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next, the cookbook was deleted from the Chef Server. I did this,
-purging all versions, because I planned to upload all the cookbooks as
-resolved by Berkshelf.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">cookbook</span> <span class="n">delete</span> <span class="o">-</span><span class="n">yap</span> <span class="n">apache2</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Finally, I removed the cookbook from the git repository.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">git</span> <span class="n">rm</span> <span class="o">-</span><span class="n">r</span> <span class="n">cookbooks</span><span class="o">/</span><span class="n">apache2</span>
-</span><span class='line'><span class="n">git</span> <span class="n">add</span> <span class="no">Berksfile</span>
-</span><span class='line'><span class="n">git</span> <span class="n">commit</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;apache2 is managed by Berkshelf&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The cookbooks that I didn&rsquo;t plan to use, I simply didn&rsquo;t add to
-Berkshelf, and removed them all in one commit.</p>
-
-<h1>After Berkshelf</h1>
-
-<p>The net effect of this change is a simpler, easier to manage
-repository. I now have only 23 cookbooks in my <code>cookbooks</code> directory.
-Some of those are candidates for refactoring and updating to the
-upstream ones, I just didn&rsquo;t get to that yet. Most of them are
-&ldquo;internal&rdquo; cookbooks that aren&rsquo;t published, since they&rsquo;re specific for
-my internal network, such as my housepub-samba or housepub-openvpn
-cookbooks.</p>
-
-<p>On my Chef Server, I have 90 total cookbooks, which means 67 are
-managed by Berkshelf. I have 62 entries in my Berksfile, and some of
-those are dependencies of others, which means that can be refactored
-some as well.</p>
-
-<p>The workflow is simpler, and there&rsquo;s fewer moving parts to worry about
-changing. I think this is a net positive for this since I do it in my
-free time. However, there&rsquo;s a couple of issues, which should be
-addressed in Berkshelf soon.</p>
-
-<p>First,
-<a href="https://github.com/RiotGames/berkshelf/issues/190">Berkshelf issue #190</a>,
-which would have <code>berks update</code> take a single cookbook to update.
-Currently, it has to update all the cookbooks, and this takes time for
-impatient people.</p>
-
-<p>Second,
-<a href="https://github.com/RiotGames/berkshelf/issues/191">issue #191</a>, which
-would allow <code>berks upload</code> to take a single cookbook to upload.
-Normally, one could just use <code>knife cookbook upload</code>, but the
-directory where Berkshelf stores cookbooks it is managing are not
-located in the <code>cookbook_path</code>, and the knife command uses the
-directory name a the cookbook name. Berkshelf creates directories like
-<code>~/.berkshelf/cookbooks/apache2-1.3.0</code>, so the way to upload Berkshelf
-managed cookbooks is all together with the <code>berks upload</code> command.
-This isn&rsquo;t a huge deal for me as I already uploaded all the cookbooks
-I&rsquo;ve been using once.</p>
-
-<p>All in all, I am happy with this workflow, though. It is simple and
-hassle-free for me. Plus, I have more flexibility for maintaining my
-additional non-Opscode cookbooks.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -2447,6 +2673,10 @@ additional non-Opscode cookbooks.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
       </li>
     
@@ -2460,10 +2690,6 @@ additional non-Opscode cookbooks.</p>
     
       <li class="post">
         <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
       </li>
     
   </ul>

@@ -9,9 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="In this post, I will explore some development patterns that I&rsquo;ve seen
-(and done!) with Chef cookbooks, and then explain how we can evolve to
-a &hellip;">
+  <meta name="description" content="Recently, Chef released ChefDK, the &ldquo;Chef Development Kit.&rdquo; This is a self-contained package of everything required to run Chef, work &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +79,405 @@ a &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-30T22:32:18-06:00" pubdate data-updated="true">Apr 30<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Recently, Chef <a href="http://www.getchef.com/blog/2014/04/15/chef-development-kit/">released ChefDK</a>, the &ldquo;Chef Development Kit.&rdquo; This is a self-contained package of everything required to run Chef, work with Chef cookbooks, and includes the best of breed community tools, test frameworks, and other utility programs that are commonly used when working with Chef in infrastructure as code. <a href="http://www.getchef.com/blog/2014/04/29/chefdk-0-1-0-released/">ChefDK version 0.1.0 was released last week</a>. A new feature mentioned in the <a href="https://github.com/opscode/chef-dk/blob/master/README.md#using-chefdk-as-your-primary-development-environment">README.md</a> is very important, in my opinion.</p>
+
+<p><strong>Using ChefDK as your primary development environment</strong></p>
+
+<p>What does that mean?</p>
+
+<p>It means that if the only reason you have Ruby installed on your local system is to do Chef development or otherwise work with Chef, <em>you no longer have to maintain a separate Ruby installation</em>. That means you won&rsquo;t need any of these:</p>
+
+<ul>
+<li><a href="https://github.com/sstephenson/rbenv">rbenv</a></li>
+<li><a href="http://rvm.io">rvm</a></li>
+<li><a href="https://github.com/postmodern/chruby">chruby</a> (*note)</li>
+<li>&ldquo;system ruby&rdquo; (e.g., OS X&rsquo;s included /usr/bin/ruby, or the <code>ruby</code> package from your Linux distro)</li>
+<li><a href="https://github.com/poise/poise-ruby">poise ruby</a>)</li>
+</ul>
+
+
+<p>(*note: You can optionally use chruby with ChefDK if it&rsquo;s part of your workflow and you have other Rubies installed.)</p>
+
+<p>Do not misunderstand me: These are all extremely good solutions for getting and using Ruby on your system. They definitely have their place if you do other Ruby development, such as <a href="http://www.sinatrarb.com/">web applications</a>. This is especially true if you have to work with multiple versions of Ruby. However, if you&rsquo;re like me and mainly use Ruby for Chef, then ChefDK has you covered.</p>
+
+<p>In this post, I will describe how I have set up my system with ChefDK, and use its embedded Ruby by default.</p>
+
+<h2>Getting Started</h2>
+
+<p>Download ChefDK from the <a href="http://www.getchef.com/downloads/chef-dk/">downloads page</a>. At the time of this blog post, the available builds are limited to OS X and Linux (Debian/Ubuntu or RHEL), but Chef is <a href="http://www.getchef.com/blog/2014/05/06/chefdk-for-windows-progress-update/">working on Windows packages</a>.</p>
+
+<p>For example, here&rsquo;s what I did on my Ubuntu 14.04 system:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>wget https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/13.10/x86_64/chefdk_0.1.0-1_amd64.deb
+</span><span class='line'>sudo dpkg -i /tmp/chefdk_0.1.0-1_amd64.deb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>OS X users will be happy to know that the download is a .DMG, which includes a standard OS X .pkg (complete with developer signing). Simply install it like many other products on OS X.</p>
+
+<p>For either Linux or OS X, in <a href="https://github.com/opscode/omnibus-ruby/">omnibus</a> fashion, the post-installation creates several symbolic links in <code>/usr/bin</code> for tools that are included in ChefDK:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ls -l /usr/bin | grep chefdk
+</span><span class='line'>lrwxrwxrwx 1 root root 21 Apr 30 22:13 berks -&gt; /opt/chefdk/bin/berks
+</span><span class='line'>lrwxrwxrwx 1 root root 20 Apr 30 22:13 chef -&gt; /opt/chefdk/bin/chef
+</span><span class='line'>lrwxrwxrwx 1 root root 26 Apr 30 22:13 chef-apply -&gt; /opt/chefdk/bin/chef-apply
+</span><span class='line'>lrwxrwxrwx 1 root root 27 Apr 30 22:13 chef-client -&gt; /opt/chefdk/bin/chef-client
+</span><span class='line'>lrwxrwxrwx 1 root root 26 Apr 30 22:13 chef-shell -&gt; /opt/chefdk/bin/chef-shell
+</span><span class='line'>lrwxrwxrwx 1 root root 25 Apr 30 22:13 chef-solo -&gt; /opt/chefdk/bin/chef-solo
+</span><span class='line'>lrwxrwxrwx 1 root root 25 Apr 30 22:13 chef-zero -&gt; /opt/chefdk/bin/chef-zero
+</span><span class='line'>lrwxrwxrwx 1 root root 23 Apr 30 22:13 fauxhai -&gt; /opt/chefdk/bin/fauxhai
+</span><span class='line'>lrwxrwxrwx 1 root root 26 Apr 30 22:13 foodcritic -&gt; /opt/chefdk/bin/foodcritic
+</span><span class='line'>lrwxrwxrwx 1 root root 23 Apr 30 22:13 kitchen -&gt; /opt/chefdk/bin/kitchen
+</span><span class='line'>lrwxrwxrwx 1 root root 21 Apr 30 22:13 knife -&gt; /opt/chefdk/bin/knife
+</span><span class='line'>lrwxrwxrwx 1 root root 20 Apr 30 22:13 ohai -&gt; /opt/chefdk/bin/ohai
+</span><span class='line'>lrwxrwxrwx 1 root root 23 Apr 30 22:13 rubocop -&gt; /opt/chefdk/bin/rubocop
+</span><span class='line'>lrwxrwxrwx 1 root root 20 Apr 30 22:13 shef -&gt; /opt/chefdk/bin/shef
+</span><span class='line'>lrwxrwxrwx 1 root root 22 Apr 30 22:13 strain -&gt; /opt/chefdk/bin/strain
+</span><span class='line'>lrwxrwxrwx 1 root root 24 Apr 30 22:13 strainer -&gt; /opt/chefdk/bin/strainer</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These should cover the 80% use case of ChefDK: using the various Chef and Chef Community tools so users can follow their favorite workflow, without shaving the yak of managing a Ruby environment.</p>
+
+<p>But, as I noted, and the thesis of this post, is that one could use this Ruby environment included in ChefDK as their own! So where is that?</p>
+
+<h2>ChefDK&rsquo;s Ruby</h2>
+
+<p>Tucked away in every &ldquo;omnibus&rdquo; package is a directory of &ldquo;embedded&rdquo; software &ndash; the things that were required to meet the end goal. In the case of Chef or ChefDK, this is Ruby, openssl, zlib, libpng, and so on. This is a fully contained directory tree, complete with lib, share, and yes indeed, bin.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ls /opt/chefdk/embedded/bin
+</span><span class='line'>(there's a bunch of commands here, trust me)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Of particular note are <code>/opt/chefdk/embedded/bin/ruby</code> and <code>/opt/chefdk/embedded/bin/gem</code>.</p>
+
+<p>To use ChefDK&rsquo;s Ruby as default, simply edit the <code>$PATH</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>export PATH="/opt/chefdk/embedded/bin:${HOME}/.chefdk/gem/ruby/2.1.0/bin:$PATH"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Add that, or its equivalent, to a login shell profile/dotrc file, and rejoice. Here&rsquo;s what I have now:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ which ruby
+</span><span class='line'>/opt/chefdk/embedded/bin/ruby
+</span><span class='line'>$ which gem
+</span><span class='line'>/opt/chefdk/embedded/bin/gem
+</span><span class='line'>$ ruby --version
+</span><span class='line'>ruby 2.1.1p76 (2014-02-24 revision 45161) [x86_64-linux]
+</span><span class='line'>$ gem --version
+</span><span class='line'>2.2.1
+</span><span class='line'>$ gem env
+</span><span class='line'>RubyGems Environment:
+</span><span class='line'>  - RUBYGEMS VERSION: 2.2.1
+</span><span class='line'>  - RUBY VERSION: 2.1.1 (2014-02-24 patchlevel 76) [x86_64-linux]
+</span><span class='line'>  - INSTALLATION DIRECTORY: /opt/chefdk/embedded/lib/ruby/gems/2.1.0
+</span><span class='line'>  - RUBY EXECUTABLE: /opt/chefdk/embedded/bin/ruby
+</span><span class='line'>  - EXECUTABLE DIRECTORY: /opt/chefdk/embedded/bin
+</span><span class='line'>  - SPEC CACHE DIRECTORY: /home/ubuntu/.gem/specs
+</span><span class='line'>  - RUBYGEMS PLATFORMS:
+</span><span class='line'>    - ruby
+</span><span class='line'>    - x86_64-linux
+</span><span class='line'>  - GEM PATHS:
+</span><span class='line'>     - /opt/chefdk/embedded/lib/ruby/gems/2.1.0
+</span><span class='line'>     - /home/ubuntu/.chefdk/gem/ruby/2.1.0
+</span><span class='line'>  - GEM CONFIGURATION:
+</span><span class='line'>     - :update_sources =&gt; true
+</span><span class='line'>     - :verbose =&gt; true
+</span><span class='line'>     - :backtrace =&gt; false
+</span><span class='line'>     - :bulk_threshold =&gt; 1000
+</span><span class='line'>     - "install" =&gt; "--user"
+</span><span class='line'>     - "update" =&gt; "--user"
+</span><span class='line'>  - REMOTE SOURCES:
+</span><span class='line'>     - https://rubygems.org/
+</span><span class='line'>  - SHELL PATH:
+</span><span class='line'>     - /opt/chefdk/embedded/bin
+</span><span class='line'>     - /home/ubuntu/.chefdk/gem/ruby/2.1.0/bin
+</span><span class='line'>     - /usr/local/sbin
+</span><span class='line'>     - /usr/local/bin
+</span><span class='line'>     - /usr/sbin
+</span><span class='line'>     - /usr/bin
+</span><span class='line'>     - /sbin
+</span><span class='line'>     - /bin
+</span><span class='line'>     - /usr/games
+</span><span class='line'>     - /usr/local/games</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that this is the current stable release of Ruby, version 2.1.1 patchlevel 76, and the {almost} latest version of RubyGems, version 2.2.1. Also note the Gem paths &ndash; the first is the embedded gems path, which is where gems installed by <code>root</code> with the <code>chef gem</code> command will go. The other is in my home directory &ndash; ChefDK is set up so that gems can be installed as a non-root user within the <code>~/.chefdk/gems</code> directory.</p>
+
+<h2>Installing Gems</h2>
+
+<p>Let&rsquo;s see this in action. Install a gem using the <code>gem</code> command.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ gem install knife-solve
+</span><span class='line'>Fetching: knife-solve-1.0.1.gem (100%)
+</span><span class='line'>Successfully installed knife-solve-1.0.1
+</span><span class='line'>Parsing documentation for knife-solve-1.0.1
+</span><span class='line'>Installing ri documentation for knife-solve-1.0.1
+</span><span class='line'>Done installing documentation for knife-solve after 0 seconds
+</span><span class='line'>1 gem installed</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And as I said, this will be installed in the home directory:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ gem content knife-solve
+</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/LICENSE
+</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/README.md
+</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/Rakefile
+</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/chef/knife/solve.rb
+</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/knife-solve.rb
+</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/knife-solve/version.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Using Bundler</h2>
+
+<p>ChefDK also includes <a href="http://bundler.io/">bundler</a>. As a &ldquo;non-Chef, Ruby use case&rdquo;, I installed octopress for this blog.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle install --path vendor --binstubs
+</span><span class='line'>Fetching gem metadata from https://rubygems.org/.......
+</span><span class='line'>Fetching additional metadata from https://rubygems.org/..
+</span><span class='line'>Installing rake (0.9.6)
+</span><span class='line'>Installing RedCloth (4.2.9)
+</span><span class='line'>Installing chunky_png (1.2.9)
+</span><span class='line'>Installing fast-stemmer (1.0.2)
+</span><span class='line'>Installing classifier (1.3.3)
+</span><span class='line'>Installing fssm (0.2.10)
+</span><span class='line'>Installing sass (3.2.12)
+</span><span class='line'>Installing compass (0.12.2)
+</span><span class='line'>Installing directory_watcher (1.4.1)
+</span><span class='line'>Installing haml (3.1.8)
+</span><span class='line'>Installing kramdown (0.14.2)
+</span><span class='line'>Installing liquid (2.3.0)
+</span><span class='line'>Installing maruku (0.7.0)
+</span><span class='line'>Installing posix-spawn (0.3.6)
+</span><span class='line'>Installing yajl-ruby (1.1.0)
+</span><span class='line'>Installing pygments.rb (0.3.7)
+</span><span class='line'>Installing jekyll (0.12.1)
+</span><span class='line'>Installing rack (1.5.2)
+</span><span class='line'>Installing rack-protection (1.5.0)
+</span><span class='line'>Installing rb-fsevent (0.9.3)
+</span><span class='line'>Installing rdiscount (2.0.7.3)
+</span><span class='line'>Installing rubypants (0.2.0)
+</span><span class='line'>Installing sass-globbing (1.0.0)
+</span><span class='line'>Installing tilt (1.4.1)
+</span><span class='line'>Installing sinatra (1.4.3)
+</span><span class='line'>Installing stringex (1.4.0)
+</span><span class='line'>Using bundler (1.5.2)
+</span><span class='line'>Updating files in vendor/cache
+</span><span class='line'>  * classifier-1.3.3.gem
+</span><span class='line'>  * fssm-0.2.10.gem
+</span><span class='line'>  * sass-3.2.12.gem
+</span><span class='line'>  * compass-0.12.2.gem
+</span><span class='line'>  * directory_watcher-1.4.1.gem
+</span><span class='line'>  * haml-3.1.8.gem
+</span><span class='line'>  * kramdown-0.14.2.gem
+</span><span class='line'>  * liquid-2.3.0.gem
+</span><span class='line'>  * maruku-0.7.0.gem
+</span><span class='line'>  * posix-spawn-0.3.6.gem
+</span><span class='line'>  * yajl-ruby-1.1.0.gem
+</span><span class='line'>  * pygments.rb-0.3.7.gem
+</span><span class='line'>  * jekyll-0.12.1.gem
+</span><span class='line'>  * rack-1.5.2.gem
+</span><span class='line'>  * rack-protection-1.5.0.gem
+</span><span class='line'>  * rb-fsevent-0.9.3.gem
+</span><span class='line'>  * rdiscount-2.0.7.3.gem
+</span><span class='line'>  * rubypants-0.2.0.gem
+</span><span class='line'>  * sass-globbing-1.0.0.gem
+</span><span class='line'>  * tilt-1.4.1.gem
+</span><span class='line'>  * sinatra-1.4.3.gem
+</span><span class='line'>  * stringex-1.4.0.gem
+</span><span class='line'>Your bundle is complete!
+</span><span class='line'>It was installed into ./vendor</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then I can use for example the rake task to preview things while writing this post.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ ./bin/rake preview
+</span><span class='line'>Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
+</span><span class='line'>directory source/stylesheets/
+</span><span class='line'>   create source/stylesheets/screen.css
+</span><span class='line'>[2014-05-07 21:46:35] INFO  WEBrick 1.3.1
+</span><span class='line'>[2014-05-07 21:46:35] INFO  ruby 2.1.1 (2014-02-24) [x86_64-linux]
+</span><span class='line'>[2014-05-07 21:46:35] INFO  WEBrick::HTTPServer#start: pid=10815 port=4000</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Conclusion</h2>
+
+<p>I&rsquo;ve used Chef before it was even released. As the project has evolved, and as the Ruby community around it has established new best practices installing and maintaining Ruby development environments, I&rsquo;ve followed along. I&rsquo;ve used all the version managers listed above. I&rsquo;ve spent untold hours getting the right set of gems installed just to have to upgrade everything again and debug my workstation. I&rsquo;ve written blog posts, <a href="http://wiki.opscode.com">wiki</a> pages, and helped countless users do this on their own systems.</p>
+
+<p>Now, we have an all-in-one environment that provides a great solution. Give ChefDK a whirl on your workstation &ndash; I think you&rsquo;ll like it!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -3062,508 +3459,6 @@ test. In this case, it was fairly easy to reproduce the bug.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/">Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-03-19T09:28:00-06:00" pubdate data-updated="true">Mar 19<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
-  this post.</p>
-
-<p><strong>Update</strong> We&rsquo;re no longer required to use bundler, and in fact
-  recommend installing the required RubyGems in your globalRuby
-  environment (#3 below).</p>
-
-<p><strong>Update</strong> The log output from the various kitchen commands is not
-  updated with the latest and greatest. Play along at home, it&rsquo;ll be
-  okay :&ndash;).</p>
-
-<p>This is a continuation from <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">part 1</a></p>
-
-<p>In order to run the tests then, we need a few things on our machine:</p>
-
-<ol>
-<li>VirtualBox and Vagrant (1.1+)</li>
-<li>A compiler toolchain with XML/XSLT development headers (for building Gem dependencies)</li>
-<li>A sane, working Ruby environment (Ruby 1.9.3 or greater)</li>
-<li>Git</li>
-</ol>
-
-
-<p>It is outside the scope of this post to cover how to get all those
-installed.</p>
-
-<p>Once those are installed:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% vagrant plugin install vagrant-berkshelf
-</span><span class='line'>% gem install berkshelf
-</span><span class='line'>% gem install test-kitchen --pre
-</span><span class='line'>% gem install kitchen-vagrant</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Test Kitchen combines the suite (default) with the platform names
-(e.g., ubuntu-12.04). To run all the suites on all platforms, simply do:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% kitchen test</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will take awhile, especially if you don&rsquo;t already have the
-Vagrant boxes on your system, as it will download each one. To make
-this faster, we&rsquo;ll just run Ubuntu 12.04:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% kitchen test default.*1204</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Test Kitchen 1.0 can take a regular expression for the instances to
-test. This will match the box <code>default-ubuntu-12.04</code>. I could also
-just say <code>12</code> as that will match the single entry in my kitchen list
-(above).</p>
-
-<p>It will take a few minutes to run Test Kitchen. Those familiar with
-Chef know that if it encounters an unhandled exception, it exits with
-a non-zero return code. This is important, because we know at the end
-of a successful run, Chef did the right thing, assuming our recipe is
-the right thing :&ndash;).</p>
-
-<p>To recap the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a>, we have a run list like this:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"]</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s break down the output of our successful run. I&rsquo;ll show the
-output first, and explain it after:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Starting Kitchen
-</span><span class='line'>Cleaning up any prior instances of &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Destroying &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Finished destroying &lt;default-ubuntu-1204&gt; (0m0.00s).
-</span><span class='line'>Testing &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Creating &lt;default-ubuntu-1204&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is basic setup to ensure that &ldquo;The Kitchen&rdquo; is clean beforehand
-and we don&rsquo;t have existing state interfering with the run.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[vagrant command] BEGIN (vagrant up default-ubuntu-1204 --no-provision)
-</span><span class='line'>[default-ubuntu-1204] Importing base box 'canonical-ubuntu-12.04'...
-</span><span class='line'>[default-ubuntu-1204] Matching MAC address for NAT networking...
-</span><span class='line'>[default-ubuntu-1204] Clearing any previously set forwarded ports...
-</span><span class='line'>[default-ubuntu-1204] Forwarding ports...
-</span><span class='line'>[default-ubuntu-1204] -- 22 =&gt; 2222 (adapter 1)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will look familiar to Vagrant users, we&rsquo;re just getting some
-basic setup from Vagrant initializing the box defined in the
-<code>.kitchen.yml</code> (passed to the Vagrantfile by the kitchen-vagrant
-plugin). This step does a <code>vagrant up --no-provision</code>.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[Berkshelf] installing cookbooks...
-</span><span class='line'>[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
-</span><span class='line'>[Berkshelf] Using apt (1.8.4)
-</span><span class='line'>[Berkshelf] Using yum (2.0.0)
-</span><span class='line'>[Berkshelf] Using minitest-handler (0.1.2)
-</span><span class='line'>[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
-</span><span class='line'>[Berkshelf] Using rsyslog (1.5.0)
-</span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Remember from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that we&rsquo;re using Berkshelf? This is
-the integration with Vagrant that ensures that the cookbooks are
-available. The first four, <code>apt</code>, <code>yum</code>, <code>minitest-handler</code> and
-bluepill_test are defined in the Berksfile. The next, <code>rsyslog</code> is a
-dependency of the <code>bluepill</code> cookbook (for rsyslog integration), and the
-last, <code>chef_handler</code> is a dependency of <code>minitest-handler</code>. Berkshelf
-extracts the dependencies from the cookbook metadata of each cookbook
-defined in the Berksfile.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[default-ubuntu-1204] Creating shared folders metadata...
-</span><span class='line'>[default-ubuntu-1204] Clearing any previously set network interfaces...
-</span><span class='line'>[default-ubuntu-1204] Running any VM customizations...
-</span><span class='line'>[default-ubuntu-1204] Booting VM...
-</span><span class='line'>[default-ubuntu-1204] Waiting for VM to boot. This can take a few minutes.
-</span><span class='line'>[default-ubuntu-1204] VM booted and ready for use!
-</span><span class='line'>[default-ubuntu-1204] Setting host name...
-</span><span class='line'>[default-ubuntu-1204] Mounting shared folders...
-</span><span class='line'>[default-ubuntu-1204] -- v-root: /vagrant
-</span><span class='line'>[default-ubuntu-1204] -- v-csc-1: /tmp/vagrant-chef-1/chef-solo-1/cookbooks
-</span><span class='line'>[vagrant command] END (0m48.76s)
-</span><span class='line'>Vagrant instance &lt;default-ubuntu-1204&gt; created.
-</span><span class='line'>Finished creating &lt;default-ubuntu-1204&gt; (0m53.12s).</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Again, this is familiar output to Vagrant users, where Vagrant is
-making the cookbooks available to the instance.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Converging &lt;default-ubuntu-1204&gt;
-</span><span class='line'>[vagrant command] BEGIN (vagrant ssh default-ubuntu-1204 --command 'should_update_chef() {\n...')
-</span><span class='line'>Installing Chef Omnibus (11.4.0)
-</span><span class='line'>Downloading Chef 11.4.0 for ubuntu...
-</span><span class='line'>Installing Chef 11.4.0
-</span><span class='line'>Selecting previously unselected package chef.
-</span><span class='line'>g database ...        60513 files and directories currently installed.)
-</span><span class='line'>Unpacking chef (from .../chef_11.4.0_amd64.deb) ...
-</span><span class='line'>Setting up chef (11.4.0-1.ubuntu.11.04) ...
-</span><span class='line'>Thank you for installing Chef!
-</span><span class='line'>[vagrant command] END (0m34.85s)
-</span><span class='line'>[vagrant command] BEGIN (vagrant provision default-ubuntu-1204)
-</span><span class='line'>[Berkshelf] installing cookbooks...
-</span><span class='line'>[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
-</span><span class='line'>[Berkshelf] Using apt (1.8.4)
-</span><span class='line'>[Berkshelf] Using yum (2.0.0)
-</span><span class='line'>[Berkshelf] Using minitest-handler (0.1.2)
-</span><span class='line'>[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
-</span><span class='line'>[Berkshelf] Using rsyslog (1.5.0)
-</span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This part is interesting, in that we&rsquo;re going to install the Full
-Stack Chef (Omnibus) package. This means it doesn&rsquo;t matter what the
-underlying base box has installed, we get the right version of Chef.
-This is defined in the <code>.kitchen.yml</code>. This is done through <code>vagrant
-ssh</code> (second line). Then, Test Kitchen does <code>vagrant provision</code>. The
-provisioning step is where Berkshelf happens, so we do see this happen
-again (perhaps a bug?).</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[default-ubuntu-1204] Running provisioner: Vagrant::Provisioners::ChefSolo...
-</span><span class='line'>[default-ubuntu-1204] Generating chef JSON and uploading...
-</span><span class='line'>[default-ubuntu-1204] Running chef-solo...
-</span><span class='line'>INFO: *** Chef 11.4.0 ***
-</span><span class='line'>INFO: Setting the run_list to ["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"] from JSON
-</span><span class='line'>INFO: Run List is [recipe[apt], recipe[minitest-handler], recipe[bluepill_test]]
-</span><span class='line'>INFO: Run List expands to [apt, minitest-handler, bluepill_test]
-</span><span class='line'>INFO: Starting Chef Run for default-ubuntu-1204.vagrantup.com</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is the start of the actual Chef run, using Chef Solo by Vagrant&rsquo;s
-provisioner. Note that we have our suite&rsquo;s run list. I&rsquo;m going to skip
-a lot of the Chef output because it isn&rsquo;t required. Note that a few
-resources in the minitest&mdash;handler will report as failed, but they can
-be ignored because it means that those tests were simply not implemented.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing directory[/var/chef/minitest/bluepill_test] action create (minitest-handler::default line 50)
-</span><span class='line'>INFO: directory[/var/chef/minitest/bluepill_test] created directory /var/chef/minitest/bluepill_test
-</span><span class='line'>INFO: Processing cookbook_file[tests-bluepill_test-default] action create (minitest-handler::default line 53)
-</span><span class='line'>INFO: cookbook_file[tests-bluepill_test-default] created file /var/chef/minitest/bluepill_test/default_test.rb
-</span><span class='line'>INFO: Processing remote_directory[tests-support-bluepill_test-default] action create (minitest-handler::default line 60)
-</span><span class='line'>INFO: remote_directory[tests-support-bluepill_test-default] created directory /var/chef/minitest/bluepill_test/support
-</span><span class='line'>INFO: Processing cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] action create (dynamically defined)
-</span><span class='line'>INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] mode changed to 644
-</span><span class='line'>INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] created file /var/chef/minitest/bluepill_test/support/helpers.rb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>These are the relevant parts of the minitest-handler recipe, where it
-has copied the tests from the <code>bluepill_test</code> cookbook into place.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing gem_package[i18n] action install (bluepill::default line 20)
-</span><span class='line'>INFO: Processing gem_package[bluepill] action install (bluepill::default line 24)
-</span><span class='line'>INFO: Processing directory[/etc/bluepill] action create (bluepill::default line 34)
-</span><span class='line'>INFO: directory[/etc/bluepill] created directory /etc/bluepill
-</span><span class='line'>INFO: directory[/etc/bluepill] owner changed to 0
-</span><span class='line'>INFO: directory[/etc/bluepill] group changed to 0
-</span><span class='line'>INFO: Processing directory[/var/run/bluepill] action create (bluepill::default line 34)
-</span><span class='line'>INFO: directory[/var/run/bluepill] created directory /var/run/bluepill
-</span><span class='line'>INFO: directory[/var/run/bluepill] owner changed to 0
-</span><span class='line'>INFO: directory[/var/run/bluepill] group changed to 0
-</span><span class='line'>INFO: Processing directory[/var/lib/bluepill] action create (bluepill::default line 34)
-</span><span class='line'>INFO: directory[/var/lib/bluepill] created directory /var/lib/bluepill
-</span><span class='line'>INFO: directory[/var/lib/bluepill] owner changed to 0
-</span><span class='line'>INFO: directory[/var/lib/bluepill] group changed to 0
-</span><span class='line'>INFO: Processing file[/var/log/bluepill.log] action create_if_missing (bluepill::default line 41)
-</span><span class='line'>INFO: entered create
-</span><span class='line'>INFO: file[/var/log/bluepill.log] owner changed to 0
-</span><span class='line'>INFO: file[/var/log/bluepill.log] group changed to 0
-</span><span class='line'>INFO: file[/var/log/bluepill.log] mode changed to 755
-</span><span class='line'>INFO: file[/var/log/bluepill.log] created file /var/log/bluepill.log</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Recall from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that the <code>bluepill_test</code> recipe includes
-the <code>bluepill</code> recipe. This is the basic setup of bluepill.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing package[nc] action install (bluepill_test::default line 4)
-</span><span class='line'>INFO: Processing template[/etc/bluepill/test_app.pill] action create (bluepill_test::default line 16)
-</span><span class='line'>INFO: template[/etc/bluepill/test_app.pill] updated content
-</span><span class='line'>INFO: Processing bluepill_service[test_app] action enable (bluepill_test::default line 18)
-</span><span class='line'>INFO: Processing bluepill_service[test_app] action load (bluepill_test::default line 18)
-</span><span class='line'>INFO: Processing bluepill_service[test_app] action start (bluepill_test::default line 18)
-</span><span class='line'>INFO: Processing link[/etc/init.d/test_app] action create (/tmp/vagrant-chef-1/chef-solo-1/cookbooks/bluepill/providers/service.rb line 30)
-</span><span class='line'>INFO: link[/etc/init.d/test_app] created
-</span><span class='line'>INFO: Chef Run complete in 81.099185824 seconds</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And this is the rest of the <code>bluepill_test</code> recipe. It sets up a test
-service that will basically be a netcat process listening on a port.
-Let&rsquo;s take a moment here and discuss what we have.</p>
-
-<p>First, we have successfully converged the default recipe in the
-<code>bluepill</code> cookbook via its inclusion in <code>bluepill_test</code>. This is
-awesome, because we know the recipe works exactly as we defined it,
-since Chef resources are declarative, and Chef exits if there&rsquo;s a
-problem.</p>
-
-<p>Second, we have successfully setup a service managed by bluepill
-itself using the LWRP included in the <code>bluepill</code> cookbook,
-<code>bluepill_service</code>. This means we know that the underlying provider
-configured all the resources correctly.</p>
-
-<p>At this point, we could say &ldquo;Ship it!&rdquo; and release the cookbook,
-knowing it will do what we require. However, this may be disingenuous
-because we don&rsquo;t know if the behavior of the system after all this
-runs is actually correct. Therefore we look to the next segment of
-output from Chef, from minitest:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Running report handlers
-</span><span class='line'>Run options: -v --seed 38794
-</span><span class='line'>\# Running tests:
-</span><span class='line'>recipe::bluepill_test::default#test_0001_the_default_log_file_must_exist_cook_1295_ =
-</span><span class='line'>0.00 s = .
-</span><span class='line'>recipe::bluepill_test::default::create a bluepill configuration file#test_0001_anonymous =
-</span><span class='line'>0.00 s = .
-</span><span class='line'>recipe::bluepill_test::default::create a bluepill configuration file#test_0002_must_be_valid_ruby =
-</span><span class='line'>0.06 s = .
-</span><span class='line'>recipe::bluepill_test::default::runs the application as a service#test_0001_anonymous =
-</span><span class='line'>0.72 s = .
-</span><span class='line'>recipe::bluepill_test::default::runs the application as a service#test_0002_anonymous =
-</span><span class='line'>0.71 s = .
-</span><span class='line'>recipe::bluepill_test::default::spawn a netcat tcp client repeatedly#test_0001_should_receive_a_tcp_connection_from_netcat =
-</span><span class='line'>2.24 s = .
-</span><span class='line'>Finished tests in 3.746002s, 1.6017 tests/s, 1.8687 assertions/s.
-</span><span class='line'>6 tests, 7 assertions, 0 failures, 0 errors, 0 skips</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is performed by the minitest-handler, which runs the tests copied
-from the <code>bluepill_test</code> cookbook before. It&rsquo;s outside the scope of
-this post to describe how to write minitest-chef tests, but we can
-talk about the output.</p>
-
-<p>We have 6 separate tests that perform 7 assertions, and they all
-passed. The tests are asserting:</p>
-
-<ol>
-<li>The log file is created, and by the full name of the test, this is
-to check for a regression from
-<a href="http://tickets.opscode.com/browse/COOK-1295">COOK-1295</a>.</li>
-<li>The <code>.pill</code> config file for the service must exist and be valid
-Ruby.</li>
-<li>The bluepill service must actually be enabled and running, thereby
-testing that those actions in the LWRP work.</li>
-<li>The running service, which listens on a TCP port, must be up and
-available, thereby testing that bluepill started the service
-correctly.</li>
-</ol>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[vagrant command] END (1m29.24s)
-</span><span class='line'>Finished converging &lt;default-ubuntu-1204&gt; (2m15.45s).
-</span><span class='line'>Setting up &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Finished setting up &lt;default-ubuntu-1204&gt; (0m0.00s).
-</span><span class='line'>Verifying &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Finished verifying &lt;default-ubuntu-1204&gt; (0m0.00s).
-</span><span class='line'>Destroying &lt;default-ubuntu-1204&gt;
-</span><span class='line'>[vagrant command] BEGIN (vagrant destroy default-ubuntu-1204 -f)
-</span><span class='line'>[default-ubuntu-1204] Forcing shutdown of VM...
-</span><span class='line'>[Berkshelf] cleaning Vagrant's shelf
-</span><span class='line'>[default-ubuntu-1204] Destroying VM and associated drives...
-</span><span class='line'>[vagrant command] END (0m3.68s)
-</span><span class='line'>Vagrant instance &lt;default-ubuntu-1204&gt; destroyed.
-</span><span class='line'>Finished destroying &lt;default-ubuntu-1204&gt; (0m4.04s).
-</span><span class='line'>Finished testing &lt;default-ubuntu-1204&gt; (3m12.62s).
-</span><span class='line'>Kitchen is finished. (3m12.62s)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This output shows Test Kitchen cleaning up after itself. We destroy
-the Vagrant instance on a successful convergence and test run in Chef,
-because further investigation is not required. If the test failed for
-some reason, Test Kitchen leaves it running so you can log into the
-machine and poke around to find out what went wrong. Then simply
-correct the required part of the cookbook (recipes, tests, etc) and
-rerun Test Kitchen. For example:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle exec kitchen login 1204
-</span><span class='line'>vagrant@ubuntu-1204$ ... run some commands
-</span><span class='line'>vagrant@ubuntu-1204$ ^D
-</span><span class='line'>% bundle exec kitchen converge 1204</span></code></pre></td></tr></table></div></figure>
-
-
-<p>My goal with these posts is to get some information out for folks to
-consider when examining Test Kitchen 1.0 alpha for their own projects.
-There&rsquo;s a lot more to Test Kitchen, such as managing non-cookbook
-projects, or even using other kinds of tests. We&rsquo;ll have more
-documentation and guides as we get the 1.0 release out.</p>
-
-<p>Enjoy!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -3596,6 +3491,10 @@ documentation and guides as we get the 1.0 release out.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
       </li>
     
@@ -3609,10 +3508,6 @@ documentation and guides as we get the 1.0 release out.</p>
     
       <li class="post">
         <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a>
       </li>
     
   </ul>
