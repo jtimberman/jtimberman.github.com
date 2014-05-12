@@ -4,7 +4,7 @@
   <title><![CDATA[Category: amazon | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/amazon/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-05-07T21:55:42-06:00</updated>
+  <updated>2014-05-12T16:35:08-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -18,7 +18,11 @@
     <link href="http://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials/"/>
     <updated>2013-10-19T17:55:00-06:00</updated>
     <id>http://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials</id>
-    <content type="html"><![CDATA[<p>In this post, I will describe my local setup for using the
+    <content type="html"><![CDATA[<p><strong>UPDATE</strong>: All non-default profiles must have their profile name
+  start with &ldquo;profile.&rdquo; Below, this is &ldquo;profile nondefault.&rdquo; The ruby
+  code is updated to reflect this.</p>
+
+<p>In this post, I will describe my local setup for using the
 <a href="http://aws.amazon.com/cli/">AWS CLI</a>, the
 <a href="http://aws.amazon.com/sdkforruby/">AWS Ruby SDK</a>, and of course the
 <a href="http://rubygems.org/gems/knife-ec2">Knife EC2 plugin</a>.</p>
@@ -48,7 +52,7 @@ different account&rsquo;s credentials. For example:</p>
 aws_access_key_id=MY_DEFAULT_KEY
 aws_secret_access_key=MY_DEFAULT_SECRET
 region=us-east-1
-[nondefault]
+[profile nondefault]
 aws_access_key_id=NOT_MY_DEFAULT_KEY
 aws_secret_access_key=NOT_MY_DEFAULT_SECRET
 region=us-east-1
@@ -73,6 +77,15 @@ export AWS_SSH_KEY='jtimberman'
 <code>aws_access_key_id</code> value. Then repeat the same for the
 <code>aws_secret_access_key</code>.</p>
 
+<p>To use the nondefault profile:</p>
+
+<p><code>
+export AWS_ACCESS_KEY_ID=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['profile nondefault']['aws_access_key_id']"`
+export AWS_SECRET_ACCESS_KEY=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['profile nondefault']['aws_secret_access_key']"`
+</code></p>
+
+<p>Note that this uses <code>['profile nondefault']</code>.</p>
+
 <p>Since different tools historically have used slightly different
 environment variables, I export those too:</p>
 
@@ -83,8 +96,7 @@ export AWS_ACCESS_KEY=$AWS_ACCESS_KEY_ID
 export AWS_SECRET_KEY=$AWS_SECRET_ACCESS_KEY
 </code></p>
 
-<p>I create a separate config script for each account. I could get fancy,
-but let&rsquo;s not get too silly.</p>
+<p>I create a separate config script for each account.</p>
 
 <p>The AWS CLI tool will automatically use the <code>~/.aws/config</code>, and can
 load different profiles with the <code>--profile</code> option. The <code>aws-sdk</code>

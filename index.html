@@ -1178,7 +1178,11 @@ helpful to those goals.</p>
   </header>
 
 
-  <div class="entry-content"><p>In this post, I will describe my local setup for using the
+  <div class="entry-content"><p><strong>UPDATE</strong>: All non-default profiles must have their profile name
+  start with &ldquo;profile.&rdquo; Below, this is &ldquo;profile nondefault.&rdquo; The ruby
+  code is updated to reflect this.</p>
+
+<p>In this post, I will describe my local setup for using the
 <a href="http://aws.amazon.com/cli/">AWS CLI</a>, the
 <a href="http://aws.amazon.com/sdkforruby/">AWS Ruby SDK</a>, and of course the
 <a href="http://rubygems.org/gems/knife-ec2">Knife EC2 plugin</a>.</p>
@@ -1223,7 +1227,7 @@ different account&rsquo;s credentials. For example:</p>
 </span><span class='line'><span class="nv">aws_access_key_id</span><span class="o">=</span>MY_DEFAULT_KEY
 </span><span class='line'><span class="nv">aws_secret_access_key</span><span class="o">=</span>MY_DEFAULT_SECRET
 </span><span class='line'><span class="nv">region</span><span class="o">=</span>us-east-1
-</span><span class='line'><span class="o">[</span>nondefault<span class="o">]</span>
+</span><span class='line'><span class="o">[</span>profile nondefault<span class="o">]</span>
 </span><span class='line'><span class="nv">aws_access_key_id</span><span class="o">=</span>NOT_MY_DEFAULT_KEY
 </span><span class='line'><span class="nv">aws_secret_access_key</span><span class="o">=</span>NOT_MY_DEFAULT_SECRET
 </span><span class='line'><span class="nv">region</span><span class="o">=</span>us-east-1
@@ -1253,6 +1257,17 @@ each of the keys.</p>
 <code>aws_access_key_id</code> value. Then repeat the same for the
 <code>aws_secret_access_key</code>.</p>
 
+<p>To use the nondefault profile:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;profile nondefault&#39;][&#39;aws_access_key_id&#39;]&quot;</span><span class="sb">`</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;profile nondefault&#39;][&#39;aws_secret_access_key&#39;]&quot;</span><span class="sb">`</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that this uses <code>['profile nondefault']</code>.</p>
+
 <p>Since different tools historically have used slightly different
 environment variables, I export those too:</p>
 
@@ -1267,8 +1282,7 @@ environment variables, I export those too:</p>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>I create a separate config script for each account. I could get fancy,
-but let&rsquo;s not get too silly.</p>
+<p>I create a separate config script for each account.</p>
 
 <p>The AWS CLI tool will automatically use the <code>~/.aws/config</code>, and can
 load different profiles with the <code>--profile</code> option. The <code>aws-sdk</code>
