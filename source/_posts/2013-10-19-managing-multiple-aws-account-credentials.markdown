@@ -6,6 +6,10 @@ comments: true
 categories: aws, amazon
 ---
 
+**UPDATE**: All non-default profiles must have their profile name
+  start with "profile." Below, this is "profile nondefault." The ruby
+  code is updated to reflect this.
+
 In this post, I will describe my local setup for using the
 [AWS CLI](http://aws.amazon.com/cli/), the
 [AWS Ruby SDK](http://aws.amazon.com/sdkforruby/), and of course the
@@ -36,7 +40,7 @@ different account's credentials. For example:
 aws_access_key_id=MY_DEFAULT_KEY
 aws_secret_access_key=MY_DEFAULT_SECRET
 region=us-east-1
-[nondefault]
+[profile nondefault]
 aws_access_key_id=NOT_MY_DEFAULT_KEY
 aws_secret_access_key=NOT_MY_DEFAULT_SECRET
 region=us-east-1
@@ -61,6 +65,15 @@ This will load the specified file, `~/.aws/config` with the
 `aws_access_key_id` value. Then repeat the same for the
 `aws_secret_access_key`.
 
+To use the nondefault profile:
+
+```
+export AWS_ACCESS_KEY_ID=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['profile nondefault']['aws_access_key_id']"`
+export AWS_SECRET_ACCESS_KEY=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['profile nondefault']['aws_secret_access_key']"`
+```
+
+Note that this uses `['profile nondefault']`.
+
 Since different tools historically have used slightly different
 environment variables, I export those too:
 
@@ -71,8 +84,7 @@ export AWS_ACCESS_KEY=$AWS_ACCESS_KEY_ID
 export AWS_SECRET_KEY=$AWS_SECRET_ACCESS_KEY
 ```
 
-I create a separate config script for each account. I could get fancy,
-but let's not get too silly.
+I create a separate config script for each account.
 
 The AWS CLI tool will automatically use the `~/.aws/config`, and can
 load different profiles with the `--profile` option. The `aws-sdk`
