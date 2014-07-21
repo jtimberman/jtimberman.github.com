@@ -121,8 +121,8 @@ vim:
 ```
 
 This output is the `load_current_resource` method implemented in the
-(apt package
-provider)[https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38].
+[apt package
+provider](https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38).
 
 The `check_package_state` method does all the heavy lifting. It runs
 `apt-cache policy` and parses the output looking for the version
