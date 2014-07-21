@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-07-21T09:52:32-06:00</updated>
+  <updated>2014-07-21T09:59:35-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -169,8 +169,8 @@ platforms to use the <code>apt</code> package provider, and that&rsquo;ll do her
 
 
 <p>This output is the <code>load_current_resource</code> method implemented in the
-(apt package
-provider)[<a href="https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38">https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38</a>].</p>
+<a href="https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38">apt package
+provider</a>.</p>
 
 <p>The <code>check_package_state</code> method does all the heavy lifting. It runs
 <code>apt-cache policy</code> and parses the output looking for the version
