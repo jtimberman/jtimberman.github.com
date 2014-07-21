@@ -8,20 +8,13 @@ categories: chef
 
 This post will illustrate `load_current_resource` and a basic use of chef-shell.
 
-The `chef-shell` is an `irb`-based [REPL
-(read-eval-print-loop)](http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop).
-Everything I do is Ruby code, just like in Chef recipes or other
-cookbook components. I'm going to use a `package` resource example, so
-need privileged access (`sudo`).
+The `chef-shell` is an `irb`-based [REPL (read-eval-print-loop)](http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop). Everything I do is Ruby code, just like in Chef recipes or other cookbook components. I'm going to use a `package` resource example, so need privileged access (`sudo`).
 
 ```
 % sudo chef-shell
 ```
 
-The chef-shell program loads its configuration, determines what
-session type, and displays a banner. In this case, we're taking all
-the defaults, which means no special configuration, and a `standalone`
-session.
+The chef-shell program loads its configuration, determines what session type, and displays a banner. In this case, we're taking all the defaults, which means no special configuration, and a `standalone` session.
 
 ```
 loading configuration: none (standalone session)
@@ -38,28 +31,20 @@ run `help' for help, `exit' or ^D to quit.
 Ohai2u jtimberman@jenkins.int.housepub.org!
 ```
 
-To evaluate resources as we'd write them in a recipe, we need to
-switch to recipe mode.
+To evaluate resources as we'd write them in a recipe, we need to switch to recipe mode.
 
 ```
 chef > recipe_mode
 ```
 
-I can do anything here that I can do in a recipe. I could paste in my
-own recipes. Here, I'm just going to add a `package` resource to
-manage the `vim` package. Note that this works like the "compile"
-phase of a `chef-client` run. The resource will be added to the
-`Chef::ResourceCollection` object. We'll look at this in a little
-more detail shortly.
+I can do anything here that I can do in a recipe. I could paste in my own recipes. Here, I'm just going to add a `package` resource to manage the `vim` package. Note that this works like the "compile" phase of a `chef-client` run. The resource will be added to the `Chef::ResourceCollection` object. We'll look at this in a little more detail shortly.
 
 ```
 chef:recipe > package "vim"
  => <package[vim] @name: "vim" @noop: nil @before: nil @params: {} @provider: nil @allowed_actions: [:nothing, :install, :upgrade, :remove, :purge, :reconfig] @action: :install @updated: false @updated_by_last_action: false @supports: {} @ignore_failure: false @retries: 0 @retry_delay: 2 @source_line: "(irb#1):1:in `irb_binding'" @guard_interpreter: :default @elapsed_time: 0 @sensitive: false @candidate_version: nil @options: nil @package_name: "vim" @resource_name: :package @response_file: nil @response_file_variables: {} @source: nil @version: nil @timeout: 900 @cookbook_name: nil @recipe_name: nil>
 ```
 
-I'm done adding resources/writing code to test, so I'll initiate a
-Chef run with the `run_chef` method (this is a special method in
-`chef-shell`).
+I'm done adding resources/writing code to test, so I'll initiate a Chef run with the `run_chef` method (this is a special method in `chef-shell`).
 
 ```
 chef:recipe > run_chef
@@ -79,33 +64,20 @@ vim:
 [2014-07-21T09:04:51-06:00] DEBUG: package[vim] is already installed - nothing to do
 ```
 
-Let's take a look at what's happening. Note that we have INFO and
-DEBUG output. By default, `chef-shell` runs with `Chef::Log#level`
-set to `:debug`. In a normal Chef Client run with `:info` output, we
-see the first line, but not the others. I'll show each line, and then
-explain what Chef did.
+Let's take a look at what's happening. Note that we have INFO and DEBUG output. By default, `chef-shell` runs with `Chef::Log#level` set to `:debug`. In a normal Chef Client run with `:info` output, we see the first line, but not the others. I'll show each line, and then explain what Chef did.
 
 ```
 [2014-07-21T09:04:51-06:00] INFO: Processing package[vim] action install ((irb#1) line 1)
 ```
 
-There is a timestamp, the resource, `package[vim]`, the action
-`install` Chef will take, and the location in the recipe where this
-was encountered. I didn't specify one in the resource, that's the
-default action for package resources. The `irb#1 line 1` just means
-that it was the first line of the `irb` in recipe mode.
+There is a timestamp, the resource, `package[vim]`, the action `install` Chef will take, and the location in the recipe where this was encountered. I didn't specify one in the resource, that's the default action for package resources. The `irb#1 line 1` just means that it was the first line of the `irb` in recipe mode.
 
 ```
 [2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid
 [2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid
 ```
 
-Chef chooses the default provider for each resource based on a
-mapping of platforms and their versions. It uses an internal class,
-`Chef::Version::Comparable` to do this. The system I'm using is a
-Debian "testing" system, which has the codename `jessie`, but it
-isn't a specific release number. Chef knows that for all `debian`
-platforms to use the `apt` package provider, and that'll do here.
+Chef chooses the default provider for each resource based on a mapping of platforms and their versions. It uses an internal class, `Chef::Version::Comparable` to do this. The system I'm using is a Debian "testing" system, which has the codename `jessie`, but it isn't a specific release number. Chef knows that for all `debian` platforms to use the `apt` package provider, and that'll do here.
 
 ```
 [2014-07-21T09:04:51-06:00] DEBUG: package[vim] checking package status for vim
@@ -120,19 +92,11 @@ vim:
 [2014-07-21T09:04:51-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1
 ```
 
-This output is the `load_current_resource` method implemented in the
-[apt package
-provider](https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38).
+This output is the `load_current_resource` method implemented in the [apt package provider](https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38).
 
-The `check_package_state` method does all the heavy lifting. It runs
-`apt-cache policy` and parses the output looking for the version
-number. If we used the `:update` action, and the installed version
-wasn't the same as the candidate version, Chef would install the
-candidate version.
+The `check_package_state` method does all the heavy lifting. It runs `apt-cache policy` and parses the output looking for the version number. If we used the `:update` action, and the installed version wasn't the same as the candidate version, Chef would install the candidate version.
 
-Chef resources are convergent. They only get updated if they need to
-be. In this case, the `vim` package is installed already (our
-implicitly specified action), so we see the following line:
+Chef resources are convergent. They only get updated if they need to be. In this case, the `vim` package is installed already (our implicitly specified action), so we see the following line:
 
 ```
 [2014-07-21T09:04:51-06:00] DEBUG: package[vim] is already installed - nothing to do
@@ -142,17 +106,9 @@ Nothing to do, Chef finishes its run.
 
 ## Modifying Existing Resources
 
-We can manipulate the state of the resources in the resource
-collection. This isn't common in most recipes. It's required for
-certain kinds of development patterns like "wrapper" cookbooks. As an
-example, I'm going to modify the resource object so I don't have to
-log into the system again and run `apt-get remove vim`, to show the
-next section.
+We can manipulate the state of the resources in the resource collection. This isn't common in most recipes. It's required for certain kinds of development patterns like "wrapper" cookbooks. As an example, I'm going to modify the resource object so I don't have to log into the system again and run `apt-get remove vim`, to show the next section.
 
-First, I'm going to create a local variable in the context of the
-recipe. This is just like any other variable in Ruby. For its value,
-I'm going to use the `#resources()` [method to look up](http://docs.opscode.com/chef/dsl_recipe.html#resources) a resource in
-the resource collection.
+First, I'm going to create a local variable in the context of the recipe. This is just like any other variable in Ruby. For its value, I'm going to use the `#resources()` [method to look up](http://docs.opscode.com/chef/dsl_recipe.html#resources) a resource in the resource collection.
 
 ```
 chef:recipe > local_package_variable = resources("package[vim]")
@@ -166,12 +122,9 @@ chef:recipe > local_package_variable.class
  => Chef::Resource::Package
 ```
 
-(`#class` is a method on the Ruby `Object` class that returns the
-class of the object)
+(`#class` is a method on the Ruby `Object` class that returns the class of the object)
 
-To remove the `vim` package, I use the `#run_action` method (available
-to all `Chef::Resource` subclasses), specifying the `:remove` action
-as a symbol:
+To remove the `vim` package, I use the `#run_action` method (available to all `Chef::Resource` subclasses), specifying the `:remove` action as a symbol:
 
 ```
 chef:recipe > local_package_variable.run_action(:remove)
@@ -179,16 +132,11 @@ chef:recipe > local_package_variable.run_action(:remove)
 [2014-07-21T09:11:52-06:00] INFO: package[vim] removed
 ```
 
-There is no additional debug to display. Chef will run `apt-get
-remove vim` to converge the resource with this action.
+There is no additional debug to display. Chef will run `apt-get remove vim` to converge the resource with this action.
 
 ## Load Current Resource Redux
 
-Now that the package has been removed from the system, what happens
-if we run Chef again? Well, Chef is convergent, and it takes
-idempotent actions on the system to ensure that the managed resources
-are in the desired state. That means it will install the `vim`
-package.
+Now that the package has been removed from the system, what happens if we run Chef again? Well, Chef is convergent, and it takes idempotent actions on the system to ensure that the managed resources are in the desired state. That means it will install the `vim` package.
 
 ```
 chef:recipe > run_chef
@@ -209,9 +157,7 @@ vim:
 [2014-07-21T09:11:57-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1
 ```
 
-This is `load_current_resource` working as expected. As we can see
-from the `apt-cache policy` output, the package is not installed, and
-as the action to take is `:install`, Chef will do what we think:
+This is `load_current_resource` working as expected. As we can see from the `apt-cache policy` output, the package is not installed, and as the action to take is `:install`, Chef will do what we think:
 
 ```
 Reading package lists...
@@ -244,12 +190,9 @@ update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/view (view) in
 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/ex (ex) in auto mode
 ```
 
-This should be familiar to anyone that uses Debian/Ubuntu, it's
-standard `apt-get install` output. Of course, this is a development
-system so I have some cruft, but we'll ignore that ;).
+This should be familiar to anyone that uses Debian/Ubuntu, it's standard `apt-get install` output. Of course, this is a development system so I have some cruft, but we'll ignore that ;).
 
-If we run_chef again, we get the output we saw in the original
-example in this post:
+If we run_chef again, we get the output we saw in the original example in this post:
 
 ```
 [2014-07-21T09:50:06-06:00] DEBUG: package[vim] is already installed - nothing to do
