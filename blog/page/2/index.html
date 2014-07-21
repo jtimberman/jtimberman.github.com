@@ -9,7 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="DISCLAIMER Test Kitchen 1.0 is still in alpha at the time of this post. Update We&rsquo;re no longer required to use bundler, and in fact recommend &hellip;">
+  <meta name="description" content="This post will briefly describe how I did a TDD update to Opscode&rsquo;s
+runit to resolve an
+issue reported last night. First, the issue manifests &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +81,156 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/05/03/tdd-cookbook-ticket/">TDD Cookbook Ticket</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-03T14:36:00-06:00" pubdate data-updated="true">May 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This post will briefly describe how I did a TDD update to Opscode&rsquo;s
+<a href="http://ckbk.it/runit">runit</a> to resolve an
+<a href="https://tickets.opscode.com/browse/COOK-2867">issue reported last night</a>.</p>
+
+<p>First, the issue manifests itself only on Debian systems. The runit
+cookbook&rsquo;s <code>runit_service</code> provider will write an
+<a href="http://tickets.opscode.com/browse/COOK-1576">LSB init.d script</a> on
+Debian, rather than symlinking to <code>/usr/bin/sv</code>. The problem raised in
+the new ticket is that the template will follow the link and write to
+<code>/usr/bin/sv</code>. This is bad, as it will end up in a forkbomb as
+runsvdir attempts to restart sv on
+<a href="http://drupal.org/files/x-all-the-things-template.png">all the things</a>.
+Oops! Sorry about that. Let&rsquo;s get it fixed, and practice some TDD.</p>
+
+<p>The runit cookbook includes support for test-kitchen, though I did
+need to
+<a href="https://github.com/opscode-cookbooks/runit/commit/8d2e0fcb9d6becf99c0d30694164e57d59fb667b">update it</a>
+for this effort. Part of this change was adding a box for Debian in
+the <code>.kitchen.yml</code>. I set about resolving this with TDD in mind.</p>
+
+<p>First, the runit cookbook includes a couple
+<a href="https://github.com/opscode-cookbooks/runit/tree/master/test/cookbooks">&ldquo;test&rdquo; cookbooks</a>
+to facilitate setting up the system with the <code>runit_service</code> resource
+so the outcome can be tested to ensure the behavior is correct. I
+started by adding a &ldquo;failing test&rdquo; in the <code>runit_test::service</code>
+recipe, meaning a link resource, and a <code>runit_service</code> resource that
+would overwrite <code>/usr/bin/sv</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">link</span> <span class="s2">&quot;/etc/init.d/cook-2867&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">to</span> <span class="s2">&quot;/usr/bin/sv&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">runit_service</span> <span class="s2">&quot;cook-2867&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">default_logger</span> <span class="kp">true</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then I ran <code>kitchen test</code> on the Debian box. As expected, the link was
+created, and then the runit service was configured. The service&rsquo;s
+provider will wait until the service is up. Since we&rsquo;ve destroyed the
+sv binary, that will never happen, so I destroyed it. I manually
+confirmed the behavior too, to make sure I wasn&rsquo;t seeing something
+weird. Due to its very nature, this is <em>really</em> hard to test for
+automatically, but it will happen consistently.</p>
+
+<p>Next, I had to write the code to implement the fix for this bug.
+Essentially, this means checking if the <code>/etc/init.d/cook-2867</code> file
+is a symbolink link, and removing it.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">initfile</span> <span class="o">=</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="s1">&#39;/etc&#39;</span><span class="p">,</span> <span class="s1">&#39;init.d&#39;</span><span class="p">,</span> <span class="n">new_resource</span><span class="o">.</span><span class="n">service_name</span><span class="p">)</span>
+</span><span class='line'><span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">initfile</span><span class="p">)</span> <span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">symlink?</span><span class="p">(</span><span class="n">initfile</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Simple enough. Next I tested again by destroying the existing
+environment and rerunning it from scratch. This takes some time, but
+it verifies that everything is working properly. Here&rsquo;s the output on
+Debian:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">link</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">runit_test</span><span class="o">::</span><span class="n">service</span> <span class="n">line</span> <span class="mi">147</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">link</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">created</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">service</span><span class="o">[</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">runit_service</span><span class="o">[</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">enable</span> <span class="p">(</span><span class="n">runit_test</span><span class="o">::</span><span class="n">service</span> <span class="n">line</span> <span class="mi">151</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">run</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">log</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">main</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/var/</span><span class="n">log</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">file</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">run</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">updated</span> <span class="n">content</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">owner</span> <span class="n">changed</span> <span class="n">to</span> <span class="mi">0</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">group</span> <span class="n">changed</span> <span class="n">to</span> <span class="mi">0</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">mode</span> <span class="n">changed</span> <span class="n">to</span> <span class="mi">755</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">runit_service</span><span class="o">[</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">configured</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Chef</span> <span class="no">Run</span> <span class="n">complete</span> <span class="k">in</span> <span class="mi">7</span><span class="o">.</span><span class="mi">267132764</span> <span class="n">seconds</span>
+</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Running</span> <span class="n">report</span> <span class="n">handlers</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I didn&rsquo;t feel I needed a specific test for this in minitest-chef,
+because it wouldn&rsquo;t have finished converging (earlier behavior I saw
+in the &ldquo;failing&rdquo; test).</p>
+
+<p>If you&rsquo;re contributing to cookbooks, and they have support for
+test-kitchen, it&rsquo;s awesome if you can open a bug report with a failing
+test. In this case, it was fairly easy to reproduce the bug.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2513,132 +2665,6 @@ organization &ldquo;apt&rdquo; repository</a>.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/11/29/some-knife-plugins/">Some Knife Plugins</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-11-29T19:11:00-07:00" pubdate data-updated="true">Nov 29<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I&rsquo;ve shared my <code>~/.chef/plugins/knife</code> directory as a Git repository
-on <a href="https://github.com/jtimberman/chef-plugins-knife">GitHub</a>. There&rsquo;s
-only a few, but I hope you find them useful. They are licensed under
-the Apache 2.0 software license, but please only use them for awesome.</p>
-
-<h2>gem</h2>
-
-<p>This plugin will install a gem into the Ruby environment that knife is
-executing in. This is handy if you want to install knife plugins that
-are gems.</p>
-
-<p>If you have Ruby and Chef/Knife installed in an area where your user
-can write:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
-
-
-<p>If you&rsquo;re using an Omnibus package install of Chef, or otherwise
-require root access to install:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>Note</strong> If you&rsquo;re trying to install a gem for <em>Chef</em> to use, you
-  should put it in a <code>chef_gem</code> resource in a recipe.</p>
-
-<h2>metadata</h2>
-
-<p>This plugin prints out information from a cookbook&rsquo;s metadata. It
-currently only works with <code>metadata.rb</code> files, and not <code>metadata.json</code>
-files.</p>
-
-<p>In a cookbook&rsquo;s directory, display the cookbook&rsquo;s dependencies:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Show the dependencies and supported platforms:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies platforms</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Use the <code>-P</code> option to pass a path to a cookbook.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata name dependencies -P ~/.berkshelf/cookbooks/rabbitmq-1.6.4</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>nukular</h2>
-
-<p><a href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/">I wrote on this blog about this plugin awhile ago</a>.</p>
-
-<p>This plugin cleans up after running <code>chef-client</code> on a VMware Fusion machine.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife nukular guineapig base guineapig.int.example.com</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>plugin_create</h2>
-
-<p>This creates a plugin scaffolding in <code>~/.chef/plugins/knife</code>. It will
-join underscored words as CamelCaseClasses.</p>
-
-<p>For example,</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesometown</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Creates a plugin that is class <code>Awesometown</code> that can be executed with:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife awesometown</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Whereas this,</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesome_town</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Creates a plugin that is class <code>AwesomeTown</code> that can be executed
-with:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin awesome town</span></code></pre></td></tr></table></div></figure>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -2673,6 +2699,10 @@ with:</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a>
       </li>
     
@@ -2686,10 +2716,6 @@ with:</p>
     
       <li class="post">
         <a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a>
       </li>
     
   </ul>
