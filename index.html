@@ -9,9 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="This post will illustrate load_current_resource and a basic use of chef-shell. The chef-shell is an irb-based REPL
-(read-eval-print-loop).
-Everything &hellip;">
+  <meta name="description" content="This post will illustrate load_current_resource and a basic use of chef-shell. The chef-shell is an irb-based REPL (read-eval-print-loop). Everything &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -112,20 +110,13 @@ Everything &hellip;">
 
   <div class="entry-content"><p>This post will illustrate <code>load_current_resource</code> and a basic use of chef-shell.</p>
 
-<p>The <code>chef-shell</code> is an <code>irb</code>-based <a href="http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">REPL
-(read-eval-print-loop)</a>.
-Everything I do is Ruby code, just like in Chef recipes or other
-cookbook components. I&rsquo;m going to use a <code>package</code> resource example, so
-need privileged access (<code>sudo</code>).</p>
+<p>The <code>chef-shell</code> is an <code>irb</code>-based <a href="http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">REPL (read-eval-print-loop)</a>. Everything I do is Ruby code, just like in Chef recipes or other cookbook components. I&rsquo;m going to use a <code>package</code> resource example, so need privileged access (<code>sudo</code>).</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>% sudo chef-shell</span></code></pre></td></tr></table></div></figure>
 
 
-<p>The chef-shell program loads its configuration, determines what
-session type, and displays a banner. In this case, we&rsquo;re taking all
-the defaults, which means no special configuration, and a <code>standalone</code>
-session.</p>
+<p>The chef-shell program loads its configuration, determines what session type, and displays a banner. In this case, we&rsquo;re taking all the defaults, which means no special configuration, and a <code>standalone</code> session.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -153,19 +144,13 @@ session.</p>
 </span><span class='line'>Ohai2u jtimberman@jenkins.int.housepub.org!</span></code></pre></td></tr></table></div></figure>
 
 
-<p>To evaluate resources as we&rsquo;d write them in a recipe, we need to
-switch to recipe mode.</p>
+<p>To evaluate resources as we&rsquo;d write them in a recipe, we need to switch to recipe mode.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>chef &gt; recipe_mode</span></code></pre></td></tr></table></div></figure>
 
 
-<p>I can do anything here that I can do in a recipe. I could paste in my
-own recipes. Here, I&rsquo;m just going to add a <code>package</code> resource to
-manage the <code>vim</code> package. Note that this works like the &ldquo;compile&rdquo;
-phase of a <code>chef-client</code> run. The resource will be added to the
-<code>Chef::ResourceCollection</code> object. We&rsquo;ll look at this in a little
-more detail shortly.</p>
+<p>I can do anything here that I can do in a recipe. I could paste in my own recipes. Here, I&rsquo;m just going to add a <code>package</code> resource to manage the <code>vim</code> package. Note that this works like the &ldquo;compile&rdquo; phase of a <code>chef-client</code> run. The resource will be added to the <code>Chef::ResourceCollection</code> object. We&rsquo;ll look at this in a little more detail shortly.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -173,9 +158,7 @@ more detail shortly.</p>
 </span><span class='line'> =&gt; &lt;package[vim] @name: "vim" @noop: nil @before: nil @params: {} @provider: nil @allowed_actions: [:nothing, :install, :upgrade, :remove, :purge, :reconfig] @action: :install @updated: false @updated_by_last_action: false @supports: {} @ignore_failure: false @retries: 0 @retry_delay: 2 @source_line: "(irb#1):1:in `irb_binding'" @guard_interpreter: :default @elapsed_time: 0 @sensitive: false @candidate_version: nil @options: nil @package_name: "vim" @resource_name: :package @response_file: nil @response_file_variables: {} @source: nil @version: nil @timeout: 900 @cookbook_name: nil @recipe_name: nil&gt;</span></code></pre></td></tr></table></div></figure>
 
 
-<p>I&rsquo;m done adding resources/writing code to test, so I&rsquo;ll initiate a
-Chef run with the <code>run_chef</code> method (this is a special method in
-<code>chef-shell</code>).</p>
+<p>I&rsquo;m done adding resources/writing code to test, so I&rsquo;ll initiate a Chef run with the <code>run_chef</code> method (this is a special method in <code>chef-shell</code>).</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -209,21 +192,13 @@ Chef run with the <code>run_chef</code> method (this is a special method in
 </span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] is already installed - nothing to do</span></code></pre></td></tr></table></div></figure>
 
 
-<p>Let&rsquo;s take a look at what&rsquo;s happening. Note that we have INFO and
-DEBUG output. By default, <code>chef-shell</code> runs with <code>Chef::Log#level</code>
-set to <code>:debug</code>. In a normal Chef Client run with <code>:info</code> output, we
-see the first line, but not the others. I&rsquo;ll show each line, and then
-explain what Chef did.</p>
+<p>Let&rsquo;s take a look at what&rsquo;s happening. Note that we have INFO and DEBUG output. By default, <code>chef-shell</code> runs with <code>Chef::Log#level</code> set to <code>:debug</code>. In a normal Chef Client run with <code>:info</code> output, we see the first line, but not the others. I&rsquo;ll show each line, and then explain what Chef did.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:04:51-06:00] INFO: Processing package[vim] action install ((irb#1) line 1)</span></code></pre></td></tr></table></div></figure>
 
 
-<p>There is a timestamp, the resource, <code>package[vim]</code>, the action
-<code>install</code> Chef will take, and the location in the recipe where this
-was encountered. I didn&rsquo;t specify one in the resource, that&rsquo;s the
-default action for package resources. The <code>irb#1 line 1</code> just means
-that it was the first line of the <code>irb</code> in recipe mode.</p>
+<p>There is a timestamp, the resource, <code>package[vim]</code>, the action <code>install</code> Chef will take, and the location in the recipe where this was encountered. I didn&rsquo;t specify one in the resource, that&rsquo;s the default action for package resources. The <code>irb#1 line 1</code> just means that it was the first line of the <code>irb</code> in recipe mode.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -231,12 +206,7 @@ that it was the first line of the <code>irb</code> in recipe mode.</p>
 </span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid</span></code></pre></td></tr></table></div></figure>
 
 
-<p>Chef chooses the default provider for each resource based on a
-mapping of platforms and their versions. It uses an internal class,
-<code>Chef::Version::Comparable</code> to do this. The system I&rsquo;m using is a
-Debian &ldquo;testing&rdquo; system, which has the codename <code>jessie</code>, but it
-isn&rsquo;t a specific release number. Chef knows that for all <code>debian</code>
-platforms to use the <code>apt</code> package provider, and that&rsquo;ll do here.</p>
+<p>Chef chooses the default provider for each resource based on a mapping of platforms and their versions. It uses an internal class, <code>Chef::Version::Comparable</code> to do this. The system I&rsquo;m using is a Debian &ldquo;testing&rdquo; system, which has the codename <code>jessie</code>, but it isn&rsquo;t a specific release number. Chef knows that for all <code>debian</code> platforms to use the <code>apt</code> package provider, and that&rsquo;ll do here.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -260,19 +230,11 @@ platforms to use the <code>apt</code> package provider, and that&rsquo;ll do her
 </span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1</span></code></pre></td></tr></table></div></figure>
 
 
-<p>This output is the <code>load_current_resource</code> method implemented in the
-<a href="https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38">apt package
-provider</a>.</p>
+<p>This output is the <code>load_current_resource</code> method implemented in the <a href="https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38">apt package provider</a>.</p>
 
-<p>The <code>check_package_state</code> method does all the heavy lifting. It runs
-<code>apt-cache policy</code> and parses the output looking for the version
-number. If we used the <code>:update</code> action, and the installed version
-wasn&rsquo;t the same as the candidate version, Chef would install the
-candidate version.</p>
+<p>The <code>check_package_state</code> method does all the heavy lifting. It runs <code>apt-cache policy</code> and parses the output looking for the version number. If we used the <code>:update</code> action, and the installed version wasn&rsquo;t the same as the candidate version, Chef would install the candidate version.</p>
 
-<p>Chef resources are convergent. They only get updated if they need to
-be. In this case, the <code>vim</code> package is installed already (our
-implicitly specified action), so we see the following line:</p>
+<p>Chef resources are convergent. They only get updated if they need to be. In this case, the <code>vim</code> package is installed already (our implicitly specified action), so we see the following line:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] is already installed - nothing to do</span></code></pre></td></tr></table></div></figure>
@@ -282,17 +244,9 @@ implicitly specified action), so we see the following line:</p>
 
 <h2>Modifying Existing Resources</h2>
 
-<p>We can manipulate the state of the resources in the resource
-collection. This isn&rsquo;t common in most recipes. It&rsquo;s required for
-certain kinds of development patterns like &ldquo;wrapper&rdquo; cookbooks. As an
-example, I&rsquo;m going to modify the resource object so I don&rsquo;t have to
-log into the system again and run <code>apt-get remove vim</code>, to show the
-next section.</p>
+<p>We can manipulate the state of the resources in the resource collection. This isn&rsquo;t common in most recipes. It&rsquo;s required for certain kinds of development patterns like &ldquo;wrapper&rdquo; cookbooks. As an example, I&rsquo;m going to modify the resource object so I don&rsquo;t have to log into the system again and run <code>apt-get remove vim</code>, to show the next section.</p>
 
-<p>First, I&rsquo;m going to create a local variable in the context of the
-recipe. This is just like any other variable in Ruby. For its value,
-I&rsquo;m going to use the <code>#resources()</code> <a href="http://docs.opscode.com/chef/dsl_recipe.html#resources">method to look up</a> a resource in
-the resource collection.</p>
+<p>First, I&rsquo;m going to create a local variable in the context of the recipe. This is just like any other variable in Ruby. For its value, I&rsquo;m going to use the <code>#resources()</code> <a href="http://docs.opscode.com/chef/dsl_recipe.html#resources">method to look up</a> a resource in the resource collection.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -308,12 +262,9 @@ the resource collection.</p>
 </span><span class='line'> =&gt; Chef::Resource::Package</span></code></pre></td></tr></table></div></figure>
 
 
-<p>(<code>#class</code> is a method on the Ruby <code>Object</code> class that returns the
-class of the object)</p>
+<p>(<code>#class</code> is a method on the Ruby <code>Object</code> class that returns the class of the object)</p>
 
-<p>To remove the <code>vim</code> package, I use the <code>#run_action</code> method (available
-to all <code>Chef::Resource</code> subclasses), specifying the <code>:remove</code> action
-as a symbol:</p>
+<p>To remove the <code>vim</code> package, I use the <code>#run_action</code> method (available to all <code>Chef::Resource</code> subclasses), specifying the <code>:remove</code> action as a symbol:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -323,16 +274,11 @@ as a symbol:</p>
 </span><span class='line'>[2014-07-21T09:11:52-06:00] INFO: package[vim] removed</span></code></pre></td></tr></table></div></figure>
 
 
-<p>There is no additional debug to display. Chef will run <code>apt-get
-remove vim</code> to converge the resource with this action.</p>
+<p>There is no additional debug to display. Chef will run <code>apt-get remove vim</code> to converge the resource with this action.</p>
 
 <h2>Load Current Resource Redux</h2>
 
-<p>Now that the package has been removed from the system, what happens
-if we run Chef again? Well, Chef is convergent, and it takes
-idempotent actions on the system to ensure that the managed resources
-are in the desired state. That means it will install the <code>vim</code>
-package.</p>
+<p>Now that the package has been removed from the system, what happens if we run Chef again? Well, Chef is convergent, and it takes idempotent actions on the system to ensure that the managed resources are in the desired state. That means it will install the <code>vim</code> package.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -362,9 +308,7 @@ package.</p>
 </span><span class='line'>[2014-07-21T09:11:57-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1</span></code></pre></td></tr></table></div></figure>
 
 
-<p>This is <code>load_current_resource</code> working as expected. As we can see
-from the <code>apt-cache policy</code> output, the package is not installed, and
-as the action to take is <code>:install</code>, Chef will do what we think:</p>
+<p>This is <code>load_current_resource</code> working as expected. As we can see from the <code>apt-cache policy</code> output, the package is not installed, and as the action to take is <code>:install</code>, Chef will do what we think:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -424,12 +368,9 @@ as the action to take is <code>:install</code>, Chef will do what we think:</p>
 </span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/ex (ex) in auto mode</span></code></pre></td></tr></table></div></figure>
 
 
-<p>This should be familiar to anyone that uses Debian/Ubuntu, it&rsquo;s
-standard <code>apt-get install</code> output. Of course, this is a development
-system so I have some cruft, but we&rsquo;ll ignore that ;).</p>
+<p>This should be familiar to anyone that uses Debian/Ubuntu, it&rsquo;s standard <code>apt-get install</code> output. Of course, this is a development system so I have some cruft, but we&rsquo;ll ignore that ;).</p>
 
-<p>If we run_chef again, we get the output we saw in the original
-example in this post:</p>
+<p>If we run_chef again, we get the output we saw in the original example in this post:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:50:06-06:00] DEBUG: package[vim] is already installed - nothing to do</span></code></pre></td></tr></table></div></figure>
