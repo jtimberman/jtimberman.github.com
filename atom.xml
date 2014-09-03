@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-09-02T14:48:03-06:00</updated>
+  <updated>2014-09-03T08:40:13-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -18,7 +18,9 @@
     <link href="http://jtimberman.housepub.org/blog/2014/09/02/chef-node-dot-debug-value/"/>
     <updated>2014-09-02T14:26:21-06:00</updated>
     <id>http://jtimberman.housepub.org/blog/2014/09/02/chef-node-dot-debug-value</id>
-    <content type="html"><![CDATA[<p>Earlier today I was reminded by <a href="https://github.com/stevendanna">Steven Danna</a> about a newer feature of Chef called <code>debug_value</code>. This is a method on the <code>node</code> object (<code>Chef::Node</code>) which will show where in Chef&rsquo;s attribute hierarchy a particular attribute or sub-attribute was set on the node.</p>
+    <content type="html"><![CDATA[<p>Update: As mentioned by <a href="https://twitter.com/kallistec/status/506953082404483072">Dan DeLeo</a>, he discussed this feature on <a href="http://www.getchef.com/blog/2013/02/05/chef-11-in-depth-attributes-changes/">Chef 11 In-Depth: Attributes Changes</a> last year when Chef 11 was released. I somehow never got a chance to use it, and thought this post would be a helpful example.</p>
+
+<p>Earlier today I was reminded by <a href="https://github.com/stevendanna">Steven Danna</a> about a newer feature of Chef called <code>debug_value</code>. This is a method on the <code>node</code> object (<code>Chef::Node</code>) which will show where in Chef&rsquo;s attribute hierarchy a particular attribute or sub-attribute was set on the node.</p>
 
 <p>Fire up a chef shell in client mode on the node you want to see:</p>
 
