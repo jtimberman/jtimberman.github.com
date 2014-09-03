@@ -6,6 +6,8 @@ comments: true
 categories: chef
 ---
 
+Update: As mentioned by [Dan DeLeo](https://twitter.com/kallistec/status/506953082404483072), he discussed this feature on [Chef 11 In-Depth: Attributes Changes](http://www.getchef.com/blog/2013/02/05/chef-11-in-depth-attributes-changes/) last year when Chef 11 was released. I somehow never got a chance to use it, and thought this post would be a helpful example.
+
 Earlier today I was reminded by [Steven Danna](https://github.com/stevendanna) about a newer feature of Chef called `debug_value`. This is a method on the `node` object (`Chef::Node`) which will show where in Chef's attribute hierarchy a particular attribute or sub-attribute was set on the node.
 
 Fire up a chef shell in client mode on the node you want to see:
