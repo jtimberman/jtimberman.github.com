@@ -1,0 +1,514 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Chef Reporting API and Resource Updates - jtimberman's Code Blog</title>
+  <meta name="author" content="Joshua Timberman">
+
+  
+  <meta name="description" content="I have released a new knife plugin, but first some background. At CHEF, we run the community&rsquo;s cookbook site, Supermarket. We monitor the &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2014/10/07/chef-reporting-api-and-resource-updates">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" />
+<link rel="openid2.local_id" href="http://www.google.com/profiles/100567271038100401523" />
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-26031299-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jtimberman's Code Blog</a></h1>
+  
+    <h2>Chef, Ops, Ruby, Linux/Unix. Opinions are mine, not my employer's (Chef).</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jtimberman.housepub.org" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Chef Reporting API and Resource Updates</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-10-07T06:18:34-06:00" pubdate data-updated="true">Oct 7<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I have released a new knife plugin, but first some background.</p>
+
+<p>At CHEF, we run the community&rsquo;s cookbook site, <a href="https://supermarket.getchef.com">Supermarket</a>. We monitor the systems that run the site with <a href="http://sensuapp.org">Sensu</a>. The current infrastructure runs instances on Amazon Web Services EC2, with an Elastic Load Balancer (ELB) in front of them. As a corrective action for a <a href="https://www.getchef.com/blog/2014/07/10/supermarket-intermittent-unresponsiveness-postmortem/">Supermarket outage</a>, CHEF&rsquo;s operations team added a new check for elevated HTTP 500 responses from the application servers behind the ELB. One thing we found was that when Supermarket was deployed, and the <code>unicorn</code> server restarted, we would see elevated 500&rsquo;s, but the site often wouldn&rsquo;t actually be impacted.</p>
+
+<p>The Sensu check is run from a &ldquo;relay&rdquo; node. That is, it isn&rsquo;t run on the application servers or the Sensu server &ndash; it&rsquo;s run out of band since it&rsquo;s for the ELB. One might imagine we could have similar checks for other services that aren&rsquo;t run on &ldquo;managed nodes,&rdquo; but that&rsquo;s neither here nor there. The issue is that we get an alert message that looks like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Sensu Alerts  ALERT - [i-d1dfd5d9/check-elb-backend-500] - CheckELBMetrics CRITICAL: supermarket-elb; Sum of HTTPCode_Backend_5XX is 2538.0. (expected lower than 30.0); (HTTPCode_Backend_5XX '2538.0' within 300 seconds between 2014-08-19 13:33:36 +0000 to 2014-08-19 13:38:36 +0000) [Playbook].</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The first part, <code>[i-d1dfd5d9/check-elb-backend-500]</code> is the node name and the check that alerted. The node name here is the monitoring relay that runs the check, not the actual node or nodes where Supermarket was deployed and restarted. This is where Chef Reporting comes into play. In Chef Reporting, we can view information about recent Chef client runs, which gives us a graph like this.</p>
+
+<p><img src="/images/reporting-graph.png"></p>
+
+<p>If we go look at the reports in the Chef Manage console, we can drill down to something like this.</p>
+
+<p><img src="/images/reporting-resources.png"></p>
+
+<p>This shows that unicorn was restarted in this run. That&rsquo;s great, but if I&rsquo;m getting this alert at a time when I&rsquo;m not particularly coherent (e.g, 2AM), I want a command in a playbook that I can run to get more information quickly without having to log into the webui and click around imprecisely. CHEF publishes a <code>knife-reporting</code> gem that has a couple handy sub-commands to retrieve this run data. For example, we can list runs.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife runs list
+</span><span class='line'>node_name:  i-3022aa3b
+</span><span class='line'>run_id:     9eccd8f6-876b-4a57-87ac-0b3e7b7ef1e7
+</span><span class='line'>start_time: 2014-08-21T17:03:56Z
+</span><span class='line'>status:     started
+</span><span class='line'>
+</span><span class='line'>node_name:  i-a09424a8
+</span><span class='line'>run_id:     f2b7871a-149b-4fd3-abdc-d74a838d719a
+</span><span class='line'>start_time: 2014-08-21T17:00:23Z
+</span><span class='line'>status:     success</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Or, we can display a specific run.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife runs show eecb04fb-11df-438a-8e81-dd610eb66616
+</span><span class='line'>run_detail:
+</span><span class='line'>  data:
+</span><span class='line'>  end_time:          2014-08-20T17:50:12Z
+</span><span class='line'>  node_name:         i-9f22aa94
+</span><span class='line'>  run_id:            eecb04fb-11df-438a-8e81-dd610eb66616
+</span><span class='line'>  run_list:          ["role[base]","role[supermarket-app]"]
+</span><span class='line'>  start_time:        2014-08-20T17:45:37Z
+</span><span class='line'>  status:            success
+</span><span class='line'>  total_res_count:   261
+</span><span class='line'>  updated_res_count: 17
+</span><span class='line'>run_resources:
+</span><span class='line'>  cookbook_name:    supermarket
+</span><span class='line'>  cookbook_version: 2.7.2
+</span><span class='line'>  duration:         209
+</span><span class='line'>  final_state:
+</span><span class='line'>    enabled: false
+</span><span class='line'>    running: true
+</span><span class='line'>  id:               unicorn
+</span><span class='line'>  initial_state:
+</span><span class='line'>    enabled: false
+</span><span class='line'>    running: true
+</span><span class='line'>  name:             unicorn
+</span><span class='line'>  result:           restart
+</span><span class='line'>  type:             service
+</span><span class='line'>  uri:              https://api.opscode.com/organizations/supermarket/reports/org/runs/eecb04fb-11df-438a-8e81-dd610eb66616/15</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is handy, but a little limited. What if I want to display only the runs containing the <code>service[unicorn]</code> resource?</p>
+
+<p>That&rsquo;s where my <code>knife-report-resource</code> plugin helps. At first, it was very much specific to finding unicorn restarts on Supermarket app servers. However, I wanted to make it more general purpose as I think people would want to be able to find when arbitrary resources were updated. This is how it works:</p>
+
+<ol>
+<li>Query the Chef Server for a particular set of nodes. For example, <code>'role:supermarket-app AND chef_environment:supermarket-prod'</code>.</li>
+<li>Get all the Chef client runs for a specified time period up until the current time. By default, it starts from one hour ago, but we can pass an ISO8601 timestamp.</li>
+<li>Iterate over all the runs looking for runs by the nodes that were returned by the search query, gathering the specified resource type and name.</li>
+<li>Display some nice output with the node&rsquo;s FQDN, the run&rsquo;s UUID, and a timestamp.</li>
+</ol>
+
+
+<p>For example,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife report resource 'role:supermarket-app AND chef_environment:supermarket-prod' execute 'apt-get update'
+</span><span class='line'>execute[apt-get update] changed in the following runs:
+</span><span class='line'>app-supermarket1.example.com 2230cf30-6d95-4e43-be18-211137eaf802 @ 2014-10-07T14:07:03Z
+</span><span class='line'>app-supermarket2.example.com c5e4d7bf-95a6-4385-9d8e-c6f5617ed79b @ 2014-10-07T14:14:04Z
+</span><span class='line'>app-supermarket3.example.com c4c4b4bb-91b6-4f73-9876-b24b093c7f1e @ 2014-10-07T14:09:54Z
+</span><span class='line'>app-supermarket4.example.com 3eb09034-7539-4a3c-af6d-5b01d35bc63f @ 2014-10-07T13:31:56Z
+</span><span class='line'>app-supermarket5.example.com aa48c1d3-da91-4031-a43d-582a577cbf2d @ 2014-10-07T13:35:15Z
+</span><span class='line'>Use `knife runs show` with the run UUID to get more info</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, we can drill down further into one of these runs with the <code>knife-reporting</code> plugin.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife runs show 2230cf30-6d95-4e43-be18-211137eaf802
+</span><span class='line'>run_detail:
+</span><span class='line'>  data:
+</span><span class='line'>  end_time:          2014-10-07T14:07:03Z
+</span><span class='line'>  node_name:         i-d7fed0df
+</span><span class='line'>  run_id:            2230cf30-6d95-4e43-be18-211137eaf802
+</span><span class='line'>  run_list:          ["role[base]","role[supermarket-app]"]
+</span><span class='line'>  start_time:        2014-10-07T14:03:59Z
+</span><span class='line'>  status:            success
+</span><span class='line'>  total_res_count:   271
+</span><span class='line'>  updated_res_count: 12
+</span><span class='line'>run_resources:
+</span><span class='line'>  cookbook_name:    chef-client
+</span><span class='line'>  cookbook_version: 3.6.0
+</span><span class='line'>  duration:         99
+</span><span class='line'>  final_state:
+</span><span class='line'>    enabled: true
+</span><span class='line'>    running: false
+</span><span class='line'>  id:               chef-client
+</span><span class='line'>  initial_state:
+</span><span class='line'>    enabled: true
+</span><span class='line'>    running: true
+</span><span class='line'>  name:             chef-client
+</span><span class='line'>  result:           enable
+</span><span class='line'>  type:             runit_service
+</span><span class='line'>  uri:              https://api.opscode.com/organizations/supermarket/reports/org/runs/2230cf30-6d95-4e43-be18-211137eaf802/0
+</span><span class='line'>...
+</span><span class='line'>  cookbook_name:    supermarket
+</span><span class='line'>  cookbook_version: 2.11.0
+</span><span class='line'>  duration:         8506
+</span><span class='line'>  final_state:
+</span><span class='line'>  id:               apt-get update
+</span><span class='line'>  initial_state:
+</span><span class='line'>  name:             apt-get update
+</span><span class='line'>  result:           run
+</span><span class='line'>  type:             execute
+</span><span class='line'>  uri:              https://api.opscode.com/organizations/supermarket/reports/org/runs/2230cf30-6d95-4e43-be18-211137eaf802/5</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hopefully you find this plugin useful! It is a RubyGem, and is available on RubyGems.org, and the source is available on GitHub.</p>
+
+<ul>
+<li><a href="https://supermarket.getchef.com/tools/knife-report-resource">Supermarket tool page</a></li>
+<li><a href="https://rubygems.org/gems/knife-report-resource">RubyGem page</a></li>
+<li><a href="https://github.com/jtimberman/knife-report-resource">GitHub repository</a></li>
+</ul>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-10-07T06:18:34-06:00" pubdate data-updated="true">Oct 7<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/chef/'>chef,</a>, <a class='category' href='/blog/categories/knife/'>knife,</a>, <a class='category' href='/blog/categories/plugins/'>plugins</a>, <a class='category' href='/blog/categories/reporting/'>reporting,</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/09/02/chef-node-dot-debug-value/" title="Previous Post: Chef::Node.debug_value">&laquo; Chef::Node.debug_value</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("jtimberman", 3, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/jtimberman" class="twitter-follow-button" data-width="208px" data-show-count="false">Follow @jtimberman</a>
+  
+</section>
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/jtimberman">@jtimberman</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'jtimberman',
+            count: 10,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2011-2014 - Joshua Timberman -
+  <span class="credit">Powered
+  by <a href="http://octopress.org">Octopress</a></span>
+  <br /><a rel="license"
+  href="http://creativecommons.org/licenses/by-sa/3.0/us/"><img alt="Creative
+  Commons License" style="border-width:0"
+  src="http://i.creativecommons.org/l/by-sa/3.0/us/80x15.png" /></a> This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/us/">Creative Commons Attribution-ShareAlike 3.0 United States License</a>.
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jtimberman';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2014/10/07/chef-reporting-api-and-resource-updates/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2014/10/07/chef-reporting-api-and-resource-updates/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

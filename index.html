@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Update: As mentioned by Dan DeLeo, he discussed this feature on Chef 11 In-Depth: Attributes Changes last year when Chef 11 was released. I somehow &hellip;">
+  <meta name="description" content="I have released a new knife plugin, but first some background. At CHEF, we run the community&rsquo;s cookbook site, Supermarket. We monitor the &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,257 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-10-07T06:18:34-06:00" pubdate data-updated="true">Oct 7<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I have released a new knife plugin, but first some background.</p>
+
+<p>At CHEF, we run the community&rsquo;s cookbook site, <a href="https://supermarket.getchef.com">Supermarket</a>. We monitor the systems that run the site with <a href="http://sensuapp.org">Sensu</a>. The current infrastructure runs instances on Amazon Web Services EC2, with an Elastic Load Balancer (ELB) in front of them. As a corrective action for a <a href="https://www.getchef.com/blog/2014/07/10/supermarket-intermittent-unresponsiveness-postmortem/">Supermarket outage</a>, CHEF&rsquo;s operations team added a new check for elevated HTTP 500 responses from the application servers behind the ELB. One thing we found was that when Supermarket was deployed, and the <code>unicorn</code> server restarted, we would see elevated 500&rsquo;s, but the site often wouldn&rsquo;t actually be impacted.</p>
+
+<p>The Sensu check is run from a &ldquo;relay&rdquo; node. That is, it isn&rsquo;t run on the application servers or the Sensu server &ndash; it&rsquo;s run out of band since it&rsquo;s for the ELB. One might imagine we could have similar checks for other services that aren&rsquo;t run on &ldquo;managed nodes,&rdquo; but that&rsquo;s neither here nor there. The issue is that we get an alert message that looks like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Sensu Alerts  ALERT - [i-d1dfd5d9/check-elb-backend-500] - CheckELBMetrics CRITICAL: supermarket-elb; Sum of HTTPCode_Backend_5XX is 2538.0. (expected lower than 30.0); (HTTPCode_Backend_5XX '2538.0' within 300 seconds between 2014-08-19 13:33:36 +0000 to 2014-08-19 13:38:36 +0000) [Playbook].</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The first part, <code>[i-d1dfd5d9/check-elb-backend-500]</code> is the node name and the check that alerted. The node name here is the monitoring relay that runs the check, not the actual node or nodes where Supermarket was deployed and restarted. This is where Chef Reporting comes into play. In Chef Reporting, we can view information about recent Chef client runs, which gives us a graph like this.</p>
+
+<p><img src="/images/reporting-graph.png"></p>
+
+<p>If we go look at the reports in the Chef Manage console, we can drill down to something like this.</p>
+
+<p><img src="/images/reporting-resources.png"></p>
+
+<p>This shows that unicorn was restarted in this run. That&rsquo;s great, but if I&rsquo;m getting this alert at a time when I&rsquo;m not particularly coherent (e.g, 2AM), I want a command in a playbook that I can run to get more information quickly without having to log into the webui and click around imprecisely. CHEF publishes a <code>knife-reporting</code> gem that has a couple handy sub-commands to retrieve this run data. For example, we can list runs.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife runs list
+</span><span class='line'>node_name:  i-3022aa3b
+</span><span class='line'>run_id:     9eccd8f6-876b-4a57-87ac-0b3e7b7ef1e7
+</span><span class='line'>start_time: 2014-08-21T17:03:56Z
+</span><span class='line'>status:     started
+</span><span class='line'>
+</span><span class='line'>node_name:  i-a09424a8
+</span><span class='line'>run_id:     f2b7871a-149b-4fd3-abdc-d74a838d719a
+</span><span class='line'>start_time: 2014-08-21T17:00:23Z
+</span><span class='line'>status:     success</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Or, we can display a specific run.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife runs show eecb04fb-11df-438a-8e81-dd610eb66616
+</span><span class='line'>run_detail:
+</span><span class='line'>  data:
+</span><span class='line'>  end_time:          2014-08-20T17:50:12Z
+</span><span class='line'>  node_name:         i-9f22aa94
+</span><span class='line'>  run_id:            eecb04fb-11df-438a-8e81-dd610eb66616
+</span><span class='line'>  run_list:          ["role[base]","role[supermarket-app]"]
+</span><span class='line'>  start_time:        2014-08-20T17:45:37Z
+</span><span class='line'>  status:            success
+</span><span class='line'>  total_res_count:   261
+</span><span class='line'>  updated_res_count: 17
+</span><span class='line'>run_resources:
+</span><span class='line'>  cookbook_name:    supermarket
+</span><span class='line'>  cookbook_version: 2.7.2
+</span><span class='line'>  duration:         209
+</span><span class='line'>  final_state:
+</span><span class='line'>    enabled: false
+</span><span class='line'>    running: true
+</span><span class='line'>  id:               unicorn
+</span><span class='line'>  initial_state:
+</span><span class='line'>    enabled: false
+</span><span class='line'>    running: true
+</span><span class='line'>  name:             unicorn
+</span><span class='line'>  result:           restart
+</span><span class='line'>  type:             service
+</span><span class='line'>  uri:              https://api.opscode.com/organizations/supermarket/reports/org/runs/eecb04fb-11df-438a-8e81-dd610eb66616/15</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is handy, but a little limited. What if I want to display only the runs containing the <code>service[unicorn]</code> resource?</p>
+
+<p>That&rsquo;s where my <code>knife-report-resource</code> plugin helps. At first, it was very much specific to finding unicorn restarts on Supermarket app servers. However, I wanted to make it more general purpose as I think people would want to be able to find when arbitrary resources were updated. This is how it works:</p>
+
+<ol>
+<li>Query the Chef Server for a particular set of nodes. For example, <code>'role:supermarket-app AND chef_environment:supermarket-prod'</code>.</li>
+<li>Get all the Chef client runs for a specified time period up until the current time. By default, it starts from one hour ago, but we can pass an ISO8601 timestamp.</li>
+<li>Iterate over all the runs looking for runs by the nodes that were returned by the search query, gathering the specified resource type and name.</li>
+<li>Display some nice output with the node&rsquo;s FQDN, the run&rsquo;s UUID, and a timestamp.</li>
+</ol>
+
+
+<p>For example,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife report resource 'role:supermarket-app AND chef_environment:supermarket-prod' execute 'apt-get update'
+</span><span class='line'>execute[apt-get update] changed in the following runs:
+</span><span class='line'>app-supermarket1.example.com 2230cf30-6d95-4e43-be18-211137eaf802 @ 2014-10-07T14:07:03Z
+</span><span class='line'>app-supermarket2.example.com c5e4d7bf-95a6-4385-9d8e-c6f5617ed79b @ 2014-10-07T14:14:04Z
+</span><span class='line'>app-supermarket3.example.com c4c4b4bb-91b6-4f73-9876-b24b093c7f1e @ 2014-10-07T14:09:54Z
+</span><span class='line'>app-supermarket4.example.com 3eb09034-7539-4a3c-af6d-5b01d35bc63f @ 2014-10-07T13:31:56Z
+</span><span class='line'>app-supermarket5.example.com aa48c1d3-da91-4031-a43d-582a577cbf2d @ 2014-10-07T13:35:15Z
+</span><span class='line'>Use `knife runs show` with the run UUID to get more info</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, we can drill down further into one of these runs with the <code>knife-reporting</code> plugin.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife runs show 2230cf30-6d95-4e43-be18-211137eaf802
+</span><span class='line'>run_detail:
+</span><span class='line'>  data:
+</span><span class='line'>  end_time:          2014-10-07T14:07:03Z
+</span><span class='line'>  node_name:         i-d7fed0df
+</span><span class='line'>  run_id:            2230cf30-6d95-4e43-be18-211137eaf802
+</span><span class='line'>  run_list:          ["role[base]","role[supermarket-app]"]
+</span><span class='line'>  start_time:        2014-10-07T14:03:59Z
+</span><span class='line'>  status:            success
+</span><span class='line'>  total_res_count:   271
+</span><span class='line'>  updated_res_count: 12
+</span><span class='line'>run_resources:
+</span><span class='line'>  cookbook_name:    chef-client
+</span><span class='line'>  cookbook_version: 3.6.0
+</span><span class='line'>  duration:         99
+</span><span class='line'>  final_state:
+</span><span class='line'>    enabled: true
+</span><span class='line'>    running: false
+</span><span class='line'>  id:               chef-client
+</span><span class='line'>  initial_state:
+</span><span class='line'>    enabled: true
+</span><span class='line'>    running: true
+</span><span class='line'>  name:             chef-client
+</span><span class='line'>  result:           enable
+</span><span class='line'>  type:             runit_service
+</span><span class='line'>  uri:              https://api.opscode.com/organizations/supermarket/reports/org/runs/2230cf30-6d95-4e43-be18-211137eaf802/0
+</span><span class='line'>...
+</span><span class='line'>  cookbook_name:    supermarket
+</span><span class='line'>  cookbook_version: 2.11.0
+</span><span class='line'>  duration:         8506
+</span><span class='line'>  final_state:
+</span><span class='line'>  id:               apt-get update
+</span><span class='line'>  initial_state:
+</span><span class='line'>  name:             apt-get update
+</span><span class='line'>  result:           run
+</span><span class='line'>  type:             execute
+</span><span class='line'>  uri:              https://api.opscode.com/organizations/supermarket/reports/org/runs/2230cf30-6d95-4e43-be18-211137eaf802/5</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hopefully you find this plugin useful! It is a RubyGem, and is available on RubyGems.org, and the source is available on GitHub.</p>
+
+<ul>
+<li><a href="https://supermarket.getchef.com/tools/knife-report-resource">Supermarket tool page</a></li>
+<li><a href="https://rubygems.org/gems/knife-report-resource">RubyGem page</a></li>
+<li><a href="https://github.com/jtimberman/knife-report-resource">GitHub repository</a></li>
+</ul>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -3485,198 +3736,6 @@ for the reference material they contain.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/05/09/starting-chefspec-example/">Starting ChefSpec Example</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-05-09T21:10:00-06:00" pubdate data-updated="true">May 9<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This is a quick post to introduce what I&rsquo;m starting on testing with
-<a href="http://acrmp.github.io/chefspec/">ChefSpec</a>. This is from Opscode&rsquo;s
-Java cookbook. While the recipe tested is really trivial, it actually
-has some nuances that require detailed testing.</p>
-
-<p>First off, the whole thing is in
-<a href="https://gist.github.com/jtimberman/5552182">this gist</a>. I&rsquo;m going to
-break it down into sections below. The file is <code>spec/default_spec.rb</code>
-in the java cookbook (not committed/pushed yet).</p>
-
-<p>The chefspec gem is where all the magic comes from. You can read about
-ChefSpec on <a href="http://acrmp.github.io/chefspec/">its home page</a>. You&rsquo;ll
-need to install the gem, and from there, run <code>rspec</code> to run the tests.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chefspec&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next, we&rsquo;re going to describe the default recipe. We&rsquo;re using the
-regular rspec &ldquo;let&rdquo; block to set up the runner to converge the recipe.
-Then, because we know/assume that the openjdk recipe is the default,
-we can say that this chef run should include the <code>java::openjdk</code> recipe.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">describe</span> <span class="s1">&#39;java::default&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">let</span> <span class="p">(</span><span class="ss">:chef_run</span><span class="p">)</span> <span class="p">{</span> <span class="ss">ChefSpec</span><span class="p">:</span><span class="ss">:ChefRunner</span><span class="o">.</span><span class="n">new</span><span class="o">.</span><span class="n">converge</span><span class="p">(</span><span class="s1">&#39;java::default&#39;</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;should include the openjdk recipe by default&#39;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">chef_run</span><span class="o">.</span><span class="n">should</span> <span class="n">include_recipe</span> <span class="s1">&#39;java::openjdk&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next, this cookbook supports Windows. However, we have to set up the
-runner with the correct platform and version (this comes from
-<a href="https://github.com/customink/fauxhai">fauxhai</a>), and then set
-attributes that are required for it to work.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">context</span> <span class="s1">&#39;windows&#39;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let</span><span class="p">(</span><span class="ss">:chef_run</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">runner</span> <span class="o">=</span> <span class="ss">ChefSpec</span><span class="p">:</span><span class="ss">:ChefRunner</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
-</span><span class='line'>        <span class="s1">&#39;platform&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;windows&#39;</span><span class="p">,</span>
-</span><span class='line'>        <span class="s1">&#39;version&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;2008R2&#39;</span>
-</span><span class='line'>        <span class="p">)</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;java&#39;</span><span class="o">][</span><span class="s1">&#39;install_flavor&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;windows&#39;</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;java&#39;</span><span class="o">][</span><span class="s1">&#39;windows&#39;</span><span class="o">][</span><span class="s1">&#39;url&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;http://example.com/windows-java.msi&#39;</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">converge</span><span class="p">(</span><span class="s1">&#39;java::default&#39;</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should include the windows recipe&#39;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">chef_run</span><span class="o">.</span><span class="n">should</span> <span class="n">include_recipe</span> <span class="s1">&#39;java::windows&#39;</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next are the contexts for other install flavors. The default recipe
-will include the right recipe based on the flavor, which is set by an
-attribute. So we set up an rspec context for each recipe, then set the
-install flavor attribute, and test that the right recipe was included.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">context</span> <span class="s1">&#39;oracle&#39;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let</span><span class="p">(</span><span class="ss">:chef_run</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">runner</span> <span class="o">=</span> <span class="ss">ChefSpec</span><span class="p">:</span><span class="ss">:ChefRunner</span><span class="o">.</span><span class="n">new</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;java&#39;</span><span class="o">][</span><span class="s1">&#39;install_flavor&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;oracle&#39;</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">converge</span><span class="p">(</span><span class="s1">&#39;java::default&#39;</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should include the oracle recipe&#39;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">chef_run</span><span class="o">.</span><span class="n">should</span> <span class="n">include_recipe</span> <span class="s1">&#39;java::oracle&#39;</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>  <span class="n">context</span> <span class="s1">&#39;oracle_i386&#39;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let</span><span class="p">(</span><span class="ss">:chef_run</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">runner</span> <span class="o">=</span> <span class="ss">ChefSpec</span><span class="p">:</span><span class="ss">:ChefRunner</span><span class="o">.</span><span class="n">new</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;java&#39;</span><span class="o">][</span><span class="s1">&#39;install_flavor&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;oracle_i386&#39;</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">converge</span><span class="p">(</span><span class="s1">&#39;java::default&#39;</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should include the oracle_i386 recipe&#39;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">chef_run</span><span class="o">.</span><span class="n">should</span> <span class="n">include_recipe</span> <span class="s1">&#39;java::oracle_i386&#39;</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Finally, a recent addition to this cookbook is support for
-<a href="http://tickets.opscode.com/browse/COOK-2897">IBM&rsquo;s Java</a>. In addition
-to setting the install flavor, we must set the URL where the IBM Java
-package is (see the README in the commit linked in that ticket for
-detail), and we can see that the <code>ibm</code> recipe is in fact included.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">context</span> <span class="s1">&#39;ibm&#39;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let</span><span class="p">(</span><span class="ss">:chef_run</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">runner</span> <span class="o">=</span> <span class="ss">ChefSpec</span><span class="p">:</span><span class="ss">:ChefRunner</span><span class="o">.</span><span class="n">new</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;java&#39;</span><span class="o">][</span><span class="s1">&#39;install_flavor&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;ibm&#39;</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;java&#39;</span><span class="o">][</span><span class="s1">&#39;ibm&#39;</span><span class="o">][</span><span class="s1">&#39;url&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;http://example.com/ibm-java.bin&#39;</span>
-</span><span class='line'>      <span class="n">runner</span><span class="o">.</span><span class="n">converge</span><span class="p">(</span><span class="s1">&#39;java::default&#39;</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should include the ibm recipe&#39;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">chef_run</span><span class="o">.</span><span class="n">should</span> <span class="n">include_recipe</span> <span class="s1">&#39;java::ibm&#39;</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is just the start of the testing for this cookbook. We&rsquo;ll need to
-test each individual recipe. However as I&rsquo;ve not written that code
-yet, I don&rsquo;t have examples. Stay tuned!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -3709,6 +3768,10 @@ yet, I don&rsquo;t have examples. Stay tuned!</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
       </li>
     
@@ -3722,10 +3785,6 @@ yet, I don&rsquo;t have examples. Stay tuned!</p>
     
       <li class="post">
         <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a>
       </li>
     
   </ul>
