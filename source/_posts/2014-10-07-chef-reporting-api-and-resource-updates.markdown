@@ -6,7 +6,20 @@ comments: true
 categories: chef, knife, reporting, plugins
 ---
 
-I have released a new knife plugin, but first some background.
+Have you ever wanted to find a list of nodes that updated a specific resource in a period of time? Such as "show me all the nodes in production that had an application service restart in the last hour"? Or, "which nodes have updated their apt cache recently?" For example,
+
+```
+% knife report resource 'role:supermarket-app AND chef_environment:supermarket-prod' execute 'apt-get update'
+execute[apt-get update] changed in the following runs:
+app-supermarket1.example.com 2230cf30-6d95-4e43-be18-211137eaf802 @ 2014-10-07T14:07:03Z
+app-supermarket2.example.com c5e4d7bf-95a6-4385-9d8e-c6f5617ed79b @ 2014-10-07T14:14:04Z
+app-supermarket3.example.com c4c4b4bb-91b6-4f73-9876-b24b093c7f1e @ 2014-10-07T14:09:54Z
+app-supermarket4.example.com 3eb09034-7539-4a3c-af6d-5b01d35bc63f @ 2014-10-07T13:31:56Z
+app-supermarket5.example.com aa48c1d3-da91-4031-a43d-582a577cbf2d @ 2014-10-07T13:35:15Z
+Use `knife runs show` with the run UUID to get more info
+```
+
+I have released a new knife plugin to do that, but first some background.
 
 At CHEF, we run the community's cookbook site, [Supermarket](https://supermarket.getchef.com). We monitor the systems that run the site with [Sensu](http://sensuapp.org). The current infrastructure runs instances on Amazon Web Services EC2, with an Elastic Load Balancer (ELB) in front of them. As a corrective action for a [Supermarket outage](https://www.getchef.com/blog/2014/07/10/supermarket-intermittent-unresponsiveness-postmortem/), CHEF's operations team added a new check for elevated HTTP 500 responses from the application servers behind the ELB. One thing we found was that when Supermarket was deployed, and the `unicorn` server restarted, we would see elevated 500's, but the site often wouldn't actually be impacted.
 
@@ -79,7 +92,7 @@ That's where my `knife-report-resource` plugin helps. At first, it was very much
 3. Iterate over all the runs looking for runs by the nodes that were returned by the search query, gathering the specified resource type and name.
 4. Display some nice output with the node's FQDN, the run's UUID, and a timestamp.
 
-For example,
+From the earlier example:
 
 ```
 % knife report resource 'role:supermarket-app AND chef_environment:supermarket-prod' execute 'apt-get update'
