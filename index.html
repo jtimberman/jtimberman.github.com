@@ -9,7 +9,10 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I have released a new knife plugin, but first some background. At CHEF, we run the community&rsquo;s cookbook site, Supermarket. We monitor the &hellip;">
+  <meta name="description" content="So the earlier example:&mdash;&ndash;
+layout: post
+title: &ldquo;Chef Reporting API and Resource Updates&rdquo;
+date: 2014-10-07 06:18:34 -0600 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -85,7 +88,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a></h1>
+      <h1 class="entry-title"><a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting Api and Resource Updates</a></h1>
     
     
       <p class="meta">
@@ -101,14 +104,42 @@
   
 
 
-<time datetime="2014-10-07T06:18:34-06:00" pubdate data-updated="true">Oct 7<span>th</span>, 2014</time>
+<time datetime="2014-10-07T00:00:00-06:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>I have released a new knife plugin, but first some background.</p>
+  <div class="entry-content"><p>So the earlier example:&mdash;&ndash;
+layout: post
+title: &ldquo;Chef Reporting API and Resource Updates&rdquo;
+date: 2014-10-07 06:18:34 -0600
+comments: true</p>
+
+<h2>categories: chef, knife, reporting, plugins</h2>
+
+<p>Have you ever wanted to find a list of nodes that updated a specific resource in a period of time? Such as &ldquo;show me all the nodes in production that had an application service restart in the last hour&rdquo;? Or, &ldquo;which nodes have updated their apt cache recently?&rdquo; For example,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife report resource 'role:supermarket-app AND chef_environment:supermarket-prod' execute 'apt-get update'
+</span><span class='line'>execute[apt-get update] changed in the following runs:
+</span><span class='line'>app-supermarket1.example.com 2230cf30-6d95-4e43-be18-211137eaf802 @ 2014-10-07T14:07:03Z
+</span><span class='line'>app-supermarket2.example.com c5e4d7bf-95a6-4385-9d8e-c6f5617ed79b @ 2014-10-07T14:14:04Z
+</span><span class='line'>app-supermarket3.example.com c4c4b4bb-91b6-4f73-9876-b24b093c7f1e @ 2014-10-07T14:09:54Z
+</span><span class='line'>app-supermarket4.example.com 3eb09034-7539-4a3c-af6d-5b01d35bc63f @ 2014-10-07T13:31:56Z
+</span><span class='line'>app-supermarket5.example.com aa48c1d3-da91-4031-a43d-582a577cbf2d @ 2014-10-07T13:35:15Z
+</span><span class='line'>Use `knife runs show` with the run UUID to get more info</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I have released a new knife plugin to do that, but first some background.</p>
 
 <p>At CHEF, we run the community&rsquo;s cookbook site, <a href="https://supermarket.getchef.com">Supermarket</a>. We monitor the systems that run the site with <a href="http://sensuapp.org">Sensu</a>. The current infrastructure runs instances on Amazon Web Services EC2, with an Elastic Load Balancer (ELB) in front of them. As a corrective action for a <a href="https://www.getchef.com/blog/2014/07/10/supermarket-intermittent-unresponsiveness-postmortem/">Supermarket outage</a>, CHEF&rsquo;s operations team added a new check for elevated HTTP 500 responses from the application servers behind the ELB. One thing we found was that when Supermarket was deployed, and the <code>unicorn</code> server restarted, we would see elevated 500&rsquo;s, but the site often wouldn&rsquo;t actually be impacted.</p>
 
@@ -218,7 +249,7 @@
 </ol>
 
 
-<p>For example,</p>
+<p>From the earlier example:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -3768,7 +3799,7 @@ for the reference material they contain.</p>
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
+        <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting Api and Resource Updates</a>
       </li>
     
       <li class="post">
