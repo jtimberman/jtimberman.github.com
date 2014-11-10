@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-11-10T11:09:12-07:00</updated>
+  <updated>2014-11-10T11:25:01-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -37,7 +37,7 @@
 
 <h2>Training and Services</h2>
 
-<p>In my time at CHEF, nee Opscode, I&rsquo;ve had several job role changes. After several months of working on cookbooks, I added package and release management (<a href="http://lists.opscode.com/sympa/arc/chef/2014-11/msg00015.html">RIP, apt.opscode.com</a>) to my repetoire. I then switched to technical evangelism and training. With mentorship from <a href="http://twitter.com/botchagalupe">John Willis</a>, I drafted the initial version of <a href="https://www.getchef.com/blog/2010/07/13/open-source-chef-training-open-training/">Chef Fundamentals</a>, and delivered our innaugural training class in Seattle.</p>
+<p>In my time at CHEF, nee Opscode, I&rsquo;ve had several job role changes. After several months of working on cookbooks, I added package and release management (<a href="http://lists.opscode.com/sympa/arc/chef/2014-11/msg00015.html">RIP, apt.opscode.com</a>) to my repertoire. I then switched to technical evangelism and training. With mentorship from <a href="http://twitter.com/botchagalupe">John Willis</a>, I drafted the initial version of <a href="https://www.getchef.com/blog/2010/07/13/open-source-chef-training-open-training/">Chef Fundamentals</a>, and delivered our inaugural training class in Seattle.</p>
 
 <p>I worked with the team John built to deliver training, speak at conferences, and work directly with customers to help make them successful with Chef. Eventually, John left the company to <a href="http://www.enstratius.com/news-events/press-releases/john-willis-announcement">build an awesome team</a> at <a href="http://www.enstratius.com/home">Enstratius</a>. I took on the role of Director of the team, but eventually I discovered that the <a href="http://fractio.nl/2014/09/19/not-a-promotion-a-career-change/">management track</a> was not the future of my career.</p>
 
