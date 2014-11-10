@@ -9,9 +9,10 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="TL;DR: Use runit; skip to
-&ldquo;This is a Solved Problem&rdquo; and &ldquo;Additional Resources&rdquo; sections at the
-end of this post. Recently on &hellip;">
+  <meta name="description" content="Today I joined the
+Food Fight Show
+for a conversation about Application Deployment. Along the way, the
+question came up about where to store &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +82,173 @@ end of this post. Recently on &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/01/28/local-templates-for-application-configuration/">Local Templates for Application Configuration</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-28T09:57:00-07:00" pubdate data-updated="true">Jan 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Today I joined the
+<a href="http://foodfightshow.org/2013/01/application-deployment.html">Food Fight Show</a>
+for a conversation about Application Deployment. Along the way, the
+question came up about where to store application specific
+configuration files. Should they be stored in a Chef cookbook for
+setting up the system for the application? Or shoud they be stored in
+the application codebase itself?</p>
+
+<p>The answer is either, as far as Chef is concerned. Chef&rsquo;s
+<a href="http://docs.opscode.com/resource_template.html">template resource</a>
+can render a template from a local file on disk, or retrieve the
+template from a cookbook. The latter is the most common pattern, so
+let&rsquo;s examine the former, using a local file on disk.</p>
+
+<p>For sake of discussion, let&rsquo;s use a Rails application that needs a
+<code>database.yml</code> file rendered. Also, we&rsquo;ll assume that information
+about the application (database user, password, server) we need is
+stored in a Chef
+<a href="http://docs.opscode.com/essentials_data_bags_store.html">data bag</a>.
+Finally, we&rsquo;re going to assume that the application is already
+deployed on the system somehow and we just want to render the
+database.yml.</p>
+
+<p>The application source tree looks something like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>myapp/
+</span><span class='line'>-&gt; config/
+</span><span class='line'>    -&gt; database.yml.erb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that there should not be a database.yml (non-.erb) here, as it
+will be rendered with Chef. The deployment of the app will end up
+in <code>/srv</code>, so the full path of this template is, for example,
+<code>/srv/myapp/current/config/database.yml.erb</code>. The content of the
+template may look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">&lt;%= @rails_env %&gt;</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @adapter %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @host %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @database %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @username %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @password %&gt;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="s">&#39;utf8&#39;</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The Chef recipe looks like this. Note we&rsquo;ll use a search to find
+the first node that should be the database master (there should only
+be one). For the adapter, we may have set an attribute in the role
+that selects the adapter to use.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">results</span> <span class="o">=</span> <span class="n">search</span><span class="p">(</span><span class="ss">:node</span><span class="p">,</span> <span class="s2">&quot;role:myapp_database_master AND environment:</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">db_master</span> <span class="o">=</span> <span class="n">results</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/srv/myapp/shared/database.yml&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;/srv/myapp/current/config/database.yml.erb&quot;</span>
+</span><span class='line'>  <span class="n">local</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">:rails_env</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:adapter</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;myapp&#39;</span><span class="o">][</span><span class="s1">&#39;db_adapter&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:host</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;fqdn&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:database</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp_</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:username</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:password</span> <span class="o">=&gt;</span> <span class="s2">&quot;SUPERSECRET&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The rendered template, <code>/srv/myapp/shared/database.yml</code>, will look
+like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">production</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mysql</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">domU-12-31-39-14-F1-C3.compute-1.internal</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp_production</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">SUPERSECRET</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">utf8</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This post is only part of the puzzle, mainly to explain what I
+mentioned on the Food Fight Show today. There are a number of
+unanswered questions like,</p>
+
+<ul>
+<li>Should database.yml be .gitignore&rsquo;d?</li>
+<li>How do developers run the app locally?</li>
+<li>How do I use this with Chef Solo?</li>
+</ul>
+
+
+<p>As mentioned on the show, there&rsquo;s currently a
+<a href="http://lists.opscode.com/sympa/arc/chef/2013-01/msg00392.html">thread</a>
+related to this topic on the Chef mailing list.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2700,177 +2868,6 @@ so stay tuned.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/07/26/autostarted-services/">Autostarted Services</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-07-26T22:11:00-06:00" pubdate data-updated="true">Jul 26<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>It is quite common in Debian and Ubuntu that when installing a package
-that provides a daemon, said daemon is started by the init script(s)
-included in the package. This is a matter of
-<a href="http://www.debian.org/doc/debian-policy/ch-opersys.html#s-sysvinit">Debian Policy</a>,
-though I don&rsquo;t interpret that section to literally mean it is
-required. However, it is
-<a href="http://wiki.debian.org/LSBInitScripts/">common enough practice</a> that <a href="https://www.varnish-cache.org/trac/ticket/1004">several people</a>
-have <a href="http://ask.debian.net/questions/how-to-prevent-daemons-from-starting-at-installation-time">asked</a> (or <a href="https://gist.github.com/1721727">ranted</a>) about <a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-02/msg00017.html">the topic</a>.</p>
-
-<p>The main issue of course is that the default configuration for the
-software being installed may not be appropriate before starting up the
-service and making it available on the network. Users of other Linux
-distributions may be smugly smirking as their distribution doesn&rsquo;t
-start the service on package installation.</p>
-
-<p>This post isn&rsquo;t about that.</p>
-
-<p>Instead, this post describes how this problem is resolved using
-configuration management, specifically Chef. I&rsquo;m also going to discuss
-a couple nuances about service management, so watch carefully.</p>
-
-<p>For the example service I&rsquo;m going to use memcached, from the memcached
-package. It is started on package installation as demonstrated:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>vagrant@precise-housepub:~$ sudo apt-get install memcached
-</span><span class='line'>...
-</span><span class='line'>Setting up memcached (1.4.13-0ubuntu2) ...
-</span><span class='line'>Starting memcached: memcached.
-</span><span class='line'>vagrant@precise-housepub:~$ service memcached status
-</span><span class='line'> * memcached is running
-</span><span class='line'>vagrant@precise-housepub:~$ ps awux | grep memcached
-</span><span class='line'> memcache 15176  0.0  0.3 323212  1180 ?        Sl   04:32   0:00 /usr/bin/memcached -m 64 -p 11211 -u memcache -l 127.0.0.1</span></code></pre></td></tr></table></div></figure>
-
-
-<p>As we can see, the memcached service is started. Of course, it is
-using the default configuration, which means that it has a very small
-memory size, and listens on localhost. While the recipe would be very
-simple:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">package</span> <span class="s2">&quot;memcached&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This wouldn&rsquo;t be very useful for discussion, or practical use
-purposes. For now, I&rsquo;m going to post the entire recipe I&rsquo;m going to
-discuss, and then break it down.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;memcached&#39;</span><span class="o">][</span><span class="s1">&#39;memory_max&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;memory&#39;</span><span class="o">][</span><span class="s1">&#39;total&#39;</span><span class="o">].</span><span class="n">to_i</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">0</span><span class="o">.</span><span class="mi">65</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">package</span> <span class="s2">&quot;memcached&quot;</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">service</span> <span class="s2">&quot;memcached&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">supports</span> <span class="ss">:restart</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">:status</span> <span class="o">=&gt;</span> <span class="kp">true</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:enable</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/etc/memcached.conf&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;memcached.conf.erb&quot;</span>
-</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;root&quot;</span>
-</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;root&quot;</span>
-</span><span class='line'>  <span class="n">mode</span> <span class="mo">00644</span>
-</span><span class='line'>  <span class="n">notifies</span> <span class="ss">:restart</span><span class="p">,</span> <span class="s2">&quot;service[memcached]&quot;</span>
-</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
-</span><span class='line'>    <span class="ss">:memory_max</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;memcached&#39;</span><span class="o">][</span><span class="s1">&#39;memory_max&#39;</span><span class="o">]</span>
-</span><span class='line'>    <span class="ss">:ip_addr</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;ipaddress&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">service</span> <span class="s2">&quot;memcached&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:start</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This recipe is fairly straightforward. First, it sets a node attribute
-based on a calculation of the amount of memory installed in the
-system. Then, it will install the memcached package. This of course
-will start up the service with the unsuitable defaults already
-discussed.</p>
-
-<p>The first <code>service</code> resource occurance makes sure that the service is
-enabled. This is the default behavior of the package manager, but this
-also gives clear indication as to the intention of the recipe. Next,
-the configuration file is managed. The exact content of the
-<code>memcached.conf.erb</code> file isn&rsquo;t particularly important. Let us presume
-that the variables passed in are what we care about &ndash; that we want to
-use 65% of the system&rsquo;s total memory for memcached, and listen on the
-default IP address. Maybe other tuning is happening, maybe not. Of
-course, when the configuration is updated, we need to notify the
-memcached service to restart.</p>
-
-<p>Finally, the memcached service is started if it is not already
-running. This occurs at the end to help remedy an issue where the
-service might have been halted, or the configuration file was rendered
-incorrectly (a typo?), so that we can correct such configuration
-problems with Chef in a single subsequent run. This uses a feature of
-Chef where resources can be declared multiple times with different
-actions (or if desired, parameters).</p>
-
-<p>The first time this recipe is run on a node, memcached will be
-installed, started, configured, restarted. We&rsquo;re not aiming to prevent
-the auto-start from occurring at all, but we do automate the
-additional steps required for handling that easily.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/4/">&larr; Older</a>
@@ -2905,6 +2902,10 @@ additional steps required for handling that easily.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/10/07/reflecting-on-six-years-with-chef/">Reflecting on Six Years With Chef</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
       </li>
     
@@ -2918,10 +2919,6 @@ additional steps required for handling that easily.</p>
     
       <li class="post">
         <a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
       </li>
     
   </ul>

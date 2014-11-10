@@ -9,9 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I created a plugin for knife that will display a specified option from
-Chef&rsquo;s configuration object, Chef::Config. It operates with the
-scope of &hellip;">
+  <meta name="description" content="It is quite common in Debian and Ubuntu that when installing a package
+that provides a daemon, said daemon is started by the init script(s)
+included &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +81,177 @@ scope of &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/07/26/autostarted-services/">Autostarted Services</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-07-26T22:11:00-06:00" pubdate data-updated="true">Jul 26<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It is quite common in Debian and Ubuntu that when installing a package
+that provides a daemon, said daemon is started by the init script(s)
+included in the package. This is a matter of
+<a href="http://www.debian.org/doc/debian-policy/ch-opersys.html#s-sysvinit">Debian Policy</a>,
+though I don&rsquo;t interpret that section to literally mean it is
+required. However, it is
+<a href="http://wiki.debian.org/LSBInitScripts/">common enough practice</a> that <a href="https://www.varnish-cache.org/trac/ticket/1004">several people</a>
+have <a href="http://ask.debian.net/questions/how-to-prevent-daemons-from-starting-at-installation-time">asked</a> (or <a href="https://gist.github.com/1721727">ranted</a>) about <a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-02/msg00017.html">the topic</a>.</p>
+
+<p>The main issue of course is that the default configuration for the
+software being installed may not be appropriate before starting up the
+service and making it available on the network. Users of other Linux
+distributions may be smugly smirking as their distribution doesn&rsquo;t
+start the service on package installation.</p>
+
+<p>This post isn&rsquo;t about that.</p>
+
+<p>Instead, this post describes how this problem is resolved using
+configuration management, specifically Chef. I&rsquo;m also going to discuss
+a couple nuances about service management, so watch carefully.</p>
+
+<p>For the example service I&rsquo;m going to use memcached, from the memcached
+package. It is started on package installation as demonstrated:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>vagrant@precise-housepub:~$ sudo apt-get install memcached
+</span><span class='line'>...
+</span><span class='line'>Setting up memcached (1.4.13-0ubuntu2) ...
+</span><span class='line'>Starting memcached: memcached.
+</span><span class='line'>vagrant@precise-housepub:~$ service memcached status
+</span><span class='line'> * memcached is running
+</span><span class='line'>vagrant@precise-housepub:~$ ps awux | grep memcached
+</span><span class='line'> memcache 15176  0.0  0.3 323212  1180 ?        Sl   04:32   0:00 /usr/bin/memcached -m 64 -p 11211 -u memcache -l 127.0.0.1</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As we can see, the memcached service is started. Of course, it is
+using the default configuration, which means that it has a very small
+memory size, and listens on localhost. While the recipe would be very
+simple:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">package</span> <span class="s2">&quot;memcached&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This wouldn&rsquo;t be very useful for discussion, or practical use
+purposes. For now, I&rsquo;m going to post the entire recipe I&rsquo;m going to
+discuss, and then break it down.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">set</span><span class="o">[</span><span class="s1">&#39;memcached&#39;</span><span class="o">][</span><span class="s1">&#39;memory_max&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;memory&#39;</span><span class="o">][</span><span class="s1">&#39;total&#39;</span><span class="o">].</span><span class="n">to_i</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">0</span><span class="o">.</span><span class="mi">65</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">package</span> <span class="s2">&quot;memcached&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">service</span> <span class="s2">&quot;memcached&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">supports</span> <span class="ss">:restart</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">:status</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:enable</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/etc/memcached.conf&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;memcached.conf.erb&quot;</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;root&quot;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;root&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">00644</span>
+</span><span class='line'>  <span class="n">notifies</span> <span class="ss">:restart</span><span class="p">,</span> <span class="s2">&quot;service[memcached]&quot;</span>
+</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">:memory_max</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;memcached&#39;</span><span class="o">][</span><span class="s1">&#39;memory_max&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="ss">:ip_addr</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;ipaddress&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">service</span> <span class="s2">&quot;memcached&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:start</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This recipe is fairly straightforward. First, it sets a node attribute
+based on a calculation of the amount of memory installed in the
+system. Then, it will install the memcached package. This of course
+will start up the service with the unsuitable defaults already
+discussed.</p>
+
+<p>The first <code>service</code> resource occurance makes sure that the service is
+enabled. This is the default behavior of the package manager, but this
+also gives clear indication as to the intention of the recipe. Next,
+the configuration file is managed. The exact content of the
+<code>memcached.conf.erb</code> file isn&rsquo;t particularly important. Let us presume
+that the variables passed in are what we care about &ndash; that we want to
+use 65% of the system&rsquo;s total memory for memcached, and listen on the
+default IP address. Maybe other tuning is happening, maybe not. Of
+course, when the configuration is updated, we need to notify the
+memcached service to restart.</p>
+
+<p>Finally, the memcached service is started if it is not already
+running. This occurs at the end to help remedy an issue where the
+service might have been halted, or the configuration file was rendered
+incorrectly (a typo?), so that we can correct such configuration
+problems with Chef in a single subsequent run. This uses a feature of
+Chef where resources can be declared multiple times with different
+actions (or if desired, parameters).</p>
+
+<p>The first time this recipe is run on a node, memcached will be
+installed, started, configured, restarted. We&rsquo;re not aiming to prevent
+the auto-start from occurring at all, but we do automate the
+additional steps required for handling that easily.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1612,145 +1783,6 @@ route.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/01/28/iterm2-with-tmux/">iTerm2 With Tmux</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-01-28T15:03:00-07:00" pubdate data-updated="true">Jan 28<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>A new &ldquo;which tool is best&rdquo; battle is raging in the internets amongst
-developers and system administrators. The contestants are <a href="http://www.gnu.org/software/screen/">screen</a>
-and <a href="http://tmux.sourceforge.net/">tmux</a>, and the
-<a href="https://www.google.com/search?q=tmux+vs+screen">jury is still out</a>.
-This is very much an argument over what color to paint the bikeshed,
-but with the latest version of
-<a href="http://www.iterm2.com/">iTerm2</a>, I think tmux is even more
-compelling. Personally, I chose tmux awhile ago.</p>
-
-<p>At my <a href="http://opscode.com">day job</a>, I worked with a customer that
-uses tmux for remote pairing between developers. At the time, tmux had
-better customizability, and better split-pane support (screen didn&rsquo;t
-yet have vertical split). I stuck with tmux ever since, and was very
-pleased when an iTerm2 update announced integration with tmux.</p>
-
-<h1>iTerm2</h1>
-
-<p>For those who aren&rsquo;t aware, iTerm2 is an alternate terminal program
-for Mac OS X. It is actually an updated codebase from the original,
-<a href="http://iterm.sourceforge.net/">iTerm</a>, which is effectively
-<a href="http://iterm.sourceforge.net/news.shtml">unmaintained</a>. iTerm2 offers
-a lot of excellent features like split panes, Growl support, and
-<a href="http://www.iterm2.com/#/section/features">many more</a>.</p>
-
-<p>One of the excellent new features is integration with tmux.</p>
-
-<h1>iTerm2&rsquo;s tmux integration</h1>
-
-<p>If you already have iTerm2 installed, you may have seen the update
-check prompt you to update. You also need to install a special version
-of tmux that has the integration patched. The iTerm2 author is working
-with the tmux author to get this into the latest tmux codebase, so
-hopefully the custom compiled version won&rsquo;t be necessary soon.</p>
-
-<p>Using the new feature is relatively straightforward. Start up iTerm2
-like normal. Then run <code>tmux -C</code> to open a new iTerm2 window that works
-like tmux.</p>
-
-<p><img src="http://img.skitch.com/20120128-cxjbh9hf9feagn5p5ieg574uce.png" alt="Launch tmux in iTerm2" /></p>
-
-<p>Use the tmux menu in iTerm2 to open new windows in tmux. Note that there
-are keyboard shortcuts for each of these, and they are not the same as
-the tmux window commands.</p>
-
-<p><img src="http://img.skitch.com/20120128-diexhy69d8t3b9da6g65yjmsum.png" alt="Use tmux menu to open buffers" /></p>
-
-<p>You can also attach to a tmux session running in iTerm2. In the
-screenshot, this is running on the same system, for example purposes.
-However, since OS X has SSH, this can be useful if you want to SSH to
-another system in the local network and connect to the running
-session. For example, the system shown below is my wife&rsquo;s iMac over
-screensharing, but I wouldn&rsquo;t need to use screenshare (or participate
-in its lag) to connect to this anymore. The same holds true for
-connecting to my work laptop if necessary.</p>
-
-<p><img src="http://img.skitch.com/20120128-txr67q3jftmcw26n84jm5hpgm.png" alt="Attach to tmux session in iTerm2" /></p>
-
-<p>In this final example screenshot, you can see that I have multiple
-panes split in one iTerm2 tab. These correspond to the split windows
-in the attached tmux in the other window. Also, the two tabs in the
-iTerm2 window are separate tmux windows (<code>0:zsh</code> and <code>1:zsh</code>).</p>
-
-<p><img src="http://img.skitch.com/20120128-miaa1dkeatt2hebxcxst8sydy1.png" alt="iTerm2 panes are panes in tmux" /></p>
-
-<p>And now, I can SSH to that system and attach to the tmux session
-started by iTerm2.</p>
-
-<p><img src="http://img.skitch.com/20120129-gjgajqnekq93da59m4r86ewh2k.png" alt="SSH to remote and run tmux attach" /></p>
-
-<p><img src="http://img.skitch.com/20120129-j2x4iir5557nt68n5jmr64f8dp.png" alt="tmux is attached to iTerm2 session" /></p>
-
-<h1>Automating Installation with Chef</h1>
-
-<p>Installing OS X apps is quite easy, but I automate them
-<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">with Chef</a>
-anyway. While it is a simple &ldquo;install update and restart&rdquo;, with a
-couple commands to install the update, I do have three systems I want
-this on. I updated my
-<a href="http://community.opscode.com/cookbooks/iterm2">iterm2 cookbook</a> to
-support installing the tmux integration for iTerm2. This is disabled
-by default, so it needs to be enabled via a node attribute. For
-example, I have this in my <code>workstation</code> role applied to my OS X
-workstations.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s2">&quot;workstation&quot;</span>
-</span><span class='line'><span class="n">description</span> <span class="s2">&quot;Mac OS X workstations&quot;</span>
-</span><span class='line'><span class="n">run_list</span><span class="p">(</span><span class="s2">&quot;recipe[tmux]&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">default_attributes</span><span class="p">(</span>
-</span><span class='line'>  <span class="s2">&quot;iterm2&quot;</span> <span class="o">=&gt;</span> <span class="p">{</span>
-</span><span class='line'>    <span class="s2">&quot;tmux_enabled&quot;</span> <span class="o">=&gt;</span> <span class="kp">true</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Check out the iterm2 cookbook&rsquo;s README for more information.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -1785,6 +1817,10 @@ workstations.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/10/07/reflecting-on-six-years-with-chef/">Reflecting on Six Years With Chef</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
       </li>
     
@@ -1798,10 +1834,6 @@ workstations.</p>
     
       <li class="post">
         <a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/02/01/evolution-of-cookbook-development/">Evolution of Cookbook Development</a>
       </li>
     
   </ul>

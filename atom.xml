@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-10-07T09:31:31-06:00</updated>
+  <updated>2014-11-10T11:09:12-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,68 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Reflecting on Six Years With Chef]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/10/07/reflecting-on-six-years-with-chef/"/>
+    <updated>2014-10-07T11:36:43-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/10/07/reflecting-on-six-years-with-chef</id>
+    <content type="html"><![CDATA[<p>It actually started a bit over seven years ago. I saw the writing on the wall at IBM; my job was soon to be outsourced. I found an open position with the SANS institute, accepted an offer there, and was due to start work in a couple of weeks. Around the same time, my friends Adam Jacob and Nathan Haneysmith had started HJK Solutions. They invited me to join them then, but it wasn&rsquo;t the right time for me. Adam told me that at SANS I should at least use the <a href="https://puppetlabs.com">automation</a> <a href="http://capistranorb.com/">tools</a> and general <a href="http://infrastructures.org">infrastructure management model</a> they planned to use. It turned out this was sage advice, for a number of reasons.</p>
+
+<p>Around April, 2008, Adam told me he was working on &ldquo;Chef,&rdquo; a Ruby based configuration management and system integration framework. I was excited about its potential, and a few months later on July 2, 2008, I started with HJK Solutions as a Linux system administration consultant. I got familiar with HJK&rsquo;s puppet-based stack, and ancillary Ruby tools like <a href="https://github.com/adamhjk/iclassify/wiki">iClassify</a> while working on their customer infrastructures over the coming months. After Opscode was founded and we released Chef 0.5, my primary focus was porting HJK&rsquo;s puppet modules to <a href="https://github.com/opscode/cookbooks">chef cookbooks</a>.</p>
+
+<h2>opscode/cookbooks</h2>
+
+<p>Adam had started the repository to give new users a place to begin using Chef with full working examples. I continued their development, and had the opportunity to solve hard problems of integration web application stacks with them. There were three important reasons for the repository to exist:</p>
+
+<ol>
+<li>We have a body of knowledge as a tribe, and that can be codified.</li>
+<li>Infrastructure as code is real, and it <em>can</em> be reusable.</li>
+<li>The best way to learn Chef is to use Chef, and I had a goal to know Chef well enough to teach it to new users and companies.</li>
+</ol>
+
+
+<p>The development of general purpose cookbooks ends up being harder than any of us really imagined, I think. Every platform is different, so not only did I have to learn Chef, I had to learn how different platforms behave for common (and uncommon) pieces of software in web operations stacks. Over the years of managing these cookbooks, I learned a lot about how the community was developing workflows for using Chef, and how they differed from our opinions. I learned also learned how to manage and contribute to open source projects at a rather large scale, and how to have compassion and empathy for new or frustrated users.</p>
+
+<h2>Training and Services</h2>
+
+<p>In my time at CHEF, nee Opscode, I&rsquo;ve had several job role changes. After several months of working on cookbooks, I added package and release management (<a href="http://lists.opscode.com/sympa/arc/chef/2014-11/msg00015.html">RIP, apt.opscode.com</a>) to my repetoire. I then switched to technical evangelism and training. With mentorship from <a href="http://twitter.com/botchagalupe">John Willis</a>, I drafted the initial version of <a href="https://www.getchef.com/blog/2010/07/13/open-source-chef-training-open-training/">Chef Fundamentals</a>, and delivered our innaugural training class in Seattle.</p>
+
+<p>I worked with the team John built to deliver training, speak at conferences, and work directly with customers to help make them successful with Chef. Eventually, John left the company to <a href="http://www.enstratius.com/news-events/press-releases/john-willis-announcement">build an awesome team</a> at <a href="http://www.enstratius.com/home">Enstratius</a>. I took on the role of Director of the team, but eventually I discovered that the <a href="http://fractio.nl/2014/09/19/not-a-promotion-a-career-change/">management track</a> was not the future of my career.</p>
+
+<h2>Open Source and Community</h2>
+
+<p>I came back to working on the cookbooks, which I had previously <a href="https://github.com/opscode-cookbooks">split into separate repositories</a>. I was also working more directly in the community, doing public training classes only (our consulting team did private/onsite classes), participating in our <a href="https://botbot.me/freenode/chef">IRC channels</a> and mailing <a href="http://lists.opscode.com">lists</a>. We had some organization churn, and I was moved around between four different managers, eventually reporting to <a href="https://twitter.com/nathenharvey">the inimitable Nathen Harvey</a>.</p>
+
+<p>During one of our 1-1 discussions, he said, &ldquo;You know, Joshua. You write a lot of cookbooks to automate infrastructure. But you haven&rsquo;t actually worked on any infrastructure in years. You should do something about that.&rdquo;</p>
+
+<p>Around that time, there was a &ldquo;senior system administrator&rdquo; job posting on our very own careers site. I talked to our VP of Operations, and after a brief transition period, moved completely over to the ops team. I was able to bring with me the great practices from the community for developing cookbooks: testing with <a href="http://sethvargo.github.io/chefspec/">chefspec</a> and <a href="http://serverspec.org/">serverspec</a>, code consistency with <a href="">rubocop</a> and <a href="http://foodcritic.io">foodcritic</a>, and wrapping it all up with <a href="http://kitchen.ci">test kitchen</a>.</p>
+
+<h2>The Future</h2>
+
+<p>I&rsquo;ve had the privilege to do work that I love, which is automating hard problems using Chef. I&rsquo;ve also had the privilege of being part of the web operations, infrastructure as code, devops, and Chef communities over the past six years. I&rsquo;ve been to all four Chef summits, and all three ChefConfs. A thing I&rsquo;ve noticed over the years is that many conversations keep coming up at the summits and ChefConf. Fresh on my mind because the last summit was so recent is the topic of cookbook reusability. See, during the time that I managed opscode/cookbooks, I eventually saw the point people in the community were making about these being real software repositories that need to be managed like other complex software projects. We split up the repository into individual repositories per cookbook. We started adding test coverage, and conforming to consistency via syntax and style lint checking. That didn&rsquo;t make cookboks more reusable, but it lowered the barrier of contribution, which in turn made them more reusable as more use cases could be covered. I got to be a part of that evolution, and it&rsquo;s been awesome.</p>
+
+<p>While using Chef is one of my favorite technical things to do, I have come to the conclusion that based on my experience the best thing I can do is be a facilitator of stronger technical discipline with regard to using Chef. Primarily, this means improving how CHEF uses Chef to build Chef for our community and customers. We&rsquo;re already really good at using Chef to build Chef (the product), and run Hosted Chef (the service). However, awesome tools from the community such as Test Kitchen, Berkshelf, ChefSpec, and Foodcritic did not exist when we started out. Between new, awesome tools, and growing our organization with new awesome people, we need to improve on getting our team members up to speed on the process and workflow that helps us deliver higher quality products.</p>
+
+<p>That is why I&rsquo;m moving into a new role at CHEF. The sixth year marks as good a time as any to make a change, and I&rsquo;m no stranger to that. I&rsquo;m joining a team of quality advocacy led by Joseph Smith, as part of Jez Humble&rsquo;s &ldquo;Office of Continuous Improvement and Velocity.&rdquo; In this new role, I will focus on improving our overall technical excellence so we can deliver better products to our community and customers, and so we can have awesome use cases and examples for managing Chef Server and its add-ons at scale.</p>
+
+<p>My first short term goal in this new role is a workstation automation cookbook that can be used and extended by our internal teams for ensuring everyone has a consistent set of tools to work on the product. This will be made an open source project that the community can use and extend as well. We&rsquo;ll have more information about this as it becomes &ldquo;a thing.&rdquo;</p>
+
+<p>Next, I want to improve how we work on incidents. We&rsquo;ve had sporadic blog posts about issues in Hosted Chef and Supermarket, and I&rsquo;d like to see this get better.</p>
+
+<p>I&rsquo;m also interested in managing Chef Server 12 clusters, including all the add-ons. Recently I worked on the <a href="https://github.com/opscode-cookbooks/chef-server-cluster">chef-server-cluster</a> cookbook, which will become the way CHEF deploys and manages Hosted Chef using the version 12 packages. Part of the earliest days of opscode/cookbooks, I maintained cookbooks to setup the open source Chef Server. Long time users may remember the &ldquo;chef solo bootstrap&rdquo; stack. Since then, CHEF has continued to iterate on that idea, and the &ldquo;ctl&rdquo; management commands largely use chef-solo under the hood. The new cookbook combines and wraps up manual processes and the &ldquo;ctl&rdquo; commands to enable us, our community, and our customers to build scalable Chef Server clusters using the omnibus packages. The cookbook uses chef-provisioning to do much of the heavy lifting.</p>
+
+<p>It should be easy for organizations to be successful with Chef. That includes CHEF! My goal in my new position is to fuel the love of Chef internally and externally, whip up awesome, and stir up more delight. I also look forward to seeing what our community and customers do with Chef in their organizations.</p>
+
+<h2>Thank you</h2>
+
+<p>I&rsquo;d like to thank the friends and mentors I&rsquo;ve had along this journey. You&rsquo;re all important, and we&rsquo;ve shared some good times and code, and sometimes hugs. It&rsquo;s been amazing to see so many people become successful with Chef.</p>
+
+<p>Above all, I&rsquo;d like to thank Adam Jacob: for the opportunity to join in this ride, for inspiration to be a better system administrator and operations professional, for mentorship along the way, and for writing Chef in the first place. Cheers, my friend.</p>
+
+<p>Here&rsquo;s to many more years of whipping up awesome!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Chef Reporting API and Resource Updates]]></title>
@@ -4979,146 +5041,6 @@ configuration for multiple people in a single repository. The real
 benefit here is that the configuration file is Ruby, which provides a
 lot of flexibility. Of course, when using someone else&rsquo;s configuration
 examples, one should always read the code and understand it first :&ndash;).</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Local Templates for Application Configuration]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/01/28/local-templates-for-application-configuration/"/>
-    <updated>2013-01-28T09:57:00-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/01/28/local-templates-for-application-configuration</id>
-    <content type="html"><![CDATA[<p>Today I joined the
-<a href="http://foodfightshow.org/2013/01/application-deployment.html">Food Fight Show</a>
-for a conversation about Application Deployment. Along the way, the
-question came up about where to store application specific
-configuration files. Should they be stored in a Chef cookbook for
-setting up the system for the application? Or shoud they be stored in
-the application codebase itself?</p>
-
-<p>The answer is either, as far as Chef is concerned. Chef&rsquo;s
-<a href="http://docs.opscode.com/resource_template.html">template resource</a>
-can render a template from a local file on disk, or retrieve the
-template from a cookbook. The latter is the most common pattern, so
-let&rsquo;s examine the former, using a local file on disk.</p>
-
-<p>For sake of discussion, let&rsquo;s use a Rails application that needs a
-<code>database.yml</code> file rendered. Also, we&rsquo;ll assume that information
-about the application (database user, password, server) we need is
-stored in a Chef
-<a href="http://docs.opscode.com/essentials_data_bags_store.html">data bag</a>.
-Finally, we&rsquo;re going to assume that the application is already
-deployed on the system somehow and we just want to render the
-database.yml.</p>
-
-<p>The application source tree looks something like this:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>myapp/
-</span><span class='line'>-&gt; config/
-</span><span class='line'>    -&gt; database.yml.erb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note that there should not be a database.yml (non-.erb) here, as it
-will be rendered with Chef. The deployment of the app will end up
-in <code>/srv</code>, so the full path of this template is, for example,
-<code>/srv/myapp/current/config/database.yml.erb</code>. The content of the
-template may look like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">&lt;%= @rails_env %&gt;</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @adapter %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @host %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @database %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @username %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @password %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="s">&#39;utf8&#39;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The Chef recipe looks like this. Note we&rsquo;ll use a search to find
-the first node that should be the database master (there should only
-be one). For the adapter, we may have set an attribute in the role
-that selects the adapter to use.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">results</span> <span class="o">=</span> <span class="n">search</span><span class="p">(</span><span class="ss">:node</span><span class="p">,</span> <span class="s2">&quot;role:myapp_database_master AND environment:</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">db_master</span> <span class="o">=</span> <span class="n">results</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/srv/myapp/shared/database.yml&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;/srv/myapp/current/config/database.yml.erb&quot;</span>
-</span><span class='line'>  <span class="n">local</span> <span class="kp">true</span>
-</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
-</span><span class='line'>    <span class="ss">:rails_env</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:adapter</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;myapp&#39;</span><span class="o">][</span><span class="s1">&#39;db_adapter&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:host</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;fqdn&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:database</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp_</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:username</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp&quot;</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:password</span> <span class="o">=&gt;</span> <span class="s2">&quot;SUPERSECRET&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The rendered template, <code>/srv/myapp/shared/database.yml</code>, will look
-like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">production</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mysql</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">domU-12-31-39-14-F1-C3.compute-1.internal</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp_production</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">SUPERSECRET</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">utf8</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This post is only part of the puzzle, mainly to explain what I
-mentioned on the Food Fight Show today. There are a number of
-unanswered questions like,</p>
-
-<ul>
-<li>Should database.yml be .gitignore&rsquo;d?</li>
-<li>How do developers run the app locally?</li>
-<li>How do I use this with Chef Solo?</li>
-</ul>
-
-
-<p>As mentioned on the show, there&rsquo;s currently a
-<a href="http://lists.opscode.com/sympa/arc/chef/2013-01/msg00392.html">thread</a>
-related to this topic on the Chef mailing list.</p>
 ]]></content>
   </entry>
   
