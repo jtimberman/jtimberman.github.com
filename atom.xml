@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-11-10T11:25:01-07:00</updated>
+  <updated>2014-12-11T14:07:19-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,170 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Chef 12: Fix Untrusted Self Sign Certs]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/"/>
+    <updated>2014-12-11T13:42:41-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs</id>
+    <content type="html"><![CDATA[<p>Scenario: You&rsquo;ve started up a brand new Chef Server using version 12, and you have installed Chef 12 on your local system. You log into the Management Console to create a user and organization (or do this with the command-line <code>chef-server-ctl</code> commands), and you&rsquo;re ready to rock with this knife.rb:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;tester-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;tester-validator.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;https://chef-server.example.com/organizations/tester&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, when you try to check things out with knife:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">client</span> <span class="n">list</span>
+</span><span class='line'><span class="ss">ERROR</span><span class="p">:</span> <span class="no">SSL</span> <span class="no">Validation</span> <span class="n">failure</span> <span class="n">connecting</span> <span class="n">to</span> <span class="ss">host</span><span class="p">:</span> <span class="n">ip</span><span class="o">-</span><span class="mi">172</span><span class="o">-</span><span class="mi">31</span><span class="o">-</span><span class="mi">8</span><span class="o">-</span><span class="mi">24</span><span class="o">.</span><span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">internal</span> <span class="o">-</span> <span class="no">SSL_connect</span> <span class="n">returned</span><span class="o">=</span><span class="mi">1</span> <span class="n">errno</span><span class="o">=</span><span class="mi">0</span> <span class="n">state</span><span class="o">=</span><span class="no">SSLv3</span> <span class="n">read</span> <span class="n">server</span> <span class="n">certificate</span> <span class="ss">B</span><span class="p">:</span> <span class="n">certificate</span> <span class="n">verify</span> <span class="n">failed</span>
+</span><span class='line'><span class="ss">ERROR</span><span class="p">:</span> <span class="ss">OpenSSL</span><span class="p">:</span><span class="ss">:SSL</span><span class="o">::</span><span class="ss">SSLError</span><span class="p">:</span> <span class="no">SSL_connect</span> <span class="n">returned</span><span class="o">=</span><span class="mi">1</span> <span class="n">errno</span><span class="o">=</span><span class="mi">0</span> <span class="n">state</span><span class="o">=</span><span class="no">SSLv3</span> <span class="n">read</span> <span class="n">server</span> <span class="n">certificate</span> <span class="ss">B</span><span class="p">:</span> <span class="n">certificate</span> <span class="n">verify</span> <span class="n">failed</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is because Chef client 12 has SSL verification enabled by default for all requests. Since the certificate generated by the Chef Server 12 installation is self-signed, there isn&rsquo;t a signing CA that can be verified, and this fails. Never fear intrepid user, for you can get the SSL certificate from the server and store it as a &ldquo;trusted&rdquo; certificate. To find out how, use <code>knife ssl check</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">Connecting</span> <span class="n">to</span> <span class="n">host</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="p">:</span><span class="mi">443</span>
+</span><span class='line'><span class="ss">ERROR</span><span class="p">:</span> <span class="no">The</span> <span class="no">SSL</span> <span class="n">certificate</span> <span class="n">of</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">could</span> <span class="ow">not</span> <span class="n">be</span> <span class="n">verified</span>
+</span><span class='line'><span class="no">Certificate</span> <span class="n">issuer</span> <span class="ss">data</span><span class="p">:</span> <span class="sr">/C=US/</span><span class="no">ST</span><span class="o">=</span><span class="no">WA</span><span class="o">/</span><span class="n">L</span><span class="o">=</span><span class="no">Seattle</span><span class="o">/</span><span class="n">O</span><span class="o">=</span><span class="no">YouCorp</span><span class="o">/</span><span class="no">OU</span><span class="o">=</span><span class="no">Operations</span><span class="o">/</span><span class="no">CN</span><span class="o">=</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">emailAddress</span><span class="o">=</span><span class="n">you</span><span class="vi">@example</span><span class="o">.</span><span class="n">com</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Configuration</span> <span class="ss">Info</span><span class="p">:</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">OpenSSL</span> <span class="ss">Configuration</span><span class="p">:</span>
+</span><span class='line'><span class="o">*</span> <span class="ss">Version</span><span class="p">:</span> <span class="no">OpenSSL</span> <span class="mi">1</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span><span class="n">j</span> <span class="mi">15</span> <span class="no">Oct</span> <span class="mi">2014</span>
+</span><span class='line'><span class="o">*</span> <span class="no">Certificate</span> <span class="ss">file</span><span class="p">:</span> <span class="sr">/opt/</span><span class="n">chefdk</span><span class="o">/</span><span class="n">embedded</span><span class="o">/</span><span class="n">ssl</span><span class="o">/</span><span class="n">cert</span><span class="o">.</span><span class="n">pem</span>
+</span><span class='line'><span class="o">*</span> <span class="no">Certificate</span> <span class="ss">directory</span><span class="p">:</span> <span class="sr">/opt/</span><span class="n">chefdk</span><span class="o">/</span><span class="n">embedded</span><span class="o">/</span><span class="n">ssl</span><span class="o">/</span><span class="n">certs</span>
+</span><span class='line'><span class="no">Chef</span> <span class="no">SSL</span> <span class="ss">Configuration</span><span class="p">:</span>
+</span><span class='line'><span class="o">*</span> <span class="n">ssl_ca_path</span><span class="p">:</span> <span class="kp">nil</span>
+</span><span class='line'><span class="o">*</span> <span class="n">ssl_ca_file</span><span class="p">:</span> <span class="kp">nil</span>
+</span><span class='line'><span class="o">*</span> <span class="n">trusted_certs_dir</span><span class="p">:</span> <span class="s2">&quot;/Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">TO</span> <span class="no">FIX</span> <span class="no">THIS</span> <span class="ss">ERROR</span><span class="p">:</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">If</span> <span class="n">the</span> <span class="n">server</span> <span class="n">you</span> <span class="n">are</span> <span class="n">connecting</span> <span class="n">to</span> <span class="n">uses</span> <span class="n">a</span> <span class="nb">self</span><span class="o">-</span><span class="n">signed</span> <span class="n">certificate</span><span class="p">,</span> <span class="n">you</span> <span class="n">must</span>
+</span><span class='line'><span class="n">configure</span> <span class="n">chef</span> <span class="n">to</span> <span class="n">trust</span> <span class="n">that</span> <span class="n">server</span><span class="s1">&#39;s certificate.</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">By default, the certificate is stored in the following location on the host</span>
+</span><span class='line'><span class="s1">where your chef-server runs:</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">  /var/opt/chef-server/nginx/ca/SERVER_HOSTNAME.crt</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">Copy that file to your trusted_certs_dir (currently: /Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs)</span>
+</span><span class='line'><span class="s1">using SSH/SCP or some other secure method, then re-run this command to confirm</span>
+</span><span class='line'><span class="s1">that the server&#39;</span><span class="n">s</span> <span class="n">certificate</span> <span class="n">is</span> <span class="n">now</span> <span class="n">trusted</span><span class="o">.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>(note, <a href="https://github.com/opscode/chef/issues/2604">this chef-server location is incorrect</a>, it&rsquo;s <code>/var/opt/opscode</code>)</p>
+
+<p>There is a <code>fetch</code> plugin for <code>knife</code> too. Let&rsquo;s download the certificate to the automatically preconfigured trusted certificate location mentioned in the output above.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">ssl</span> <span class="n">fetch</span>
+</span><span class='line'><span class="ss">WARNING</span><span class="p">:</span> <span class="no">Certificates</span> <span class="n">from</span> <span class="n">ip</span><span class="o">-</span><span class="mi">172</span><span class="o">-</span><span class="mi">31</span><span class="o">-</span><span class="mi">8</span><span class="o">-</span><span class="mi">24</span><span class="o">.</span><span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">internal</span> <span class="n">will</span> <span class="n">be</span> <span class="n">fetched</span> <span class="ow">and</span> <span class="n">placed</span> <span class="k">in</span> <span class="n">your</span> <span class="n">trusted_cert</span>
+</span><span class='line'><span class="n">directory</span> <span class="p">(</span><span class="sr">/Users/</span><span class="n">jtimberman</span><span class="o">/</span><span class="no">Downloads</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">repo</span><span class="o">/.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="p">)</span><span class="o">.</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Knife</span> <span class="n">has</span> <span class="n">no</span> <span class="n">means</span> <span class="n">to</span> <span class="n">verify</span> <span class="n">these</span> <span class="n">are</span> <span class="n">the</span> <span class="n">correct</span> <span class="n">certificates</span><span class="o">.</span> <span class="no">You</span> <span class="n">should</span>
+</span><span class='line'><span class="n">verify</span> <span class="n">the</span> <span class="n">authenticity</span> <span class="n">of</span> <span class="n">these</span> <span class="n">certificates</span> <span class="n">after</span> <span class="n">downloading</span><span class="o">.</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Adding</span> <span class="n">certificate</span> <span class="k">for</span> <span class="n">ip</span><span class="o">-</span><span class="mi">172</span><span class="o">-</span><span class="mi">31</span><span class="o">-</span><span class="mi">8</span><span class="o">-</span><span class="mi">24</span><span class="o">.</span><span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">internal</span> <span class="k">in</span> <span class="sr">/Users/</span><span class="n">jtimberman</span><span class="o">/</span><span class="no">Downloads</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">repo</span><span class="o">/.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">ip</span><span class="o">-</span><span class="mi">172</span><span class="o">-</span><span class="mi">31</span><span class="o">-</span><span class="mi">8</span><span class="o">-</span><span class="mi">24</span><span class="n">_us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span><span class="n">_compute_internal</span><span class="o">.</span><span class="n">crt</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The certificate should be verified that what was downloaded is in fact the same as the certificate on the Chef Server. For example, I compared SHA256 checksums:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% ssh </span><span class="n">ubuntu</span><span class="vi">@chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">sudo</span> <span class="n">sha256sum</span> <span class="sr">/var/o</span><span class="n">pt</span><span class="o">/</span><span class="n">opscode</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">ca</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
+</span><span class='line'><span class="mo">04372</span><span class="mi">8</span><span class="n">b55144861ed43a426c67addca357a5889158886aee50685cf1422b5ebf</span>  <span class="sr">/var/o</span><span class="n">pt</span><span class="o">/</span><span class="n">opscode</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">ca</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
+</span><span class='line'><span class="sx">% gsha256sum </span><span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
+</span><span class='line'><span class="mo">04372</span><span class="mi">8</span><span class="n">b55144861ed43a426c67addca357a5889158886aee50685cf1422b5ebf</span>  <span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now check knife client list again.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">client</span> <span class="n">list</span>
+</span><span class='line'><span class="n">tester</span><span class="o">-</span><span class="n">validator</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Victory!</p>
+
+<p>Now, we need to get the ceritficate out to every node in the infrastructure in its <code>trusted_certs_dir</code> &ndash; by default this is <code>/etc/chef/trusted_certs</code>. The most simple way to do this is to use <code>knife ssh</code> to run knife on the target nodes.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">ssh</span> <span class="s1">&#39;name:*&#39;</span> <span class="s1">&#39;sudo knife ssl fetch -c /etc/chef/client.rb&#39;</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="ss">WARNING</span><span class="p">:</span> <span class="no">Certificates</span> <span class="n">from</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">-</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">will</span> <span class="n">be</span> <span class="n">fetched</span> <span class="ow">and</span> <span class="n">placed</span> <span class="k">in</span> <span class="n">your</span> <span class="n">trusted_cert</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">directory</span> <span class="p">(</span><span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="p">)</span><span class="o">.</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="no">Knife</span> <span class="n">has</span> <span class="n">no</span> <span class="n">means</span> <span class="n">to</span> <span class="n">verify</span> <span class="n">these</span> <span class="n">are</span> <span class="n">the</span> <span class="n">correct</span> <span class="n">certificates</span><span class="o">.</span> <span class="no">You</span> <span class="n">should</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">verify</span> <span class="n">the</span> <span class="n">authenticity</span> <span class="n">of</span> <span class="n">these</span> <span class="n">certificates</span> <span class="n">after</span> <span class="n">downloading</span><span class="o">.</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span>
+</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="no">Adding</span> <span class="n">certificate</span> <span class="k">for</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="k">in</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The output will be interleaved for all the nodes returned by <code>knife ssh</code>. Of course, we should verify the SHA256 checksums like before, which can be done again with <code>knife ssh</code>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Reflecting on Six Years With Chef]]></title>
@@ -4899,148 +5063,6 @@ net-ssh version constraints in Chef:</p>
 <li><a href="http://tickets.opscode.com/browse/CHEF-3156">http://tickets.opscode.com/browse/CHEF-3156</a></li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Local-only Knife Configuration]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/02/01/local-only-knife-configuration/"/>
-    <updated>2013-02-01T10:57:00-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/02/01/local-only-knife-configuration</id>
-    <content type="html"><![CDATA[<p>In this post I want to discuss briefly an approach to setting up a
-shared Knife configuration file for teams using the same Chef
-Repository, while supporting customized configuration.</p>
-
-<h2>Background</h2>
-
-<p>Most infrastructures managed by Chef have multiple people working on
-them. Recently, several people in the Ruby community started working
-together on migrating <a href="http://rubygems.org">RubyGems</a> to
-<a href="https://github.com/rubygems/rubygems-aws">Amazon EC2</a>.</p>
-
-<p>The repository has a shared <code>.chef/knife.rb</code> which sets some local
-paths where cookbooks and roles are located. In addition to this, I
-wanted to test building the infrastructure using a Chef Server and my
-own EC2 account.</p>
-
-<h2>The Approach</h2>
-
-<p>At Opscode, we believe in leveraging internal DSLs. The
-<code>.chef/knife.rb</code> (and Chef&rsquo;s <code>client.rb</code> or <code>solo.rb</code>, etc) is no
-exception. While you can have a fairly simple configuration like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>        <span class="s2">&quot;jtimberman&quot;</span>
-</span><span class='line'><span class="n">client_key</span>       <span class="s2">&quot;/home/jtimberman/.chef/jtimberman.pem&quot;</span>
-</span><span class='line'><span class="n">chef_server_url</span>  <span class="s2">&quot;https://api.opscode.com/organizations/my_organization&quot;</span>
-</span><span class='line'><span class="n">cookbook_path</span>    <span class="s2">&quot;cookbooks&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>You can also have something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>     <span class="ss">:info</span>
-</span><span class='line'><span class="n">log_location</span>  <span class="no">STDOUT</span>
-</span><span class='line'><span class="n">node_name</span>     <span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;NODE_NAME&quot;</span><span class="o">]</span> <span class="o">||</span> <span class="s2">&quot;solo&quot;</span>
-</span><span class='line'><span class="n">client_key</span>    <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../solo.pem&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span>
-</span><span class='line'><span class="n">cache_type</span>    <span class="s2">&quot;BasicFile&quot;</span>
-</span><span class='line'><span class="n">cache_options</span><span class="p">(</span><span class="ss">path</span><span class="p">:</span> <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../checksums&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'><span class="n">cookbook_path</span> <span class="o">[</span> <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span> <span class="o">]</span>
-</span><span class='line'><span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'>  <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is the <code>knife.rb</code> included in the
-<a href="https://github.com/rubygems/rubygems-aws">RubyGems-AWS repo</a>.</p>
-
-<p>The main part of interest here is the last three lines.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'>  <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This says &ldquo;if a file <code>knife.local.rb</code> exists, then load its
-configuration. The <code>Chef::Config</code> class is what Chef uses for
-configuration files, and the <code>#from_file</code> method will load the
-specified file.</p>
-
-<p>In this case, the content of my <code>knife.local.rb</code> is:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>                <span class="s2">&quot;jtimberman&quot;</span>
-</span><span class='line'><span class="n">client_key</span>               <span class="s2">&quot;/Users/jtimberman/.chef/jtimberman.pem&quot;</span>
-</span><span class='line'><span class="n">validation_client_name</span>   <span class="s2">&quot;ORGNAME-validator&quot;</span>
-</span><span class='line'><span class="n">validation_key</span>           <span class="s2">&quot;/Users/jtimberman/.chef/ORGNAME-validator.pem&quot;</span>
-</span><span class='line'><span class="n">chef_server_url</span>          <span class="s2">&quot;https://api.opscode.com/organizations/ORGNAME&quot;</span>
-</span><span class='line'><span class="n">cookbook_path</span> <span class="o">[</span>
-</span><span class='line'>  <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">),</span>
-</span><span class='line'>  <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/site-cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span>
-</span><span class='line'><span class="o">]</span>
-</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_access_key_id</span><span class="o">]</span>      <span class="o">=</span> <span class="s2">&quot;Some access key I like&quot;</span>
-</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_secret_access_key</span><span class="o">]</span>  <span class="o">=</span> <span class="s2">&quot;The matching secret access key&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here I&rsquo;m setting my Opscode Hosted Chef credentials and server. I also
-set the <code>cookbook_path</code> to include the site-cookbooks directory (this
-should probably go in the regular knife.rb). Finally, I set the knife
-configuration options for my AWS EC2 account.</p>
-
-<p>The configuration is parsed top-down, so the options here that overlap
-the <code>knife.rb</code> will be used instead.</p>
-
-<h2>In the Repository</h2>
-
-<p>In the repository, commit only the <code>.chef/knife.rb</code> and not the
-<code>.chef/knife.local.rb</code>. I recommend adding the local file to the
-.gitignore or VCS equivalent.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% echo </span><span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">knife</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">rb</span> <span class="o">&gt;&gt;</span> <span class="o">.</span><span class="n">gitignore</span>
-</span><span class='line'><span class="sx">% git </span><span class="n">add</span> <span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">knife</span><span class="o">.</span><span class="n">rb</span> <span class="o">.</span><span class="n">gitignore</span>
-</span><span class='line'><span class="sx">% git </span><span class="n">commit</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;keep general knife.rb, local config is ignored&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Conclusion</h2>
-
-<p>There are many approaches to solving the issue of having shared Knife
-configuration for multiple people in a single repository. The real
-benefit here is that the configuration file is Ruby, which provides a
-lot of flexibility. Of course, when using someone else&rsquo;s configuration
-examples, one should always read the code and understand it first :&ndash;).</p>
 ]]></content>
   </entry>
   
