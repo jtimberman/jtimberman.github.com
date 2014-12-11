@@ -20,7 +20,7 @@ However, when you try to check things out with knife:
 
 ```
 % knife client list
-ERROR: SSL Validation failure connecting to host: ip-172-31-8-24.us-west-2.compute.internal - SSL_connect returned=1 errno=0 state=SSLv3 read server certificate B: certificate verify failed
+ERROR: SSL Validation failure connecting to host: chef-server.example.com - SSL_connect returned=1 errno=0 state=SSLv3 read server certificate B: certificate verify failed
 ERROR: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=SSLv3 read server certificate B: certificate verify failed
 ```
 
@@ -63,13 +63,13 @@ There is a `fetch` plugin for `knife` too. Let's download the certificate to the
 
 ```
 % knife ssl fetch
-WARNING: Certificates from ip-172-31-8-24.us-west-2.compute.internal will be fetched and placed in your trusted_cert
+WARNING: Certificates from chef-server.example.com will be fetched and placed in your trusted_cert
 directory (/Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs).
 
 Knife has no means to verify these are the correct certificates. You should
 verify the authenticity of these certificates after downloading.
 
-Adding certificate for ip-172-31-8-24.us-west-2.compute.internal in /Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs/ip-172-31-8-24_us-west-2_compute_internal.crt
+Adding certificate for chef-server.example.com in /Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs/chef-server.example.com.crt
 ```
 
 The certificate should be verified that what was downloaded is in fact the same as the certificate on the Chef Server. For example, I compared SHA256 checksums:
