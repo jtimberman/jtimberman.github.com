@@ -4,7 +4,7 @@
   <title><![CDATA[Category: personal | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/personal/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-11T15:55:01-07:00</updated>
+  <updated>2014-12-24T14:19:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -72,6 +72,399 @@
 <p>Above all, I&rsquo;d like to thank Adam Jacob: for the opportunity to join in this ride, for inspiration to be a better system administrator and operations professional, for mentorship along the way, and for writing Chef in the first place. Cheers, my friend.</p>
 
 <p>Here&rsquo;s to many more years of whipping up awesome!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Chef Repository Berkshelf Conversion]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/19/chef-repository-berkshelf-conversion/"/>
+    <updated>2012-11-19T22:10:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/19/chef-repository-berkshelf-conversion</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve been managing my personal systems with Chef since Chef was
+created, though I didn&rsquo;t always use the same chef-repo for them. For
+about two years though, I&rsquo;ve used pretty much the same repository,
+which has grown and accumulated cruft over time. Fortunately since
+it&rsquo;s only me working on it, and I only have a few systems, it is
+really easy to make drastic changes.</p>
+
+<p>I have a number of to do items that I&rsquo;ve put off, so this weekend I
+decided to spend some time cleaning house, and convert the repository
+to have cookbooks managed by <a href="http://berkshelf.com/">Berkshelf</a>.</p>
+
+<h1>Rationale</h1>
+
+<p>There are other cookbook management tools, including the built in
+&ldquo;<code>knife cookbook site install</code>&rdquo;,
+<a href="https://github.com/applicationsonline/librarian">librarian-chef</a>, and
+<a href="https://github.com/kisoku/whisk">whisk</a>. I have used the knife
+command as long as it has existed, and it worked well for awhile. The
+buzz in the community since the
+<a href="http://wiki.opscode.com/display/chef/Opscode+Community+Summit+2">Chef Summit</a>
+has been around &ldquo;library&rdquo; vs &ldquo;application&rdquo; cookbooks, especially in
+conjunction with Berkshelf so I thought I&rsquo;d give it a go.</p>
+
+<h1>Before Berkshelf</h1>
+
+<p>Before I started on this migration, here are some numbers about
+cookbooks in my chef-repo.</p>
+
+<ul>
+<li>113 total cookbooks</li>
+<li>33 &ldquo;chef-vendor&rdquo; branches (<code>knife cookbook site install</code> creates a
+branch for each cookbook)</li>
+<li>50 &ldquo;cookbook site&rdquo; tags</li>
+</ul>
+
+
+<p>Overall, I had about a half dozen cookbooks that I actually modified
+from their &ldquo;upstream&rdquo; versions on the community site. Most of those
+customizations were adding munin plugins, changing a couple minor
+settings in a template, or long term workarounds that are actually
+fixed in the current released versions.</p>
+
+<h1>The Conversion</h1>
+
+<p>The conversion was fairly straight-forward. It required some preparation:</p>
+
+<ul>
+<li>Determine the cookbooks that would be managed by Berkshelf.</li>
+<li>Refactor customizations into &ldquo;application&rdquo; cookbooks or otherwise.</li>
+<li>Remove all those cookbooks, and the completely unused cookbooks.</li>
+</ul>
+
+
+<h2>Cookbooks in Berkshelf</h2>
+
+<p>Determining the cookbooks that would be managed by Berkshelf was
+simple. I started with all the cookbooks that had been installed via
+<code>knife cookbook site install</code>. Since the command creates a branch for
+each one, I had a nice list already. I did review that for cookbooks I
+know I wasn&rsquo;t using anymore, or didn&rsquo;t plan to use for long, to
+simplify matters.</p>
+
+<p><code>
+git branch | grep 'chef-vendor' | awk -F- '{print $3}'
+</code></p>
+
+<p>I also looked at the cookbooks that are applied to node&rsquo;s expanded run
+lists. This <code>knife exec</code> one-liner will return such a list.</p>
+
+<p><code>
+knife exec -E "nodes.find('recipes:*').map {|n| n[:recipes]}.flatten.map {|r| r.gsub(/::.*/, '')}.sort.uniq"
+</code></p>
+
+<h2>Refactoring Customization</h2>
+
+<p>My repository has a fair amount of customization to the cookbooks from
+the community site. Rather than go through all the changes, I&rsquo;ll
+summarize with the more interesting parts.</p>
+
+<p>First, I use Samba for filesharing from an Ubuntu server. I originally
+changed the <code>samba::server</code> recipe so the services used upstart as the
+provider and set a <code>start_command</code> on Ubuntu, which looked like this
+(<code>s</code> is smbd or nmbd):</p>
+
+<p><code>ruby
+service s do
+  pattern "smbd|nmbd" if node["platform"] =~ /^arch$/
+  provider Chef::Provider::Service::Upstart if platform?("ubuntu")
+  start_command "/usr/bin/service #{s} start" if platform?("ubuntu")
+  action [:enable, :start]
+end
+</code></p>
+
+<p>The upstream cookbook doesn&rsquo;t have this change, so I added an
+&ldquo;application&rdquo; cookbook, <code>housepub-samba</code>, which has this as the
+default recipe:</p>
+
+<p><code>ruby
+["smbd", "nmbd"].each do |s|
+  srv = resource("service[#{s}]")
+  srv.provider Chef::Provider::Service::Upstart
+  srv.start_command "/usr/bin/service #{s} start"
+end if platform?("ubuntu")
+</code></p>
+
+<p>For each of the Samba services, we look up the resource in the
+resource collection, then change the provider to upstart, and set the
+<code>start_command</code> to use upstart&rsquo;s service command.</p>
+
+<p>Next, I use OpenVPN. I also want to modify the template used for the
+<code>/etc/openvpn/server.conf</code> and <code>/etc/openvpn/server.up.sh</code> resources.
+Again, I create an &ldquo;application&rdquo; cookbook, <code>housepub-openvpn</code>, and the
+default recipe looks like this:</p>
+
+<p><code>ruby
+resources("template[/etc/openvpn/server.conf]").cookbook "housepub-openvpn"
+resources("template[/etc/openvpn/server.up.sh]").cookbook "housepub-openvpn"
+</code></p>
+
+<p>This is a shorter form of what was done for Samba&rsquo;s services above.
+The <code>#resources</code> method does the lookup and returns the resource, and
+any of the resource parameter attributes can be used as a method, so I
+send the <code>cookbook</code> method to both template resources, setting this
+cookbook, <code>housepub-openvpn</code> as the cookbook that contains the
+template to use. Then, I copy my customized templates into
+<code>cookbooks/housepub-openvpn/templates/default</code>, and Chef will do the
+right thing.</p>
+
+<p>Other cookbook changes I made were:</p>
+
+<ul>
+<li>Change the data bag name used in <code>djbdns::internal_server</code>, which I
+changed back so I could use the upstream recipe.</li>
+<li>Add munin plugins to various cookbooks. As I&rsquo;m planning to move
+things to Graphite, this is unnecessary and removed.</li>
+<li>A few of my OS X cookbooks have the plist file for use with
+<code>mac_os_x_plist</code> LWRP. These are simply moved to my
+<a href="https://github.com/jtimberman/workstation-chef-repo/blob/master/cookbooks/workstation/recipes/default.rb#L72-L76">workstation data bag</a>.</li>
+</ul>
+
+
+<p>Finally, one special case is
+<a href="http://fnichol.github.com/chef-rbenv/">Fletcher Nichol&rsquo;s rbenv cookbook</a>.
+The <code>rbenv::user_install</code> recipe manages <code>/etc/profile.d/rbenv.sh</code>,
+which requires root privileges. However, on my workstations where I
+use this particular cookbook, I run Chef as my user, so I had to
+comment this resource out. To allow for a non-privileged user running
+Chef, the better approach is to determine whether to manage that file
+by using an attribute, so I
+<a href="https://github.com/fnichol/chef-rbenv/pull/20">opened a pull request</a>,
+which is now merged. Now I just have the attribute set to <code>false</code> in
+my workstation role, and can use the cookbook unmodified.</p>
+
+<h2>Remove Unused and Berkshelf Cookbooks</h2>
+
+<p>Removing the unused cookbooks, and the cookbooks managed by Berkshelf
+was simple. First, each cookbook gained an entry in the Berksfile. For
+example, <code>apache2</code>.</p>
+
+<p><code>ruby
+cookbook "apache2"
+</code></p>
+
+<p>Next, the cookbook was deleted from the Chef Server. I did this,
+purging all versions, because I planned to upload all the cookbooks as
+resolved by Berkshelf.</p>
+
+<p><code>
+knife cookbook delete -yap apache2
+</code></p>
+
+<p>Finally, I removed the cookbook from the git repository.</p>
+
+<p><code>
+git rm -r cookbooks/apache2
+git add Berksfile
+git commit -m 'apache2 is managed by Berkshelf'
+</code></p>
+
+<p>The cookbooks that I didn&rsquo;t plan to use, I simply didn&rsquo;t add to
+Berkshelf, and removed them all in one commit.</p>
+
+<h1>After Berkshelf</h1>
+
+<p>The net effect of this change is a simpler, easier to manage
+repository. I now have only 23 cookbooks in my <code>cookbooks</code> directory.
+Some of those are candidates for refactoring and updating to the
+upstream ones, I just didn&rsquo;t get to that yet. Most of them are
+&ldquo;internal&rdquo; cookbooks that aren&rsquo;t published, since they&rsquo;re specific for
+my internal network, such as my housepub-samba or housepub-openvpn
+cookbooks.</p>
+
+<p>On my Chef Server, I have 90 total cookbooks, which means 67 are
+managed by Berkshelf. I have 62 entries in my Berksfile, and some of
+those are dependencies of others, which means that can be refactored
+some as well.</p>
+
+<p>The workflow is simpler, and there&rsquo;s fewer moving parts to worry about
+changing. I think this is a net positive for this since I do it in my
+free time. However, there&rsquo;s a couple of issues, which should be
+addressed in Berkshelf soon.</p>
+
+<p>First,
+<a href="https://github.com/RiotGames/berkshelf/issues/190">Berkshelf issue #190</a>,
+which would have <code>berks update</code> take a single cookbook to update.
+Currently, it has to update all the cookbooks, and this takes time for
+impatient people.</p>
+
+<p>Second,
+<a href="https://github.com/RiotGames/berkshelf/issues/191">issue #191</a>, which
+would allow <code>berks upload</code> to take a single cookbook to upload.
+Normally, one could just use <code>knife cookbook upload</code>, but the
+directory where Berkshelf stores cookbooks it is managing are not
+located in the <code>cookbook_path</code>, and the knife command uses the
+directory name a the cookbook name. Berkshelf creates directories like
+<code>~/.berkshelf/cookbooks/apache2-1.3.0</code>, so the way to upload Berkshelf
+managed cookbooks is all together with the <code>berks upload</code> command.
+This isn&rsquo;t a huge deal for me as I already uploaded all the cookbooks
+I&rsquo;ve been using once.</p>
+
+<p>All in all, I am happy with this workflow, though. It is simple and
+hassle-free for me. Plus, I have more flexibility for maintaining my
+additional non-Opscode cookbooks.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Blog Moved to GitHub Pages]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2011/09/29/blog-moved-to-github-pages/"/>
+    <updated>2011-09-29T22:59:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2011/09/29/blog-moved-to-github-pages</id>
+    <content type="html"><![CDATA[<p>I moved my blog from Posterous to GitHub Pages. Posterous isn&rsquo;t a bad
+system and service. It just didn&rsquo;t fit the way I wanted to manage my
+site and the content. It was entirely adequate to get going but I was
+dissatisfied with the web form for creating new posts. It also loaded
+pages fairly slow.</p>
+
+<h2>GitHub is awesome.</h2>
+
+<p>Many others have migrated their technical blogs from services like
+Posterous, Wordpress, Tumblr, Blogger and so on over to GitHub
+Pages. Most often, this is because these services are database backed
+systems, use a web form for creating posts, and don&rsquo;t have a revision
+control system that we all know and love under the covers.</p>
+
+<p><a href="http://pages.github.com">GitHub Pages</a> is a great service by GitHub
+that allows you to serve up static content out of a Git
+repository. You can do simple static HTML pages, or you can use a
+static page generation framework to generate the content out of
+Markdown (or Textile, or HAML) files. There&rsquo;s a number of options for
+this, such as <a href="http://nanoc.stoneship.org/">Nanoc</a> or <a href="http://jekyllrb.com/">Jekyll</a>.</p>
+
+<h2>I chose Jekyll.</h2>
+
+<p><em>&ldquo;Jekyll is a blog-aware, static site generator in Ruby&rdquo;</em> &ndash;
+<a href="http://jekyllrb.com">http://jekyllrb.com/</a></p>
+
+<p>Jekyll fits the bill for me. It supports different markup languages,
+such as Markdown or Textile, and GitHub Pages has easy instructions on
+how to get going with it. Jekyll also includes a <em>fantastic</em> Posterous
+importer, which flawlessly imported all my
+<a href="/blog/archives">old posts</a>. Now I can start creating new posts as
+Markdown in Emacs, instead of using a web form, or editing HTML
+directly. I can also save revisions using Git, instead of saving a
+draft and monkeying with an interface to recover drafts or publish
+them.</p>
+
+<p>I sat down a few days ago and imported my old posts. Then I ran
+through trying to get them to look alright with a decent CSS
+theme. However, I&rsquo;m not a front end designer/developer, and I never
+remember how do do anything useful with CSS. So I went looking for
+canned ways to build a nice interface/theme for this blog.</p>
+
+<p>I remembered
+<a href="http://github.com/twitter/bootstrap">Twitter&rsquo;s Bootstrap</a> project,
+and thought that might be interesting. After looking at it I was
+confused about what to use, since it is a very complete solution,
+including iOS mobile layouts in addition to normal web pages. After
+looking elsewhere, I saw mention of <a href="http://octopress.org">Octopress</a>,
+a framework built on top of Jekyll. I queried
+<a href="http://junglist.gen.nz">some</a> <a href="http://likens.us/">people</a> that had
+experience with it, found that it would probably meet my needs, and
+gave it a whirl.</p>
+
+<p>Naturally if you&rsquo;re familiar with Octopress, you can see the result of
+that evaluation. It is a really nice system for managing the
+site.</p>
+
+<h2>I like my blogging workflow.</h2>
+
+<p>I like my new blogging workflow. It is very natural to me as a system
+engineer, as it uses Emacs, Rake, a Web Service, and Git. I&rsquo;ll walk
+through the steps I took in creating this post. I&rsquo;m going to skip the
+setup of Octopress, as that is
+<a href="http://octopress.org/docs/setup/">documented elsewhere</a>.</p>
+
+<pre><code>% rake new_post'[Blog Moved to GitHub Pages]'
+Creating new post: source/_posts/2011-09-29-blog-moved-to-github-pages.markdown
+</code></pre>
+
+<p>Then I load up the source file created by the rake task and enter all
+this content you see, saving my work along the way. I did, but could
+choose, to commit to the git repository as well. In order to preview
+the content, I can actually run the entire blog with Octopress&rsquo;s built
+in rake task:</p>
+
+<pre><code>% rake preview
+Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
+[2011-09-29 23:06:20] INFO  WEBrick 1.3.1
+[2011-09-29 23:06:20] INFO  ruby 1.9.2 (2011-07-09) [x86_64-darwin11.1.0]
+[2011-09-29 23:06:20] INFO  WEBrick::HTTPServer#start: pid=92373 port=4000
+Configuration from /Users/jtimberman/Development/jtimberman.github.com/_config.yml
+Auto-regenerating enabled: source -&gt; public
+[2011-09-29 23:06:21] regeneration: 107 files changed
+&gt;&gt;&gt; Compass is watching for changes. Press Ctrl-C to Stop.
+127.0.0.1 - - [29/Sep/2011 23:06:24] "GET / HTTP/1.1" 200 50231 0.0181
+</code></pre>
+
+<p>Now I can browse to <a href="http://localhost:4000">http://localhost:4000</a> and see exactly what the
+blog post will look like, and it loads lightning fast. This is of
+paramount importance for me, as I travel a lot and would really like
+to develop blog entries while I&rsquo;m on airplanes with no internet
+access.</p>
+
+<p>Once I am satisfied with the content and how it looks, I commit to the
+repository and push the source branch.</p>
+
+<pre><code>% git add source/_posts
+% git commit -m 'Blog moved to github pages'
+</code></pre>
+
+<p>Then, it is time to deploy the blog to GitHub Pages. Octopress makes
+this easy with another rake task:</p>
+
+<pre><code>% rake deploy
+</code></pre>
+
+<p>This takes care of all the repository work required, and pushes to
+GitHub. Then I push the actual source branch.</p>
+
+<pre><code>% git push origin source
+</code></pre>
+
+<h2>Nice things about Octopress</h2>
+
+<p>Besides the rake tasks and that works with Jekyll, Octopress has some
+really nice features.</p>
+
+<p>First of all, the default theme is really nice. One thing I wanted out
+of CSS on top of Jekyll was something large enough that I could read
+easily. I think this theme looks pretty good and is quite readable
+with my default browser settings. It is also nice and easily readable
+on my iPhone.</p>
+
+<p>Second, Octopress is very customizable. I can easily modify the layout
+by editing the <code>_config.yml</code> file. Of course I can change the theme,
+but I can add JavaScript, layouts and more. I modified the footer to
+include my Creative Commons license for the content of this site.</p>
+
+<p>Third, I really like the default layout in this theme. The recent
+posts, GitHub repo links and my last few tweets are a nice
+touch. Plus I have integrated Disqus for comments and set up Google
+Analytics easily, thanks to the ease of customizing the configuration.</p>
+
+<h2>Conclusion</h2>
+
+<p>In closing, I&rsquo;m very happy with this solution. I now have a blogging
+workflow that I&rsquo;m comfortable with, and that will hopefully result in
+more posts.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Obligatory first post]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2011/04/02/obligatory-first-post/"/>
+    <updated>2011-04-02T00:00:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2011/04/02/obligatory-first-post</id>
+    <content type="html"><![CDATA[<p>My intention is to post about Linux/Unix system administration, Ruby development, Opscode's Chef and even more philosophical topics like devops, cloud computing, or really anything that strikes my fancy.</p>
+
+
+<p>I'm probably going to post a lot about Chef. Most of this is my own personal exploration of the framework and testing for my personal usage. While I work for Opscode and you're free to ask me any time about Chef and the Opscode Platform, I post on this blog in my personal time. Not all the information here is canonical or even reflects the best way to go about doing <strong>anything,</strong>&nbsp;let alone with Chef.</p>
+
+
+<p>&nbsp;</p>
+
 ]]></content>
   </entry>
   

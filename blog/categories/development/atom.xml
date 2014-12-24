@@ -1,0 +1,1252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: development | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/development/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-12-24T14:19:22-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Evolution of Cookbook Development]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/02/01/evolution-of-cookbook-development/"/>
+    <updated>2014-02-01T12:48:49-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/02/01/evolution-of-cookbook-development</id>
+    <content type="html"><![CDATA[<p>In this post, I will explore some development patterns that I&rsquo;ve seen
+(and done!) with Chef cookbooks, and then explain how we can evolve to
+a new level of cookbook development. The examples here come from
+Chef&rsquo;s new
+<a href="http://www.getchef.com/blog/2014/01/28/chefs-splunk-cookbook-2/">chef-splunk cookbook</a>,
+which is a refactored version of an old <code>splunk42</code> cookbook. While
+there is a public <code>splunk</code> cookbook on the Chef community site, it
+shares some of the issues that I saw with our old one, which are
+partially subject matter of this post.</p>
+
+<p>Anyway, on to the evolution!</p>
+
+<h1>Sub-optimal patterns</h1>
+
+<p>These are the general patterns I&rsquo;m going to address.</p>
+
+<ul>
+<li>Composing URLs from multiple local variables or attributes</li>
+<li>Large conditional logic branches like case statements in recipes</li>
+<li>Not using definitions when it is best to do so</li>
+<li>Knowledge of how node run lists are composed for search, or
+searching for &ldquo;<code>role:some-server</code>&rdquo;</li>
+<li>Repeated resources across multiple orthogonal recipes</li>
+<li>Plaintext secrets in attributes or data bag items</li>
+</ul>
+
+
+<p>Cookbook development is a wide and varied topic, so there are many
+other patterns to consider, but these are the ones most relevant to
+the refactored cookbook.</p>
+
+<h2>Composing URLs</h2>
+
+<p>It may seem like a good idea, to compose URL strings as attributes or
+local variables in a recipe based on other attributes and local
+variables. For example, in our <code>splunk42</code> cookbook we have this:</p>
+
+<p><code>ruby
+splunk_root = "http://download.splunk.com/releases/"
+splunk_version = "4.2.1"
+splunk_build = "98164"
+splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-amd64.deb"
+os = node['os'].gsub(/\d*/, '')
+</code></p>
+
+<p>These get used in the following <code>remote_file</code> resource:</p>
+
+<p><code>ruby
+remote_file "/opt/#{splunk_file}" do
+  source "#{splunk_root}/#{splunk_version}/universalforwarder/#{os}/#{splunk_file}"
+  action :create_if_missing
+end
+</code></p>
+
+<p>We reused the filename variable, and composed the URL to the file to
+download. Then to upgrade, we can simply modify the <code>splunk_version</code>
+and <code>splunk_build</code>, as Splunk uses a consistent naming theme for their
+package URLs (thanks, Splunk!). The filename itself is built from a
+case statement (more on that in the next section). We could further
+make the version and build attributes, so users can update to newer
+versions by simply changing the attribute.</p>
+
+<p>So what is bad about this? Two things.</p>
+
+<ol>
+<li>This is in the <code>splunk42::client</code> recipe, and repeated again in the
+<code>splunk42::server</code> recipe with only minor differences (the package
+name, splunk vs splunkforwarder).</li>
+<li>Ruby has excellent libraries for manipulating URIs and paths as
+strings, and it is easier to break up a string than compose a new one.</li>
+</ol>
+
+
+<p>How can this be improved? First, we can set attributes for the full URL.
+The actual code for that is below, but suffice to say, it will look
+like this (note the version is different because the new cookbook installs
+a new Splunk version).</p>
+
+<p><code>ruby
+default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883-linux-2.6-amd64.deb'
+</code></p>
+
+<p>Second, we have
+<a href="https://github.com/opscode-cookbooks/chef-splunk/blob/master/libraries/helpers.rb">helper libraries</a>
+distributed with the cookbook that break up the URI so we can return
+just the package filename.</p>
+
+<p><code>ruby
+def splunk_file(uri)
+  require 'pathname'
+  require 'uri'
+  Pathname.new(URI.parse(uri).path).basename.to_s
+end
+</code></p>
+
+<p>The previous <code>remote_file</code> resource is rewritten like this:</p>
+
+<p><code>ruby
+remote_file "/opt/#{splunk_file(node['splunk']['forwarder']['url'])}" do
+  source node['splunk']['forwarder']['url']
+  action :create_if_missing
+end
+</code></p>
+
+<p>As a bonus, the helper methods are available in other places like
+other cookbooks and recipes, rather than the local scope of local
+variables.</p>
+
+<h2>Conditional Logic Branches</h2>
+
+<p>One of the wonderful things about Chef is that simple Ruby
+conditionals can be used in recipes to selectively set values for
+resource attributes, define resources that should be used, and other
+decisions. One of the horrible things about Chef is that simple Ruby
+conditionals can be used in recipes and often end up being far more
+complicated than originally intended, especially when handling
+multiple platforms and versions.</p>
+
+<p>In the earlier example, we had a <code>splunk_file</code> local variable set in a
+recipe. I mentioned it was built from a case statement, which looks
+like this, in full:</p>
+
+<p>```ruby
+splunk_file = case node[&lsquo;platform_family&rsquo;]
+  when &ldquo;rhel&rdquo;</p>
+
+<pre><code>if node['kernel']['machine'] == "x86_64"
+  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-x86_64.rpm"
+else
+  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}.i386.rpm"
+end
+</code></pre>
+
+<p>  when &ldquo;debian&rdquo;</p>
+
+<pre><code>if node['kernel']['machine'] == "x86_64"
+  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-amd64.deb"
+else
+  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-intel.deb"
+end
+</code></pre>
+
+<p>  when &ldquo;omnios&rdquo;</p>
+
+<pre><code>splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-solaris-10-intel.pkg.Z"
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Splunk itself supports many platforms, and not all of them are covered
+by this conditional, so it&rsquo;s easy to imagine how this can get further
+out of control and make the recipe even harder to follow. Also
+consider that this is just the <code>client</code> portion for the
+<code>splunkforwarder</code> package, this same block is repeated in the <code>server</code>
+recipe, for the <code>splunk</code> package.</p>
+
+<p>So why is this bad? There are three reasons.</p>
+
+<ol>
+<li>We have a large block of conditionals that sit in front of a user
+reading a recipe.</li>
+<li>This logic isn&rsquo;t reusable elsewhere, so it has to be duplicated in
+the other recipe.</li>
+<li>This is only the logic for the package filename, but we care about
+the entire URL. I&rsquo;ve also covered that composing URLs isn&rsquo;t delightful.</li>
+</ol>
+
+
+<p>What is a better approach? Use the full URL as I mentioned before, and
+set it as an attribute. We will still have the gnarly case statement,
+but it will be tucked away in the <code>attributes/default.rb</code> file, and
+hidden from anyone reading the recipe (which is the thing they
+probably care most about reading).</p>
+
+<p>```ruby
+case node[&lsquo;platform_family&rsquo;]
+when &lsquo;rhel&rsquo;
+  if node[&lsquo;kernel&rsquo;][&lsquo;machine&rsquo;] == &lsquo;x86_64&rsquo;</p>
+
+<pre><code>default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883-linux-2.6-x86_64.rpm'
+default['splunk']['server']['url'] = 'http://download.splunk.com/releases/6.0.1/splunk/linux/splunk-6.0.1-189883-linux-2.6-x86_64.rpm'
+</code></pre>
+
+<p>  else</p>
+
+<pre><code>default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883.i386.rpm'
+default['splunk']['server']['url'] = 'http://download.splunk.com/releases/6.0.1/splunk/linux/splunk-6.0.1-189883.i386.rpm'
+</code></pre>
+
+<p>  end
+when &lsquo;debian&rsquo;
+  # &hellip;
+```</p>
+
+<p>The the complete case block can be viewed in the
+<a href="https://github.com/opscode-cookbooks/chef-splunk/blob/master/attributes/default.rb#L46-L66">repository</a>.
+Also, since this is an attribute, consumers of this cookbook can set
+the URL to whatever they want, including a local HTTP server.</p>
+
+<p>Another example of gnarly conditional logic looks like this, also from
+the <code>splunk42::client</code> recipe.</p>
+
+<p>```ruby
+case node[&lsquo;platform_family&rsquo;]
+when &ldquo;rhel&rdquo;
+  rpm_package &ldquo;/opt/#{splunk_file}&rdquo; do</p>
+
+<pre><code>source "/opt/#{splunk_file}"
+</code></pre>
+
+<p>  end
+when &ldquo;debian&rdquo;
+  dpkg_package &ldquo;/opt/#{splunk_file}&rdquo; do</p>
+
+<pre><code>source "/opt/#{splunk_file}"
+</code></pre>
+
+<p>  end
+when &ldquo;omnios&rdquo;
+  # tl;dr, this was more lines than you want to read, and
+  # will be covered in the next section.
+end
+```</p>
+
+<p>Why is this bad? After all, we&rsquo;re selecting the proper package
+resource to install from a local file on disk. The main issue is the
+conditional creates different resources that can&rsquo;t be looked up in the
+resource collection. Our recipe doesn&rsquo;t do this, but perhaps a wrapper
+cookbook would. The consumer wrapping the cookbook has to duplicate
+this logic in their own. Instead, it is better to select the provider
+for a single <code>package</code> resource.</p>
+
+<p>```ruby
+package &ldquo;/opt/#{splunk_file(node[&lsquo;splunk&rsquo;][&lsquo;forwarder&rsquo;][&lsquo;url&rsquo;])}&rdquo; do
+  case node[&lsquo;platform_family&rsquo;]
+  when &lsquo;rhel&rsquo;</p>
+
+<pre><code>provider Chef::Provider::Package::Rpm
+</code></pre>
+
+<p>  when &lsquo;debian&rsquo;</p>
+
+<pre><code>provider Chef::Provider::Package::Dpkg
+</code></pre>
+
+<p>  when &lsquo;omnios&rsquo;</p>
+
+<pre><code>provider Chef::Provider::Package::Solaris
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<h2>Definitions Aren&rsquo;t Bad</h2>
+
+<p>Definitions are simply defined as recipe &ldquo;macros.&rdquo; They are not
+actually Chef Resources themselves, they just look like them, and
+contain their own Chef resources. This has some disadvantages, such as
+lack of metaparameters (like action), which has lead people to prefer
+using the &ldquo;Lightweight Resource/Provider&rdquo; (LWRP) DSL instead. In fact,
+some feel that definitions are bad, and that one should feel bad for
+using them. I argue that they have their place. One advantage is their
+relative simplicity.</p>
+
+<p>In our <code>splunk42</code> cookbook, the client and server recipes duplicate a
+lot of logic. As mentioned a lot of this is case statements for the
+Splunk package file. They also repeat the same logic for choosing the
+provider to install the package. I snipped the content from the <code>when
+"omnios"</code> block, but it looks like this:</p>
+
+<p>`&ldquo;ruby
+cache_dir = Chef::Config[:file_cache_path]
+splunk_pkg = splunk_file.gsub(/.Z/, &rdquo;)</p>
+
+<p>execute &ldquo;uncompress /opt/#{splunk_file}&rdquo; do
+  not_if { ::File.exists?(splunk_cmd) }
+end</p>
+
+<p>cookbook_file &ldquo;#{cache_dir}/splunk-nocheck&rdquo; do
+  source &ldquo;splunk-nocheck&rdquo;
+end</p>
+
+<p>file &ldquo;#{cache_dir}/splunkforwarder-response&rdquo; do
+  content &ldquo;BASEDIR=/opt&rdquo;
+end</p>
+
+<p>pkgopts = [&ldquo;-a #{cache_dir}/splunk-nocheck&rdquo;,</p>
+
+<pre><code>       "-r #{cache_dir}/splunkforwarder-response"]
+</code></pre>
+
+<p>package &ldquo;splunkforwarder&rdquo; do
+  source &ldquo;/opt/#{splunk_pkg}&rdquo;
+  options pkgopts.join(&lsquo; &rsquo;)
+  provider Chef::Provider::Package::Solaris
+end
+```</p>
+
+<p>(Note: the logic for setting the provider is required since we&rsquo;re not using the default over-the-network package providers, and installing from a local file on the system.)</p>
+
+<p>This isn&rsquo;t <em>too</em> bad on its own, but needs to be repeated again in the
+server recipe if one wanted to run a Splunk server on OmniOS. The
+actual differences between the client and server package installation
+are the package name, <code>splunkforwarder</code> vs <code>splunk</code>. The earlier URL
+attribute example established a <code>forwarder</code> and <code>server</code> attribute.
+Using a definition, named <code>splunk_installer</code>, allows us to simplify
+the package installation used by the client and server recipes to look
+like this:</p>
+
+<p><code>ruby
+splunk_installer 'splunkforwarder' do
+  url node['splunk']['forwarder']['url']
+end
+splunk_installer 'splunk' do
+  url node['splunk']['server']['url']
+end
+</code></p>
+
+<p>How is this better than an LWRP? Simply that there was less ceremony
+in creating it. There is less cognitive load for a cookbook developer
+to worry about. Definitions by their very nature of containing
+resources are already idempotent and convergent with no additional
+effort. They also automatically support why-run mode, whereas in an
+LWRP that must be done by the developer. Finally, between resources in
+the definition and the rest of the Chef run, notifications may be
+sent.</p>
+
+<p>Contrast this to an LWRP, we need <code>resources</code> and <code>providers</code>
+directories, and the attributes of the resource need to be defined in
+the resource. Then the action methods need to be written in the
+provider. If we&rsquo;re using inline resources (which we are) we need to
+declare those so any notifications work. Finally, we should ensure
+that why-run works properly.</p>
+
+<p>The actual definition is ~40 lines, and can be viewed in the cookbook
+<a href="https://github.com/opscode-cookbooks/chef-splunk/blob/master/definitions/splunk_installer.rb">repository</a>.
+I don&rsquo;t have a comparable LWRP for this, but suffice to say that it
+would be longer and more complicated than the definition.</p>
+
+<h2>Reasonability About Search</h2>
+
+<p>Search is one of the killer features of running a Chef Server.
+Dynamically configuring load balancer configuration, or finding the
+master database server is simple with a search. Because we often think
+about the functionality a service provides based on the role it
+serves, we end up doing searches that look like this:</p>
+
+<p><code>ruby
+splunk_servers = search(:node, "role:splunk-server")
+</code></p>
+
+<p>Then we do something with <code>splunk_servers</code>, like send it to a
+template. What if someone doesn&rsquo;t like the <a href="http://bikeshed.io">role name</a>?
+Then we have to do something like this:</p>
+
+<p><code>ruby
+splunk_servers = search(:node, "role:#{node['splunk']['server_role']}")
+</code></p>
+
+<p>Then consumers of the cookbook can use whatever server role name they
+want, and just update the attribute for it. But, the internet has said
+that roles are bad, so we shouldn&rsquo;t use them (even though they
+aren&rsquo;t ;)). So instead, we need something like one of these queries:</p>
+
+<p>```ruby
+splunk_servers = search(:node, &ldquo;recipes:splunk42\:\:server&rdquo;)</p>
+
+<h1>or</h1>
+
+<p>splunk_servers = search(:node, &ldquo;#{node[&lsquo;splunk&rsquo;][&lsquo;server_search_query&rsquo;]}&rdquo;)
+```</p>
+
+<p>The problem with the first is similar to the problem with the first
+(<code>role:splunk-server</code>), we need knowledge about the run list in order
+to search properly. The problem with the second is that we now have to
+worry about constructing a query properly as a string that gets
+interpolated correctly.</p>
+
+<p>How can we improve this? I think it is more &ldquo;Chef-like&rdquo; to use an
+attribute on the server&rsquo;s node object itself that informs queries the
+intention that the node is in fact a Splunk server. In our
+<code>chef-splunk</code> cookbook, we use <code>node['splunk']['is_server']</code>. The
+query looks like this:</p>
+
+<p><code>ruby
+splunk_servers = search(:node, "splunk_is_server:true")
+</code></p>
+
+<p>This reads clearly, and the <code>is_server</code> attribute can be set in one of
+15 places (for good or bad, but that&rsquo;s a different post).</p>
+
+<h2>Repeating Resources, Composable Recipes</h2>
+
+<p>In the past, it was deemed okay to repeat resources across recipes
+when those recipes were not included on the same node. For example,
+client and server recipes that have similar resource requirements, but
+may pass in separate data. Another example is in the
+<a href="http://community.opscode.com/cookbooks/haproxy">haproxy</a>) cookbook I
+wrote where one recipe statically manages the configuration files, and
+the other uses a Chef search to populate the configuration.</p>
+
+<p>As I have mentioned above, a lot of code was duplicated between the
+client and server recipes for our <code>splunk42</code> cookbook: user and group,
+the case statements, package resources, execute statements (that
+haven&rsquo;t been shared here), and the service resource. It is definitely
+important to ensure that all the resources needed to converge a recipe
+are defined, particularly when using notifications. That is why
+sometimes a recipe will have a <code>service</code> resource with no actions like
+this:</p>
+
+<p><code>ruby
+service 'mything'
+</code></p>
+
+<p>However Chef 11will generate a warning about
+<a href="http://tickets.opscode.com/browse/CHEF-3694">cloned resources</a> when
+they are repeated in the same Chef run.</p>
+
+<p>Why is this bad? Well, CHEF-3694 explains in more detail that
+particular issue, of cloned resources. The other reason is that it
+makes recipes harder to reuse when they have a larger scope than
+absolutely necessary. How can we make this better? A solution to this
+is to write small, composable recipes that contain resources that may
+be optional for certain use cases. For example, we can put the service
+resource in a recipe and include that:</p>
+
+<p><code>ruby
+service 'splunk' do
+  supports :status =&gt; true, :restart =&gt; true
+  provider Chef::Provider::Service::Init
+  action :start
+end
+</code></p>
+
+<p>Then when we need to make sure we have the <code>service</code> resource
+available (e.g., for notifications):</p>
+
+<p><code>ruby
+template "#{splunk_dir}/etc/system/local/outputs.conf" do
+  source 'outputs.conf.erb'
+  mode 0644
+  variables :splunk_servers =&gt; splunk_servers
+  notifies :restart, 'service[splunk]'
+end
+include_recipe 'chef-splunk::service'
+</code></p>
+
+<p>Note that the service is included <em>after</em> the resource that notifies
+it. This is a feature of the notification system, where the notified
+resource can appear anywhere in the resource collection, and brings up
+another excellent practice, which is to declare service resources
+after other resources which affect their configuration. This prevents
+a race condition where, if a bad config is deployed, the service would
+attempt to start, fail, and cause the Chef run to exit before the
+config file could correct the problem.</p>
+
+<p>Making recipes composable in this way means that users can pick and
+choose the ones they want. Our <code>chef-splunk</code> cookbook has a
+prescriptive default recipe, but the client and server recipes mainly
+include the others they need. If someone doesn&rsquo;t share our opinion on
+this for their use case, they can pick and choose the ones they want.
+Perhaps they have the <code>splunk</code> user and group created on systems
+through some other means. They won&rsquo;t need the <code>chef-splunk::user</code>
+recipe, and can write their own wrapper to handle that. Overall this
+is good, though it does mean there are multiple places where a user
+must look to follow a recipe.</p>
+
+<h2>Plaintext Secrets</h2>
+
+<p>Managing secrets is one of the hardest problems to solve in system
+administration and configuration management. In Chef, it is very easy
+to simply set attributes, or use data bag items for authentication
+credentials. Our old <code>splunk42</code> cookbook had this:</p>
+
+<p><code>ruby
+splunk_password = node[:splunk][:auth].split(':')[1]
+</code></p>
+
+<p>Where <code>node[:splunk][:auth]</code> was set in a role with the
+<code>username:password</code>. This isn&rsquo;t particularly <em>bad</em> since our Chef
+server runs on a private network and is secured with HTTPS and RSA
+keys, but a defense in depth security posture has more controls in
+place for secrets.</p>
+
+<p>How can this be improved? At Chef, we started using
+<a href="https://github.com/Nordstrom/chef-vault">Chef Vault</a> to manage
+secrets. I wrote a
+<a href="http://www.getchef.com/blog/2013/09/19/managing-secrets-with-chef-vault/">post about chef-vault</a>
+a few months ago, so I won&rsquo;t dig too deep into the details here. The
+current <code>chef-splunk</code> cookbook loads the authentication information
+like this:</p>
+
+<p>```ruby
+splunk_auth_info = chef_vault_item(:vault, &ldquo;splunk_#{node.chef_environment}&rdquo;)[&lsquo;auth&rsquo;]
+user, pw = splunk_auth_info.split(&lsquo;:&rsquo;)</p>
+
+<p>execute &ldquo;#{splunk_cmd} edit user #{user} -password &lsquo;#{pw}&rsquo; -role admin -auth admin:changeme&rdquo; do
+  not_if { ::File.exists?(&ldquo;#{splunk_dir}/etc/.setup<em>#{user}</em>password&rdquo;) }
+end</p>
+
+<p>file &ldquo;#{splunk_dir}/etc/.setup<em>#{user}</em>password&rdquo; do
+  content &lsquo;true\n&rsquo;
+  owner &lsquo;root&rsquo;
+  group &lsquo;root&rsquo;
+  mode 00600
+end
+```</p>
+
+<p>The first line loads the authentication information from the
+encrypted-with-chef-vault data bag item. Then we make a couple of
+convenient local variables, and change the password from Splunk&rsquo;s
+built-in default. Then, we control convergence of the execute by
+writing a file that indicates that the password has been set.</p>
+
+<p>The advantage of this over attributes or data bag items is that the
+content is encrypted. The advantage over regular encrypted data bags
+is that we don&rsquo;t need to distribute the secret key out to every
+system, we can update the list of nodes that have access with a knife
+command.</p>
+
+<h1>Conclusion</h1>
+
+<p>Neither Chef (the company), nor I are here to tell anyone how to
+write cookbooks. One of the benefits of Chef (the product) is its
+flexibility, allowing users to write blocks of Ruby code in recipes
+that quickly solve an immediate problem. That&rsquo;s how we got to where we
+were with <code>splunk42</code>, and we certainly have other cookbooks that can
+be refactored similarly. When it comes to sharing cookbooks with the
+community, well-factored, easy to follow, understand, and use code is
+preferred.</p>
+
+<p>Many of the ideas here came from community members like Miah Johnson,
+Noah Kantrowitz, Jamie Winsor, and Mike Fiedler. I owe them thanks for
+challenging me over the years on a lot of the older patterns that I
+held onto. Together we can build better automation through cookbooks,
+and a strong collaborative community. I hope this information is
+helpful to those goals.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Starting ChefSpec Example]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/09/starting-chefspec-example/"/>
+    <updated>2013-05-09T21:10:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/09/starting-chefspec-example</id>
+    <content type="html"><![CDATA[<p>This is a quick post to introduce what I&rsquo;m starting on testing with
+<a href="http://acrmp.github.io/chefspec/">ChefSpec</a>. This is from Opscode&rsquo;s
+Java cookbook. While the recipe tested is really trivial, it actually
+has some nuances that require detailed testing.</p>
+
+<p>First off, the whole thing is in
+<a href="https://gist.github.com/jtimberman/5552182">this gist</a>. I&rsquo;m going to
+break it down into sections below. The file is <code>spec/default_spec.rb</code>
+in the java cookbook (not committed/pushed yet).</p>
+
+<p>The chefspec gem is where all the magic comes from. You can read about
+ChefSpec on <a href="http://acrmp.github.io/chefspec/">its home page</a>. You&rsquo;ll
+need to install the gem, and from there, run <code>rspec</code> to run the tests.</p>
+
+<p><code>ruby
+require 'chefspec'
+</code></p>
+
+<p>Next, we&rsquo;re going to describe the default recipe. We&rsquo;re using the
+regular rspec &ldquo;let&rdquo; block to set up the runner to converge the recipe.
+Then, because we know/assume that the openjdk recipe is the default,
+we can say that this chef run should include the <code>java::openjdk</code> recipe.</p>
+
+<p>```ruby
+describe &lsquo;java::default&rsquo; do
+  let (:chef_run) { ChefSpec::ChefRunner.new.converge(&lsquo;java::default&rsquo;) }
+  it &lsquo;should include the openjdk recipe by default&rsquo; do</p>
+
+<pre><code>chef_run.should include_recipe 'java::openjdk'
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Next, this cookbook supports Windows. However, we have to set up the
+runner with the correct platform and version (this comes from
+<a href="https://github.com/customink/fauxhai">fauxhai</a>), and then set
+attributes that are required for it to work.</p>
+
+<p>```ruby
+context &lsquo;windows&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new(
+    'platform' =&gt; 'windows',
+    'version' =&gt; '2008R2'
+    )
+  runner.node.set['java']['install_flavor'] = 'windows'
+  runner.node.set['java']['windows']['url'] = 'http://example.com/windows-java.msi'
+  runner.converge('java::default')
+end
+it 'should include the windows recipe' do
+  chef_run.should include_recipe 'java::windows'
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Next are the contexts for other install flavors. The default recipe
+will include the right recipe based on the flavor, which is set by an
+attribute. So we set up an rspec context for each recipe, then set the
+install flavor attribute, and test that the right recipe was included.</p>
+
+<p>```ruby
+  context &lsquo;oracle&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new
+  runner.node.set['java']['install_flavor'] = 'oracle'
+  runner.converge('java::default')
+end
+it 'should include the oracle recipe' do
+  chef_run.should include_recipe 'java::oracle'
+end
+</code></pre>
+
+<p>  end
+  context &lsquo;oracle_i386&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new
+  runner.node.set['java']['install_flavor'] = 'oracle_i386'
+  runner.converge('java::default')
+end
+it 'should include the oracle_i386 recipe' do
+  chef_run.should include_recipe 'java::oracle_i386'
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>Finally, a recent addition to this cookbook is support for
+<a href="http://tickets.opscode.com/browse/COOK-2897">IBM&rsquo;s Java</a>. In addition
+to setting the install flavor, we must set the URL where the IBM Java
+package is (see the README in the commit linked in that ticket for
+detail), and we can see that the <code>ibm</code> recipe is in fact included.</p>
+
+<p>```ruby
+  context &lsquo;ibm&rsquo; do</p>
+
+<pre><code>let(:chef_run) do
+  runner = ChefSpec::ChefRunner.new
+  runner.node.set['java']['install_flavor'] = 'ibm'
+  runner.node.set['java']['ibm']['url'] = 'http://example.com/ibm-java.bin'
+  runner.converge('java::default')
+end
+it 'should include the ibm recipe' do
+  chef_run.should include_recipe 'java::ibm'
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>This is just the start of the testing for this cookbook. We&rsquo;ll need to
+test each individual recipe. However as I&rsquo;ve not written that code
+yet, I don&rsquo;t have examples. Stay tuned!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Test Kitchen and Jenkins]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/08/test-kitchen-and-jenkins/"/>
+    <updated>2013-05-08T23:53:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/08/test-kitchen-and-jenkins</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve been working more with test-kitchen 1.0 alpha lately. The most
+recent thing I&rsquo;ve done is set up a Jenkins build server to run
+test-kitchen on cookbooks. This post will describe how I did this for
+my own environment, and how you can use my new test-kitchen cookbook
+in yours&hellip; if you&rsquo;re using Jenkins, anyway.</p>
+
+<p>This is all powered by a relatively simple cookbook, and some
+click-click-clicking in the Jenkins UI. I&rsquo;ll walk through what I did
+to set up my Jenkins system.</p>
+
+<p>First, I started with Debian 7.0 (stable, released this past weekend).
+I installed the OS on it, and then bootstrapped with Chef. The initial
+test was to make sure everything installed correctly, and the commands
+were functioning. This was done in a VM, and is now handled by
+test-kitchen itself (how meta!) in the cookbook, kitchen-jenkins.</p>
+
+<p>The cookbook, <a href="http://ckbk.it/kitchen-jenkins">kitchen-jenkins</a> is
+available on the Chef Community site. I started with a recipe, but
+extracted it to a cookbook to make it easier to share with you all.
+This is essentially a site cookbook that I use to customize my Jenkins
+installation so I can run test-kitchen builds.</p>
+
+<p>I apply the recipe with a role, because I love the roles primitive in
+Chef :&ndash;). Here is the role I&rsquo;m using:</p>
+
+<p>```javascript
+{
+  &ldquo;name&rdquo;: &ldquo;jenkins&rdquo;,
+  &ldquo;description&rdquo;: &ldquo;Jenkins Build Server&rdquo;,
+  &ldquo;run_list&rdquo;: [</p>
+
+<pre><code>"recipe[kitchen-jenkins]"
+</code></pre>
+
+<p>  ],
+  &ldquo;default_attributes&rdquo;: {</p>
+
+<pre><code>"jenkins": {
+  "server": {
+    "home": "/var/lib/jenkins",
+    "plugins": ["git-client", "git"],
+    "version": "1.511",
+    "war_checksum": "7e676062231f6b80b60e53dc982eb89c36759bdd2da7f82ad8b35a002a36da9a"
+  }
+}
+</code></pre>
+
+<p>  },
+  &ldquo;json_class&rdquo;: &ldquo;Chef::Role&rdquo;,
+  &ldquo;chef_type&rdquo;: &ldquo;role&rdquo;
+}
+```</p>
+
+<p>The run list is only slightly different here than my actual role, I
+have a few other things in the run list, which are other site-specific
+recipes. Don&rsquo;t worry about those now. The jenkins attributes are set
+to ensure the right plugins I need are available, and the right
+version of jenkins is installed.</p>
+
+<p>(I&rsquo;m going to leave out the details such as uploading cookbooks and
+roles, if you&rsquo;re interested in test-kitchen, I&rsquo;ll assume you&rsquo;ve got
+that covered :&ndash;).)</p>
+
+<p>Once Chef completes on the Jenkins node, I can reach the Jenkins UI,
+conveniently enough, via &ldquo;<a href="http://jenkins:8080">http://jenkins:8080</a>&rdquo; (because I&rsquo;ve made a
+DNS entry, of course). The next release of the Jenkins cookbook will
+have a resource for managing jobs, but for now I&rsquo;m just going to
+create them in the webui.</p>
+
+<p>For this example, I want to have two kinds of cookbook testing jobs.
+The first, is to simply run foodcritic and fail on any correctness
+matches. Second, I want to actually run test-kitchen.</p>
+
+<p>A foodcritic job is simple:</p>
+
+<ol>
+<li>New job &ndash;> Build a free-style software project
+&ldquo;foodcritic-COOKBOOK&rdquo;.</li>
+<li>Source Code Management &ndash;> Git, supply the repository and the master
+branch.</li>
+<li>Set a build trigger to Poll SCM every 5 minutes, once an hour,
+whenever you like.</li>
+<li>Add a build step to execute a shell, &ldquo;foodcritic . -f correctness&rdquo;</li>
+</ol>
+
+
+<p>I created a view for foodcritic jobs, and added them all to the view
+for easy organizing.</p>
+
+<p>Next, I create a test-kitchen job:</p>
+
+<ol>
+<li>New job &ndash;> Copy existing job &ldquo;foodcritic-COOKBOOK&rdquo;, name the new
+job &ldquo;test-COOKBOOK&rdquo;.</li>
+<li>Uncheck Poll SCM, check &ldquo;Build after other projects are built&rdquo; and
+enter &ldquo;foodcritic-COOKBOOK&rdquo;.</li>
+<li>Replace the foodcritic command in the build shell command with
+&ldquo;kitchen test&rdquo;.</li>
+</ol>
+
+
+<p>Now, the test kitchen test will only run if the foodcritic build
+succeeds. If the cookbook has any correctness lint errors, then the
+foodcritic build fails, and the kitchen build won&rsquo;t run. This will
+help conserve resources.</p>
+
+<p>Hopefully the <code>kitchen-jenkins</code> cookbook is helpful and this blog post
+will give you some ideas how to go about adding cookbook tests to your
+CI system, even if it&rsquo;s not Jenkins.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[TDD Cookbook Ticket]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket/"/>
+    <updated>2013-05-03T14:36:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket</id>
+    <content type="html"><![CDATA[<p>This post will briefly describe how I did a TDD update to Opscode&rsquo;s
+<a href="http://ckbk.it/runit">runit</a> to resolve an
+<a href="https://tickets.opscode.com/browse/COOK-2867">issue reported last night</a>.</p>
+
+<p>First, the issue manifests itself only on Debian systems. The runit
+cookbook&rsquo;s <code>runit_service</code> provider will write an
+<a href="http://tickets.opscode.com/browse/COOK-1576">LSB init.d script</a> on
+Debian, rather than symlinking to <code>/usr/bin/sv</code>. The problem raised in
+the new ticket is that the template will follow the link and write to
+<code>/usr/bin/sv</code>. This is bad, as it will end up in a forkbomb as
+runsvdir attempts to restart sv on
+<a href="http://drupal.org/files/x-all-the-things-template.png">all the things</a>.
+Oops! Sorry about that. Let&rsquo;s get it fixed, and practice some TDD.</p>
+
+<p>The runit cookbook includes support for test-kitchen, though I did
+need to
+<a href="https://github.com/opscode-cookbooks/runit/commit/8d2e0fcb9d6becf99c0d30694164e57d59fb667b">update it</a>
+for this effort. Part of this change was adding a box for Debian in
+the <code>.kitchen.yml</code>. I set about resolving this with TDD in mind.</p>
+
+<p>First, the runit cookbook includes a couple
+<a href="https://github.com/opscode-cookbooks/runit/tree/master/test/cookbooks">&ldquo;test&rdquo; cookbooks</a>
+to facilitate setting up the system with the <code>runit_service</code> resource
+so the outcome can be tested to ensure the behavior is correct. I
+started by adding a &ldquo;failing test&rdquo; in the <code>runit_test::service</code>
+recipe, meaning a link resource, and a <code>runit_service</code> resource that
+would overwrite <code>/usr/bin/sv</code>.</p>
+
+<p>```ruby
+link &ldquo;/etc/init.d/cook-2867&rdquo; do
+  to &ldquo;/usr/bin/sv&rdquo;
+end</p>
+
+<p>runit_service &ldquo;cook-2867&rdquo; do
+  default_logger true
+end
+```</p>
+
+<p>Then I ran <code>kitchen test</code> on the Debian box. As expected, the link was
+created, and then the runit service was configured. The service&rsquo;s
+provider will wait until the service is up. Since we&rsquo;ve destroyed the
+sv binary, that will never happen, so I destroyed it. I manually
+confirmed the behavior too, to make sure I wasn&rsquo;t seeing something
+weird. Due to its very nature, this is <em>really</em> hard to test for
+automatically, but it will happen consistently.</p>
+
+<p>Next, I had to write the code to implement the fix for this bug.
+Essentially, this means checking if the <code>/etc/init.d/cook-2867</code> file
+is a symbolink link, and removing it.</p>
+
+<p><code>ruby
+initfile = ::File.join( '/etc', 'init.d', new_resource.service_name)
+::File.unlink(initfile) if ::File.symlink?(initfile)
+</code></p>
+
+<p>Simple enough. Next I tested again by destroying the existing
+environment and rerunning it from scratch. This takes some time, but
+it verifies that everything is working properly. Here&rsquo;s the output on
+Debian:</p>
+
+<p><code>
+INFO: Processing link[/etc/init.d/cook-2867] action create (runit_test::service line 147)
+INFO: link[/etc/init.d/cook-2867] created
+INFO: Processing service[cook-2867] action nothing (dynamically defined)
+INFO: Processing runit_service[cook-2867] action enable (runit_test::service line 151)
+INFO: Processing directory[/etc/sv/cook-2867] action create (dynamically defined)
+INFO: Processing template[/etc/sv/cook-2867/run] action create (dynamically defined)
+INFO: Processing directory[/etc/sv/cook-2867/log] action create (dynamically defined)
+INFO: Processing directory[/etc/sv/cook-2867/log/main] action create (dynamically defined)
+INFO: Processing directory[/var/log/cook-2867] action create (dynamically defined)
+INFO: Processing file[/etc/sv/cook-2867/log/run] action create (dynamically defined)
+INFO: Processing template[/etc/init.d/cook-2867] action create (dynamically defined)
+INFO: template[/etc/init.d/cook-2867] updated content
+INFO: template[/etc/init.d/cook-2867] owner changed to 0
+INFO: template[/etc/init.d/cook-2867] group changed to 0
+INFO: template[/etc/init.d/cook-2867] mode changed to 755
+INFO: runit_service[cook-2867] configured
+INFO: Chef Run complete in 7.267132764 seconds
+INFO: Running report handlers
+</code></p>
+
+<p>I didn&rsquo;t feel I needed a specific test for this in minitest-chef,
+because it wouldn&rsquo;t have finished converging (earlier behavior I saw
+in the &ldquo;failing&rdquo; test).</p>
+
+<p>If you&rsquo;re contributing to cookbooks, and they have support for
+test-kitchen, it&rsquo;s awesome if you can open a bug report with a failing
+test. In this case, it was fairly easy to reproduce the bug.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/"/>
+    <updated>2013-03-19T09:28:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2</id>
+    <content type="html"><![CDATA[<p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
+  this post.</p>
+
+<p><strong>Update</strong> We&rsquo;re no longer required to use bundler, and in fact
+  recommend installing the required RubyGems in your globalRuby
+  environment (#3 below).</p>
+
+<p><strong>Update</strong> The log output from the various kitchen commands is not
+  updated with the latest and greatest. Play along at home, it&rsquo;ll be
+  okay :&ndash;).</p>
+
+<p>This is a continuation from <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">part 1</a></p>
+
+<p>In order to run the tests then, we need a few things on our machine:</p>
+
+<ol>
+<li>VirtualBox and Vagrant (1.1+)</li>
+<li>A compiler toolchain with XML/XSLT development headers (for building Gem dependencies)</li>
+<li>A sane, working Ruby environment (Ruby 1.9.3 or greater)</li>
+<li>Git</li>
+</ol>
+
+
+<p>It is outside the scope of this post to cover how to get all those
+installed.</p>
+
+<p>Once those are installed:</p>
+
+<p><code>
+% vagrant plugin install vagrant-berkshelf
+% gem install berkshelf
+% gem install test-kitchen --pre
+% gem install kitchen-vagrant
+</code></p>
+
+<p>Test Kitchen combines the suite (default) with the platform names
+(e.g., ubuntu-12.04). To run all the suites on all platforms, simply do:</p>
+
+<p><code>
+% kitchen test
+</code></p>
+
+<p>This will take awhile, especially if you don&rsquo;t already have the
+Vagrant boxes on your system, as it will download each one. To make
+this faster, we&rsquo;ll just run Ubuntu 12.04:</p>
+
+<p><code>
+% kitchen test default.*1204
+</code></p>
+
+<p>Test Kitchen 1.0 can take a regular expression for the instances to
+test. This will match the box <code>default-ubuntu-12.04</code>. I could also
+just say <code>12</code> as that will match the single entry in my kitchen list
+(above).</p>
+
+<p>It will take a few minutes to run Test Kitchen. Those familiar with
+Chef know that if it encounters an unhandled exception, it exits with
+a non-zero return code. This is important, because we know at the end
+of a successful run, Chef did the right thing, assuming our recipe is
+the right thing :&ndash;).</p>
+
+<p>To recap the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a>, we have a run list like this:</p>
+
+<p><code>
+["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"]
+</code></p>
+
+<p>Let&rsquo;s break down the output of our successful run. I&rsquo;ll show the
+output first, and explain it after:</p>
+
+<p><code>
+Starting Kitchen
+Cleaning up any prior instances of &lt;default-ubuntu-1204&gt;
+Destroying &lt;default-ubuntu-1204&gt;
+Finished destroying &lt;default-ubuntu-1204&gt; (0m0.00s).
+Testing &lt;default-ubuntu-1204&gt;
+Creating &lt;default-ubuntu-1204&gt;
+</code></p>
+
+<p>This is basic setup to ensure that &ldquo;The Kitchen&rdquo; is clean beforehand
+and we don&rsquo;t have existing state interfering with the run.</p>
+
+<p><code>
+[vagrant command] BEGIN (vagrant up default-ubuntu-1204 --no-provision)
+[default-ubuntu-1204] Importing base box 'canonical-ubuntu-12.04'...
+[default-ubuntu-1204] Matching MAC address for NAT networking...
+[default-ubuntu-1204] Clearing any previously set forwarded ports...
+[default-ubuntu-1204] Forwarding ports...
+[default-ubuntu-1204] -- 22 =&gt; 2222 (adapter 1)
+</code></p>
+
+<p>This will look familiar to Vagrant users, we&rsquo;re just getting some
+basic setup from Vagrant initializing the box defined in the
+<code>.kitchen.yml</code> (passed to the Vagrantfile by the kitchen-vagrant
+plugin). This step does a <code>vagrant up --no-provision</code>.</p>
+
+<p><code>
+[Berkshelf] installing cookbooks...
+[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
+[Berkshelf] Using apt (1.8.4)
+[Berkshelf] Using yum (2.0.0)
+[Berkshelf] Using minitest-handler (0.1.2)
+[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
+[Berkshelf] Using rsyslog (1.5.0)
+[Berkshelf] Using chef_handler (1.1.0)
+</code></p>
+
+<p>Remember from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that we&rsquo;re using Berkshelf? This is
+the integration with Vagrant that ensures that the cookbooks are
+available. The first four, <code>apt</code>, <code>yum</code>, <code>minitest-handler</code> and
+bluepill_test are defined in the Berksfile. The next, <code>rsyslog</code> is a
+dependency of the <code>bluepill</code> cookbook (for rsyslog integration), and the
+last, <code>chef_handler</code> is a dependency of <code>minitest-handler</code>. Berkshelf
+extracts the dependencies from the cookbook metadata of each cookbook
+defined in the Berksfile.</p>
+
+<p><code>
+[default-ubuntu-1204] Creating shared folders metadata...
+[default-ubuntu-1204] Clearing any previously set network interfaces...
+[default-ubuntu-1204] Running any VM customizations...
+[default-ubuntu-1204] Booting VM...
+[default-ubuntu-1204] Waiting for VM to boot. This can take a few minutes.
+[default-ubuntu-1204] VM booted and ready for use!
+[default-ubuntu-1204] Setting host name...
+[default-ubuntu-1204] Mounting shared folders...
+[default-ubuntu-1204] -- v-root: /vagrant
+[default-ubuntu-1204] -- v-csc-1: /tmp/vagrant-chef-1/chef-solo-1/cookbooks
+[vagrant command] END (0m48.76s)
+Vagrant instance &lt;default-ubuntu-1204&gt; created.
+Finished creating &lt;default-ubuntu-1204&gt; (0m53.12s).
+</code></p>
+
+<p>Again, this is familiar output to Vagrant users, where Vagrant is
+making the cookbooks available to the instance.</p>
+
+<p><code>
+Converging &lt;default-ubuntu-1204&gt;
+[vagrant command] BEGIN (vagrant ssh default-ubuntu-1204 --command 'should_update_chef() {\n...')
+Installing Chef Omnibus (11.4.0)
+Downloading Chef 11.4.0 for ubuntu...
+Installing Chef 11.4.0
+Selecting previously unselected package chef.
+g database ...        60513 files and directories currently installed.)
+Unpacking chef (from .../chef_11.4.0_amd64.deb) ...
+Setting up chef (11.4.0-1.ubuntu.11.04) ...
+Thank you for installing Chef!
+[vagrant command] END (0m34.85s)
+[vagrant command] BEGIN (vagrant provision default-ubuntu-1204)
+[Berkshelf] installing cookbooks...
+[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
+[Berkshelf] Using apt (1.8.4)
+[Berkshelf] Using yum (2.0.0)
+[Berkshelf] Using minitest-handler (0.1.2)
+[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
+[Berkshelf] Using rsyslog (1.5.0)
+[Berkshelf] Using chef_handler (1.1.0)
+</code></p>
+
+<p>This part is interesting, in that we&rsquo;re going to install the Full
+Stack Chef (Omnibus) package. This means it doesn&rsquo;t matter what the
+underlying base box has installed, we get the right version of Chef.
+This is defined in the <code>.kitchen.yml</code>. This is done through <code>vagrant
+ssh</code> (second line). Then, Test Kitchen does <code>vagrant provision</code>. The
+provisioning step is where Berkshelf happens, so we do see this happen
+again (perhaps a bug?).</p>
+
+<p><code>
+[default-ubuntu-1204] Running provisioner: Vagrant::Provisioners::ChefSolo...
+[default-ubuntu-1204] Generating chef JSON and uploading...
+[default-ubuntu-1204] Running chef-solo...
+INFO: *** Chef 11.4.0 ***
+INFO: Setting the run_list to ["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"] from JSON
+INFO: Run List is [recipe[apt], recipe[minitest-handler], recipe[bluepill_test]]
+INFO: Run List expands to [apt, minitest-handler, bluepill_test]
+INFO: Starting Chef Run for default-ubuntu-1204.vagrantup.com
+</code></p>
+
+<p>This is the start of the actual Chef run, using Chef Solo by Vagrant&rsquo;s
+provisioner. Note that we have our suite&rsquo;s run list. I&rsquo;m going to skip
+a lot of the Chef output because it isn&rsquo;t required. Note that a few
+resources in the minitest&mdash;handler will report as failed, but they can
+be ignored because it means that those tests were simply not implemented.</p>
+
+<p><code>
+INFO: Processing directory[/var/chef/minitest/bluepill_test] action create (minitest-handler::default line 50)
+INFO: directory[/var/chef/minitest/bluepill_test] created directory /var/chef/minitest/bluepill_test
+INFO: Processing cookbook_file[tests-bluepill_test-default] action create (minitest-handler::default line 53)
+INFO: cookbook_file[tests-bluepill_test-default] created file /var/chef/minitest/bluepill_test/default_test.rb
+INFO: Processing remote_directory[tests-support-bluepill_test-default] action create (minitest-handler::default line 60)
+INFO: remote_directory[tests-support-bluepill_test-default] created directory /var/chef/minitest/bluepill_test/support
+INFO: Processing cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] action create (dynamically defined)
+INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] mode changed to 644
+INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] created file /var/chef/minitest/bluepill_test/support/helpers.rb
+</code></p>
+
+<p>These are the relevant parts of the minitest-handler recipe, where it
+has copied the tests from the <code>bluepill_test</code> cookbook into place.</p>
+
+<p><code>
+INFO: Processing gem_package[i18n] action install (bluepill::default line 20)
+INFO: Processing gem_package[bluepill] action install (bluepill::default line 24)
+INFO: Processing directory[/etc/bluepill] action create (bluepill::default line 34)
+INFO: directory[/etc/bluepill] created directory /etc/bluepill
+INFO: directory[/etc/bluepill] owner changed to 0
+INFO: directory[/etc/bluepill] group changed to 0
+INFO: Processing directory[/var/run/bluepill] action create (bluepill::default line 34)
+INFO: directory[/var/run/bluepill] created directory /var/run/bluepill
+INFO: directory[/var/run/bluepill] owner changed to 0
+INFO: directory[/var/run/bluepill] group changed to 0
+INFO: Processing directory[/var/lib/bluepill] action create (bluepill::default line 34)
+INFO: directory[/var/lib/bluepill] created directory /var/lib/bluepill
+INFO: directory[/var/lib/bluepill] owner changed to 0
+INFO: directory[/var/lib/bluepill] group changed to 0
+INFO: Processing file[/var/log/bluepill.log] action create_if_missing (bluepill::default line 41)
+INFO: entered create
+INFO: file[/var/log/bluepill.log] owner changed to 0
+INFO: file[/var/log/bluepill.log] group changed to 0
+INFO: file[/var/log/bluepill.log] mode changed to 755
+INFO: file[/var/log/bluepill.log] created file /var/log/bluepill.log
+</code></p>
+
+<p>Recall from the <a href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that the <code>bluepill_test</code> recipe includes
+the <code>bluepill</code> recipe. This is the basic setup of bluepill.</p>
+
+<p><code>
+INFO: Processing package[nc] action install (bluepill_test::default line 4)
+INFO: Processing template[/etc/bluepill/test_app.pill] action create (bluepill_test::default line 16)
+INFO: template[/etc/bluepill/test_app.pill] updated content
+INFO: Processing bluepill_service[test_app] action enable (bluepill_test::default line 18)
+INFO: Processing bluepill_service[test_app] action load (bluepill_test::default line 18)
+INFO: Processing bluepill_service[test_app] action start (bluepill_test::default line 18)
+INFO: Processing link[/etc/init.d/test_app] action create (/tmp/vagrant-chef-1/chef-solo-1/cookbooks/bluepill/providers/service.rb line 30)
+INFO: link[/etc/init.d/test_app] created
+INFO: Chef Run complete in 81.099185824 seconds
+</code></p>
+
+<p>And this is the rest of the <code>bluepill_test</code> recipe. It sets up a test
+service that will basically be a netcat process listening on a port.
+Let&rsquo;s take a moment here and discuss what we have.</p>
+
+<p>First, we have successfully converged the default recipe in the
+<code>bluepill</code> cookbook via its inclusion in <code>bluepill_test</code>. This is
+awesome, because we know the recipe works exactly as we defined it,
+since Chef resources are declarative, and Chef exits if there&rsquo;s a
+problem.</p>
+
+<p>Second, we have successfully setup a service managed by bluepill
+itself using the LWRP included in the <code>bluepill</code> cookbook,
+<code>bluepill_service</code>. This means we know that the underlying provider
+configured all the resources correctly.</p>
+
+<p>At this point, we could say &ldquo;Ship it!&rdquo; and release the cookbook,
+knowing it will do what we require. However, this may be disingenuous
+because we don&rsquo;t know if the behavior of the system after all this
+runs is actually correct. Therefore we look to the next segment of
+output from Chef, from minitest:</p>
+
+<p><code>
+INFO: Running report handlers
+Run options: -v --seed 38794
+\# Running tests:
+recipe::bluepill_test::default#test_0001_the_default_log_file_must_exist_cook_1295_ =
+0.00 s = .
+recipe::bluepill_test::default::create a bluepill configuration file#test_0001_anonymous =
+0.00 s = .
+recipe::bluepill_test::default::create a bluepill configuration file#test_0002_must_be_valid_ruby =
+0.06 s = .
+recipe::bluepill_test::default::runs the application as a service#test_0001_anonymous =
+0.72 s = .
+recipe::bluepill_test::default::runs the application as a service#test_0002_anonymous =
+0.71 s = .
+recipe::bluepill_test::default::spawn a netcat tcp client repeatedly#test_0001_should_receive_a_tcp_connection_from_netcat =
+2.24 s = .
+Finished tests in 3.746002s, 1.6017 tests/s, 1.8687 assertions/s.
+6 tests, 7 assertions, 0 failures, 0 errors, 0 skips
+</code></p>
+
+<p>This is performed by the minitest-handler, which runs the tests copied
+from the <code>bluepill_test</code> cookbook before. It&rsquo;s outside the scope of
+this post to describe how to write minitest-chef tests, but we can
+talk about the output.</p>
+
+<p>We have 6 separate tests that perform 7 assertions, and they all
+passed. The tests are asserting:</p>
+
+<ol>
+<li>The log file is created, and by the full name of the test, this is
+to check for a regression from
+<a href="http://tickets.opscode.com/browse/COOK-1295">COOK-1295</a>.</li>
+<li>The <code>.pill</code> config file for the service must exist and be valid
+Ruby.</li>
+<li>The bluepill service must actually be enabled and running, thereby
+testing that those actions in the LWRP work.</li>
+<li>The running service, which listens on a TCP port, must be up and
+available, thereby testing that bluepill started the service
+correctly.</li>
+</ol>
+
+
+<p><code>
+[vagrant command] END (1m29.24s)
+Finished converging &lt;default-ubuntu-1204&gt; (2m15.45s).
+Setting up &lt;default-ubuntu-1204&gt;
+Finished setting up &lt;default-ubuntu-1204&gt; (0m0.00s).
+Verifying &lt;default-ubuntu-1204&gt;
+Finished verifying &lt;default-ubuntu-1204&gt; (0m0.00s).
+Destroying &lt;default-ubuntu-1204&gt;
+[vagrant command] BEGIN (vagrant destroy default-ubuntu-1204 -f)
+[default-ubuntu-1204] Forcing shutdown of VM...
+[Berkshelf] cleaning Vagrant's shelf
+[default-ubuntu-1204] Destroying VM and associated drives...
+[vagrant command] END (0m3.68s)
+Vagrant instance &lt;default-ubuntu-1204&gt; destroyed.
+Finished destroying &lt;default-ubuntu-1204&gt; (0m4.04s).
+Finished testing &lt;default-ubuntu-1204&gt; (3m12.62s).
+Kitchen is finished. (3m12.62s)
+</code></p>
+
+<p>This output shows Test Kitchen cleaning up after itself. We destroy
+the Vagrant instance on a successful convergence and test run in Chef,
+because further investigation is not required. If the test failed for
+some reason, Test Kitchen leaves it running so you can log into the
+machine and poke around to find out what went wrong. Then simply
+correct the required part of the cookbook (recipes, tests, etc) and
+rerun Test Kitchen. For example:</p>
+
+<p><code>
+% bundle exec kitchen login 1204
+vagrant@ubuntu-1204$ ... run some commands
+vagrant@ubuntu-1204$ ^D
+% bundle exec kitchen converge 1204
+</code></p>
+
+<p>My goal with these posts is to get some information out for folks to
+consider when examining Test Kitchen 1.0 alpha for their own projects.
+There&rsquo;s a lot more to Test Kitchen, such as managing non-cookbook
+projects, or even using other kinds of tests. We&rsquo;ll have more
+documentation and guides as we get the 1.0 release out.</p>
+
+<p>Enjoy!</p>
+]]></content>
+  </entry>
+  
+</feed>

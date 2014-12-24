@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: chef, | jtimberman's Code Blog]]></title>
+  <title><![CDATA[Category: chef | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-11T15:55:01-07:00</updated>
+  <updated>2014-12-24T14:19:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,126 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Deleting Attributes]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/12/24/quicktip-delete-attributes/"/>
+    <updated>2014-12-24T10:00:40-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/12/24/quicktip-delete-attributes</id>
+    <content type="html"><![CDATA[<p>I have a new goal for 2015, and that is to write at least one &ldquo;Quick Tip&rdquo; per week about Chef. I&rsquo;ve added the category &ldquo;<a href="/blog/categories/quicktips">quicktips</a>&rdquo; to make these easier to find.</p>
+
+<p>In this quick tip, I want to talk about a new feature of Chef 12. The new feature is the ability to remove an attribute from all levels (default, normal, override) on a node so it doesn&rsquo;t get saved back to the Chef Server. This was brought up in <a href="https://github.com/opscode/chef-rfc/blob/master/rfc023-chef-12-attributes-changes.md#global-level-removals">Chef RFC 23</a>. The reason I don&rsquo;t want to save the attribute in question back to the server is that it is a secret that I have in a <a href="https://github.com/Nordstrom/chef-vault">Chef Vault item</a>.</p>
+
+<p>I&rsquo;m using <a href="https://www.datadoghq.com">Datadog</a> for my home systems, and the wonderful folks at Datadog have a <a href="https://supermarket.chef.io/cookbooks/datadog">cookbook</a> to set it up. The documentation requires that you set two attributes to authenticate, the API key, and the application key:</p>
+
+<p><code>ruby
+node.default['datadog']['api_key'] = 'Secrets In Plain Text Attributes??'
+node.default['datadog']['application_key'] = 'It is probably fine.'
+</code></p>
+
+<p>I prefer to use chef-vault because <a href="http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault/">I think it&rsquo;s the best way</a> to manage shared secrets in Chef recipes. I still need to set the attributes for Datadog&rsquo;s recipe to work, however. In order to accomplish the goal here, I will use a custom cookbook, <code>housepub-datadog</code>. It has one recipe that looks like this:</p>
+
+<p>```ruby
+include_recipe &lsquo;chef-vault&rsquo;</p>
+
+<p>node.default[&lsquo;datadog&rsquo;][&lsquo;api_key&rsquo;] = chef_vault_item(:secrets, &lsquo;datadog&rsquo;)[&lsquo;data&rsquo;][&lsquo;api_key&rsquo;]
+node.default[&lsquo;datadog&rsquo;][&lsquo;application_key&rsquo;] = chef_vault_item(:secrets, &lsquo;datadog&rsquo;)[&lsquo;data&rsquo;][&lsquo;chef&rsquo;]</p>
+
+<p>include_recipe &lsquo;datadog::dd-agent&rsquo;</p>
+
+<p>ruby_block &lsquo;smash-datadog-auth-attributes&rsquo; do
+  block do</p>
+
+<pre><code>node.rm('datadog', 'api_key')
+node.rm('datadog', 'application_key')
+</code></pre>
+
+<p>  end
+  subscribes :create, &lsquo;template[/etc/dd-agent/datadog.conf]&rsquo;, :immediately
+end
+```</p>
+
+<p>Let&rsquo;s take a closer look at the recipe.</p>
+
+<p><code>ruby
+include_recipe 'chef-vault'
+</code></p>
+
+<p>Here, the <code>chef-vault</code> recipe is included to ensure everything works, and I have a dependency on <code>chef-vault</code> in my cookbook&rsquo;s metadata. Next, we see the attributes set:</p>
+
+<p><code>ruby
+node.default['datadog']['api_key'] = chef_vault_item(:secrets, 'datadog')['data']['api_key']
+node.default['datadog']['application_key'] = chef_vault_item(:secrets, 'datadog')['data']['chef']
+</code></p>
+
+<p>The <code>secrets/datadog</code> item looks like this in plaintext:</p>
+
+<p>```json
+{
+  &ldquo;id&rdquo;: &ldquo;datadog&rdquo;,
+  &ldquo;data&rdquo;: {</p>
+
+<pre><code>"api_key": "My datadog API key",
+"chef": "Application key for the 'chef' application"
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>When Chef runs, it will load the vault-encrypted data bag item, and populate the attributes that will be used in the template. This template comes from the <code>datadog::dd-agent</code> recipe, which is included next. The template from that recipe looks like this:</p>
+
+<p>```ruby
+template &lsquo;/etc/dd-agent/datadog.conf&rsquo; do
+  owner &lsquo;root&rsquo;
+  group &lsquo;root&rsquo;
+  mode 0644
+  variables(</p>
+
+<pre><code>:api_key =&gt; node['datadog']['api_key'],
+:dd_url =&gt; node['datadog']['url']
+</code></pre>
+
+<p>  )
+end
+```</p>
+
+<p>Now, for the grand finale of this post, I delete the attributes that were set using a <code>ruby_block</code> resource. The timing here is important, because these attributes must be deleted after Chef has converged the template. This does get updated every run, because the attributes are populated every run. I could write additional logic to make this convergent, but I&rsquo;m okay with the behavior. The <code>subscribes</code> ensures that as soon as the template is written, the node object is updated to remove the attributes. Otherwise, this happens next after the <code>dd-agent</code> recipe.</p>
+
+<p>```ruby
+ruby_block &lsquo;smash-datadog-auth-attributes&rsquo; do
+  block do</p>
+
+<pre><code>node.rm('datadog', 'api_key')
+node.rm('datadog', 'application_key')
+</code></pre>
+
+<p>  end
+  subscribes :create, &lsquo;template[/etc/dd-agent/datadog.conf]&rsquo;, :immediately
+end
+```</p>
+
+<p>Let&rsquo;s see this in action:</p>
+
+<p>```
+managed-node$ chef-client
+&hellip;
+Recipe: housepub-datadog::default
+  * ruby_block[smash-datadog-auth-attributes] action run</p>
+
+<pre><code>- execute the ruby block smash-datadog-auth-attributes
+</code></pre>
+
+<p>&hellip;
+workstation% knife node show managed-node -a datadog.api_key -a datadog.application_key
+managed-node:
+  datadog.api_key:
+  datadog.application_key:
+```</p>
+
+<p><strong>Bonus quick tip!</strong> <code>knife node show</code> can take the <code>-a</code> option multiple times to display more attributes. I just discovered this in writing this post, and I don&rsquo;t know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Chef 12: Fix Untrusted Self Sign Certs]]></title>
@@ -41,7 +161,7 @@ ERROR: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=SSLv3 read s
 <p>```
 Connecting to host chef-server.example.com:443
 ERROR: The SSL certificate of chef-server.example.com could not be verified
-Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#109;&#x61;&#x69;&#x6c;&#x74;&#x6f;&#x3a;&#121;&#111;&#x75;&#64;&#x65;&#x78;&#x61;&#x6d;&#x70;&#108;&#101;&#46;&#99;&#x6f;&#109;">&#121;&#111;&#x75;&#64;&#x65;&#x78;&#x61;&#x6d;&#112;&#x6c;&#101;&#46;&#x63;&#111;&#x6d;</a></p>
+Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#x6d;&#97;&#x69;&#108;&#x74;&#x6f;&#x3a;&#x79;&#x6f;&#117;&#64;&#x65;&#x78;&#97;&#109;&#112;&#x6c;&#101;&#x2e;&#99;&#x6f;&#109;">&#x79;&#x6f;&#x75;&#x40;&#x65;&#x78;&#97;&#109;&#x70;&#x6c;&#101;&#x2e;&#x63;&#111;&#109;</a></p>
 
 <p>Configuration Info:</p>
 
@@ -354,1331 +474,117 @@ running: true
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[Evolution of Cookbook Development]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2014/02/01/evolution-of-cookbook-development/"/>
-    <updated>2014-02-01T12:48:49-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2014/02/01/evolution-of-cookbook-development</id>
-    <content type="html"><![CDATA[<p>In this post, I will explore some development patterns that I&rsquo;ve seen
-(and done!) with Chef cookbooks, and then explain how we can evolve to
-a new level of cookbook development. The examples here come from
-Chef&rsquo;s new
-<a href="http://www.getchef.com/blog/2014/01/28/chefs-splunk-cookbook-2/">chef-splunk cookbook</a>,
-which is a refactored version of an old <code>splunk42</code> cookbook. While
-there is a public <code>splunk</code> cookbook on the Chef community site, it
-shares some of the issues that I saw with our old one, which are
-partially subject matter of this post.</p>
-
-<p>Anyway, on to the evolution!</p>
-
-<h1>Sub-optimal patterns</h1>
-
-<p>These are the general patterns I&rsquo;m going to address.</p>
-
-<ul>
-<li>Composing URLs from multiple local variables or attributes</li>
-<li>Large conditional logic branches like case statements in recipes</li>
-<li>Not using definitions when it is best to do so</li>
-<li>Knowledge of how node run lists are composed for search, or
-searching for &ldquo;<code>role:some-server</code>&rdquo;</li>
-<li>Repeated resources across multiple orthogonal recipes</li>
-<li>Plaintext secrets in attributes or data bag items</li>
-</ul>
-
-
-<p>Cookbook development is a wide and varied topic, so there are many
-other patterns to consider, but these are the ones most relevant to
-the refactored cookbook.</p>
-
-<h2>Composing URLs</h2>
-
-<p>It may seem like a good idea, to compose URL strings as attributes or
-local variables in a recipe based on other attributes and local
-variables. For example, in our <code>splunk42</code> cookbook we have this:</p>
-
-<p><code>ruby
-splunk_root = "http://download.splunk.com/releases/"
-splunk_version = "4.2.1"
-splunk_build = "98164"
-splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-amd64.deb"
-os = node['os'].gsub(/\d*/, '')
-</code></p>
-
-<p>These get used in the following <code>remote_file</code> resource:</p>
-
-<p><code>ruby
-remote_file "/opt/#{splunk_file}" do
-  source "#{splunk_root}/#{splunk_version}/universalforwarder/#{os}/#{splunk_file}"
-  action :create_if_missing
-end
-</code></p>
-
-<p>We reused the filename variable, and composed the URL to the file to
-download. Then to upgrade, we can simply modify the <code>splunk_version</code>
-and <code>splunk_build</code>, as Splunk uses a consistent naming theme for their
-package URLs (thanks, Splunk!). The filename itself is built from a
-case statement (more on that in the next section). We could further
-make the version and build attributes, so users can update to newer
-versions by simply changing the attribute.</p>
-
-<p>So what is bad about this? Two things.</p>
-
-<ol>
-<li>This is in the <code>splunk42::client</code> recipe, and repeated again in the
-<code>splunk42::server</code> recipe with only minor differences (the package
-name, splunk vs splunkforwarder).</li>
-<li>Ruby has excellent libraries for manipulating URIs and paths as
-strings, and it is easier to break up a string than compose a new one.</li>
-</ol>
-
-
-<p>How can this be improved? First, we can set attributes for the full URL.
-The actual code for that is below, but suffice to say, it will look
-like this (note the version is different because the new cookbook installs
-a new Splunk version).</p>
-
-<p><code>ruby
-default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883-linux-2.6-amd64.deb'
-</code></p>
-
-<p>Second, we have
-<a href="https://github.com/opscode-cookbooks/chef-splunk/blob/master/libraries/helpers.rb">helper libraries</a>
-distributed with the cookbook that break up the URI so we can return
-just the package filename.</p>
-
-<p><code>ruby
-def splunk_file(uri)
-  require 'pathname'
-  require 'uri'
-  Pathname.new(URI.parse(uri).path).basename.to_s
-end
-</code></p>
-
-<p>The previous <code>remote_file</code> resource is rewritten like this:</p>
-
-<p><code>ruby
-remote_file "/opt/#{splunk_file(node['splunk']['forwarder']['url'])}" do
-  source node['splunk']['forwarder']['url']
-  action :create_if_missing
-end
-</code></p>
-
-<p>As a bonus, the helper methods are available in other places like
-other cookbooks and recipes, rather than the local scope of local
-variables.</p>
-
-<h2>Conditional Logic Branches</h2>
-
-<p>One of the wonderful things about Chef is that simple Ruby
-conditionals can be used in recipes to selectively set values for
-resource attributes, define resources that should be used, and other
-decisions. One of the horrible things about Chef is that simple Ruby
-conditionals can be used in recipes and often end up being far more
-complicated than originally intended, especially when handling
-multiple platforms and versions.</p>
-
-<p>In the earlier example, we had a <code>splunk_file</code> local variable set in a
-recipe. I mentioned it was built from a case statement, which looks
-like this, in full:</p>
-
-<p>```ruby
-splunk_file = case node[&lsquo;platform_family&rsquo;]
-  when &ldquo;rhel&rdquo;</p>
-
-<pre><code>if node['kernel']['machine'] == "x86_64"
-  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-x86_64.rpm"
-else
-  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}.i386.rpm"
-end
-</code></pre>
-
-<p>  when &ldquo;debian&rdquo;</p>
-
-<pre><code>if node['kernel']['machine'] == "x86_64"
-  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-amd64.deb"
-else
-  splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-linux-2.6-intel.deb"
-end
-</code></pre>
-
-<p>  when &ldquo;omnios&rdquo;</p>
-
-<pre><code>splunk_file = "splunkforwarder-#{splunk_version}-#{splunk_build}-solaris-10-intel.pkg.Z"
-</code></pre>
-
-<p>  end
-```</p>
-
-<p>Splunk itself supports many platforms, and not all of them are covered
-by this conditional, so it&rsquo;s easy to imagine how this can get further
-out of control and make the recipe even harder to follow. Also
-consider that this is just the <code>client</code> portion for the
-<code>splunkforwarder</code> package, this same block is repeated in the <code>server</code>
-recipe, for the <code>splunk</code> package.</p>
-
-<p>So why is this bad? There are three reasons.</p>
-
-<ol>
-<li>We have a large block of conditionals that sit in front of a user
-reading a recipe.</li>
-<li>This logic isn&rsquo;t reusable elsewhere, so it has to be duplicated in
-the other recipe.</li>
-<li>This is only the logic for the package filename, but we care about
-the entire URL. I&rsquo;ve also covered that composing URLs isn&rsquo;t delightful.</li>
-</ol>
-
-
-<p>What is a better approach? Use the full URL as I mentioned before, and
-set it as an attribute. We will still have the gnarly case statement,
-but it will be tucked away in the <code>attributes/default.rb</code> file, and
-hidden from anyone reading the recipe (which is the thing they
-probably care most about reading).</p>
-
-<p>```ruby
-case node[&lsquo;platform_family&rsquo;]
-when &lsquo;rhel&rsquo;
-  if node[&lsquo;kernel&rsquo;][&lsquo;machine&rsquo;] == &lsquo;x86_64&rsquo;</p>
-
-<pre><code>default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883-linux-2.6-x86_64.rpm'
-default['splunk']['server']['url'] = 'http://download.splunk.com/releases/6.0.1/splunk/linux/splunk-6.0.1-189883-linux-2.6-x86_64.rpm'
-</code></pre>
-
-<p>  else</p>
-
-<pre><code>default['splunk']['forwarder']['url'] = 'http://download.splunk.com/releases/6.0.1/universalforwarder/linux/splunkforwarder-6.0.1-189883.i386.rpm'
-default['splunk']['server']['url'] = 'http://download.splunk.com/releases/6.0.1/splunk/linux/splunk-6.0.1-189883.i386.rpm'
-</code></pre>
-
-<p>  end
-when &lsquo;debian&rsquo;
-  # &hellip;
-```</p>
-
-<p>The the complete case block can be viewed in the
-<a href="https://github.com/opscode-cookbooks/chef-splunk/blob/master/attributes/default.rb#L46-L66">repository</a>.
-Also, since this is an attribute, consumers of this cookbook can set
-the URL to whatever they want, including a local HTTP server.</p>
-
-<p>Another example of gnarly conditional logic looks like this, also from
-the <code>splunk42::client</code> recipe.</p>
-
-<p>```ruby
-case node[&lsquo;platform_family&rsquo;]
-when &ldquo;rhel&rdquo;
-  rpm_package &ldquo;/opt/#{splunk_file}&rdquo; do</p>
-
-<pre><code>source "/opt/#{splunk_file}"
-</code></pre>
-
-<p>  end
-when &ldquo;debian&rdquo;
-  dpkg_package &ldquo;/opt/#{splunk_file}&rdquo; do</p>
-
-<pre><code>source "/opt/#{splunk_file}"
-</code></pre>
-
-<p>  end
-when &ldquo;omnios&rdquo;
-  # tl;dr, this was more lines than you want to read, and
-  # will be covered in the next section.
-end
-```</p>
-
-<p>Why is this bad? After all, we&rsquo;re selecting the proper package
-resource to install from a local file on disk. The main issue is the
-conditional creates different resources that can&rsquo;t be looked up in the
-resource collection. Our recipe doesn&rsquo;t do this, but perhaps a wrapper
-cookbook would. The consumer wrapping the cookbook has to duplicate
-this logic in their own. Instead, it is better to select the provider
-for a single <code>package</code> resource.</p>
-
-<p>```ruby
-package &ldquo;/opt/#{splunk_file(node[&lsquo;splunk&rsquo;][&lsquo;forwarder&rsquo;][&lsquo;url&rsquo;])}&rdquo; do
-  case node[&lsquo;platform_family&rsquo;]
-  when &lsquo;rhel&rsquo;</p>
-
-<pre><code>provider Chef::Provider::Package::Rpm
-</code></pre>
-
-<p>  when &lsquo;debian&rsquo;</p>
-
-<pre><code>provider Chef::Provider::Package::Dpkg
-</code></pre>
-
-<p>  when &lsquo;omnios&rsquo;</p>
-
-<pre><code>provider Chef::Provider::Package::Solaris
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<h2>Definitions Aren&rsquo;t Bad</h2>
-
-<p>Definitions are simply defined as recipe &ldquo;macros.&rdquo; They are not
-actually Chef Resources themselves, they just look like them, and
-contain their own Chef resources. This has some disadvantages, such as
-lack of metaparameters (like action), which has lead people to prefer
-using the &ldquo;Lightweight Resource/Provider&rdquo; (LWRP) DSL instead. In fact,
-some feel that definitions are bad, and that one should feel bad for
-using them. I argue that they have their place. One advantage is their
-relative simplicity.</p>
-
-<p>In our <code>splunk42</code> cookbook, the client and server recipes duplicate a
-lot of logic. As mentioned a lot of this is case statements for the
-Splunk package file. They also repeat the same logic for choosing the
-provider to install the package. I snipped the content from the <code>when
-"omnios"</code> block, but it looks like this:</p>
-
-<p>`&ldquo;ruby
-cache_dir = Chef::Config[:file_cache_path]
-splunk_pkg = splunk_file.gsub(/.Z/, &rdquo;)</p>
-
-<p>execute &ldquo;uncompress /opt/#{splunk_file}&rdquo; do
-  not_if { ::File.exists?(splunk_cmd) }
-end</p>
-
-<p>cookbook_file &ldquo;#{cache_dir}/splunk-nocheck&rdquo; do
-  source &ldquo;splunk-nocheck&rdquo;
-end</p>
-
-<p>file &ldquo;#{cache_dir}/splunkforwarder-response&rdquo; do
-  content &ldquo;BASEDIR=/opt&rdquo;
-end</p>
-
-<p>pkgopts = [&ldquo;-a #{cache_dir}/splunk-nocheck&rdquo;,</p>
-
-<pre><code>       "-r #{cache_dir}/splunkforwarder-response"]
-</code></pre>
-
-<p>package &ldquo;splunkforwarder&rdquo; do
-  source &ldquo;/opt/#{splunk_pkg}&rdquo;
-  options pkgopts.join(&lsquo; &rsquo;)
-  provider Chef::Provider::Package::Solaris
-end
-```</p>
-
-<p>(Note: the logic for setting the provider is required since we&rsquo;re not using the default over-the-network package providers, and installing from a local file on the system.)</p>
-
-<p>This isn&rsquo;t <em>too</em> bad on its own, but needs to be repeated again in the
-server recipe if one wanted to run a Splunk server on OmniOS. The
-actual differences between the client and server package installation
-are the package name, <code>splunkforwarder</code> vs <code>splunk</code>. The earlier URL
-attribute example established a <code>forwarder</code> and <code>server</code> attribute.
-Using a definition, named <code>splunk_installer</code>, allows us to simplify
-the package installation used by the client and server recipes to look
-like this:</p>
-
-<p><code>ruby
-splunk_installer 'splunkforwarder' do
-  url node['splunk']['forwarder']['url']
-end
-splunk_installer 'splunk' do
-  url node['splunk']['server']['url']
-end
-</code></p>
-
-<p>How is this better than an LWRP? Simply that there was less ceremony
-in creating it. There is less cognitive load for a cookbook developer
-to worry about. Definitions by their very nature of containing
-resources are already idempotent and convergent with no additional
-effort. They also automatically support why-run mode, whereas in an
-LWRP that must be done by the developer. Finally, between resources in
-the definition and the rest of the Chef run, notifications may be
-sent.</p>
-
-<p>Contrast this to an LWRP, we need <code>resources</code> and <code>providers</code>
-directories, and the attributes of the resource need to be defined in
-the resource. Then the action methods need to be written in the
-provider. If we&rsquo;re using inline resources (which we are) we need to
-declare those so any notifications work. Finally, we should ensure
-that why-run works properly.</p>
-
-<p>The actual definition is ~40 lines, and can be viewed in the cookbook
-<a href="https://github.com/opscode-cookbooks/chef-splunk/blob/master/definitions/splunk_installer.rb">repository</a>.
-I don&rsquo;t have a comparable LWRP for this, but suffice to say that it
-would be longer and more complicated than the definition.</p>
-
-<h2>Reasonability About Search</h2>
-
-<p>Search is one of the killer features of running a Chef Server.
-Dynamically configuring load balancer configuration, or finding the
-master database server is simple with a search. Because we often think
-about the functionality a service provides based on the role it
-serves, we end up doing searches that look like this:</p>
-
-<p><code>ruby
-splunk_servers = search(:node, "role:splunk-server")
-</code></p>
-
-<p>Then we do something with <code>splunk_servers</code>, like send it to a
-template. What if someone doesn&rsquo;t like the <a href="http://bikeshed.io">role name</a>?
-Then we have to do something like this:</p>
-
-<p><code>ruby
-splunk_servers = search(:node, "role:#{node['splunk']['server_role']}")
-</code></p>
-
-<p>Then consumers of the cookbook can use whatever server role name they
-want, and just update the attribute for it. But, the internet has said
-that roles are bad, so we shouldn&rsquo;t use them (even though they
-aren&rsquo;t ;)). So instead, we need something like one of these queries:</p>
-
-<p>```ruby
-splunk_servers = search(:node, &ldquo;recipes:splunk42\:\:server&rdquo;)</p>
-
-<h1>or</h1>
-
-<p>splunk_servers = search(:node, &ldquo;#{node[&lsquo;splunk&rsquo;][&lsquo;server_search_query&rsquo;]}&rdquo;)
-```</p>
-
-<p>The problem with the first is similar to the problem with the first
-(<code>role:splunk-server</code>), we need knowledge about the run list in order
-to search properly. The problem with the second is that we now have to
-worry about constructing a query properly as a string that gets
-interpolated correctly.</p>
-
-<p>How can we improve this? I think it is more &ldquo;Chef-like&rdquo; to use an
-attribute on the server&rsquo;s node object itself that informs queries the
-intention that the node is in fact a Splunk server. In our
-<code>chef-splunk</code> cookbook, we use <code>node['splunk']['is_server']</code>. The
-query looks like this:</p>
-
-<p><code>ruby
-splunk_servers = search(:node, "splunk_is_server:true")
-</code></p>
-
-<p>This reads clearly, and the <code>is_server</code> attribute can be set in one of
-15 places (for good or bad, but that&rsquo;s a different post).</p>
-
-<h2>Repeating Resources, Composable Recipes</h2>
-
-<p>In the past, it was deemed okay to repeat resources across recipes
-when those recipes were not included on the same node. For example,
-client and server recipes that have similar resource requirements, but
-may pass in separate data. Another example is in the
-<a href="http://community.opscode.com/cookbooks/haproxy">haproxy</a>) cookbook I
-wrote where one recipe statically manages the configuration files, and
-the other uses a Chef search to populate the configuration.</p>
-
-<p>As I have mentioned above, a lot of code was duplicated between the
-client and server recipes for our <code>splunk42</code> cookbook: user and group,
-the case statements, package resources, execute statements (that
-haven&rsquo;t been shared here), and the service resource. It is definitely
-important to ensure that all the resources needed to converge a recipe
-are defined, particularly when using notifications. That is why
-sometimes a recipe will have a <code>service</code> resource with no actions like
-this:</p>
-
-<p><code>ruby
-service 'mything'
-</code></p>
-
-<p>However Chef 11will generate a warning about
-<a href="http://tickets.opscode.com/browse/CHEF-3694">cloned resources</a> when
-they are repeated in the same Chef run.</p>
-
-<p>Why is this bad? Well, CHEF-3694 explains in more detail that
-particular issue, of cloned resources. The other reason is that it
-makes recipes harder to reuse when they have a larger scope than
-absolutely necessary. How can we make this better? A solution to this
-is to write small, composable recipes that contain resources that may
-be optional for certain use cases. For example, we can put the service
-resource in a recipe and include that:</p>
-
-<p><code>ruby
-service 'splunk' do
-  supports :status =&gt; true, :restart =&gt; true
-  provider Chef::Provider::Service::Init
-  action :start
-end
-</code></p>
-
-<p>Then when we need to make sure we have the <code>service</code> resource
-available (e.g., for notifications):</p>
-
-<p><code>ruby
-template "#{splunk_dir}/etc/system/local/outputs.conf" do
-  source 'outputs.conf.erb'
-  mode 0644
-  variables :splunk_servers =&gt; splunk_servers
-  notifies :restart, 'service[splunk]'
-end
-include_recipe 'chef-splunk::service'
-</code></p>
-
-<p>Note that the service is included <em>after</em> the resource that notifies
-it. This is a feature of the notification system, where the notified
-resource can appear anywhere in the resource collection, and brings up
-another excellent practice, which is to declare service resources
-after other resources which affect their configuration. This prevents
-a race condition where, if a bad config is deployed, the service would
-attempt to start, fail, and cause the Chef run to exit before the
-config file could correct the problem.</p>
-
-<p>Making recipes composable in this way means that users can pick and
-choose the ones they want. Our <code>chef-splunk</code> cookbook has a
-prescriptive default recipe, but the client and server recipes mainly
-include the others they need. If someone doesn&rsquo;t share our opinion on
-this for their use case, they can pick and choose the ones they want.
-Perhaps they have the <code>splunk</code> user and group created on systems
-through some other means. They won&rsquo;t need the <code>chef-splunk::user</code>
-recipe, and can write their own wrapper to handle that. Overall this
-is good, though it does mean there are multiple places where a user
-must look to follow a recipe.</p>
-
-<h2>Plaintext Secrets</h2>
-
-<p>Managing secrets is one of the hardest problems to solve in system
-administration and configuration management. In Chef, it is very easy
-to simply set attributes, or use data bag items for authentication
-credentials. Our old <code>splunk42</code> cookbook had this:</p>
-
-<p><code>ruby
-splunk_password = node[:splunk][:auth].split(':')[1]
-</code></p>
-
-<p>Where <code>node[:splunk][:auth]</code> was set in a role with the
-<code>username:password</code>. This isn&rsquo;t particularly <em>bad</em> since our Chef
-server runs on a private network and is secured with HTTPS and RSA
-keys, but a defense in depth security posture has more controls in
-place for secrets.</p>
-
-<p>How can this be improved? At Chef, we started using
-<a href="https://github.com/Nordstrom/chef-vault">Chef Vault</a> to manage
-secrets. I wrote a
-<a href="http://www.getchef.com/blog/2013/09/19/managing-secrets-with-chef-vault/">post about chef-vault</a>
-a few months ago, so I won&rsquo;t dig too deep into the details here. The
-current <code>chef-splunk</code> cookbook loads the authentication information
-like this:</p>
-
-<p>```ruby
-splunk_auth_info = chef_vault_item(:vault, &ldquo;splunk_#{node.chef_environment}&rdquo;)[&lsquo;auth&rsquo;]
-user, pw = splunk_auth_info.split(&lsquo;:&rsquo;)</p>
-
-<p>execute &ldquo;#{splunk_cmd} edit user #{user} -password &lsquo;#{pw}&rsquo; -role admin -auth admin:changeme&rdquo; do
-  not_if { ::File.exists?(&ldquo;#{splunk_dir}/etc/.setup<em>#{user}</em>password&rdquo;) }
-end</p>
-
-<p>file &ldquo;#{splunk_dir}/etc/.setup<em>#{user}</em>password&rdquo; do
-  content &lsquo;true\n&rsquo;
-  owner &lsquo;root&rsquo;
-  group &lsquo;root&rsquo;
-  mode 00600
-end
-```</p>
-
-<p>The first line loads the authentication information from the
-encrypted-with-chef-vault data bag item. Then we make a couple of
-convenient local variables, and change the password from Splunk&rsquo;s
-built-in default. Then, we control convergence of the execute by
-writing a file that indicates that the password has been set.</p>
-
-<p>The advantage of this over attributes or data bag items is that the
-content is encrypted. The advantage over regular encrypted data bags
-is that we don&rsquo;t need to distribute the secret key out to every
-system, we can update the list of nodes that have access with a knife
-command.</p>
-
-<h1>Conclusion</h1>
-
-<p>Neither Chef (the company), nor I are here to tell anyone how to
-write cookbooks. One of the benefits of Chef (the product) is its
-flexibility, allowing users to write blocks of Ruby code in recipes
-that quickly solve an immediate problem. That&rsquo;s how we got to where we
-were with <code>splunk42</code>, and we certainly have other cookbooks that can
-be refactored similarly. When it comes to sharing cookbooks with the
-community, well-factored, easy to follow, understand, and use code is
-preferred.</p>
-
-<p>Many of the ideas here came from community members like Miah Johnson,
-Noah Kantrowitz, Jamie Winsor, and Mike Fiedler. I owe them thanks for
-challenging me over the years on a lot of the older patterns that I
-held onto. Together we can build better automation through cookbooks,
-and a strong collaborative community. I hope this information is
-helpful to those goals.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Managing Secrets With Chef Vault]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault/"/>
-    <updated>2013-09-10T09:30:00-06:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault</id>
-    <content type="html"><![CDATA[<p>Two years ago, I wrote a post about
-<a href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">using Chef encrypted data bags</a>
-for SASL authentication with Postfix. At the time, my ISP didn&rsquo;t allow
-non-authenticated SMTP, so I had to find a solution so I could get
-cronspam and other vital email from my servers at home. I&rsquo;ve since
-switched ISPs to one that doesn&rsquo;t care so much about this, so I&rsquo;m not
-using any of that code anymore.</p>
-
-<p>However, that doesn&rsquo;t mean I don&rsquo;t have secrets to manage! I actually
-don&rsquo;t for my personal systems due to what I&rsquo;m managing with Chef now,
-but we certainly do for Opscode&rsquo;s hosted Enterprise Chef environment.
-The usual suspects for any web application are required: database
-passwords, SSL certificates, service API tokens, etc.</p>
-
-<p>We&rsquo;re evaluating chef-vault as a possible solution. This blog post
-will serve as notes for me so I can remember what I did when my
-terminal history is gone, and hopefully information for you to be able
-to use in your own environment.</p>
-
-<h1>Chef Vault</h1>
-
-<p>Chef Vault is an
-<a href="https://github.com/Nordstrom/chef-vault">open source project</a>
-published by <a href="http://nordstrom.com">Nordstrom</a>. It is distributed as a
-RubyGem. You&rsquo;ll need it installed on your local workstation so you can
-encrypt sensitive secrets, and on any systems that need to decrypt
-said secrets. Since the workstation is where we&rsquo;re going to start,
-install the gem. I&rsquo;ll talk about using this in a recipe later.</p>
+    <title type="html"><![CDATA[Chef::Node.debug_value]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/09/02/chef-node-dot-debug-value/"/>
+    <updated>2014-09-02T14:26:21-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/09/02/chef-node-dot-debug-value</id>
+    <content type="html"><![CDATA[<p>Update: As mentioned by <a href="https://twitter.com/kallistec/status/506953082404483072">Dan DeLeo</a>, he discussed this feature on <a href="http://www.getchef.com/blog/2013/02/05/chef-11-in-depth-attributes-changes/">Chef 11 In-Depth: Attributes Changes</a> last year when Chef 11 was released. I somehow never got a chance to use it, and thought this post would be a helpful example.</p>
+
+<p>Earlier today I was reminded by <a href="https://github.com/stevendanna">Steven Danna</a> about a newer feature of Chef called <code>debug_value</code>. This is a method on the <code>node</code> object (<code>Chef::Node</code>) which will show where in Chef&rsquo;s attribute hierarchy a particular attribute or sub-attribute was set on the node.</p>
+
+<p>Fire up a chef shell in client mode on the node you want to see:</p>
 
 <p><code>
-% gem install chef-vault
+chef-shell -z
 </code></p>
 
-<h1>Use Cases</h1>
-
-<p>Now, for the use cases, I&rsquo;m going to take two fairly simple examples,
-and explain how chef-vault works along the way.</p>
-
-<ol>
-<li>A username/password combination. The <code>vaultuser</code> will be created on
-the system with Chef&rsquo;s built-in <code>user</code> resource.</li>
-<li>A file with sensitive content. In this case, I&rsquo;m going to use a
-junk RSA private key for <code>vaultuser</code>.</li>
-</ol>
-
-
-<p>Secrets are generally one of these things. Either a value passed into
-a command-line program (like <code>useradd</code>) or a file that should live on
-disk (like an SSL certificate or RSA key).</p>
-
-<h1>Command-line Structure</h1>
-
-<p>Chef Vault includes knife plugins to allow you to manage the secrets
-from your workstation, uploading them to the Chef Server just like
-normal data bags. The secrets themselves live in Data Bags on the Chef
-Server. The &ldquo;bag&rdquo; is called the &ldquo;vault&rdquo; for chef-vault.</p>
-
-<p>After installation, the <code>encrypt</code> and <code>decrypt</code> sub-commands will be
-available for knife.</p>
+<p>For example, I&rsquo;ll use my minecraft server, using the excellent <a href="https://supermarket.getchef.com/cookbooks/minecraft">minecraft cookbook</a>.</p>
 
 <p><code>
-knife encrypt create [VAULT] [ITEM] [VALUES] --mode MODE --search SEARCH --admins ADMINS --json FILE
-knife encrypt delete [VAULT] [ITEM] --mode MODE
-knife encrypt remove [VAULT] [ITEM] [VALUES] --mode MODE --search SEARCH --admins ADMINS
-knife rotate secret [VAULT] [ITEM] --mode MODE
-knife encrypt update [VAULT] [ITEM] [VALUES] --mode MODE --search SEARCH --admins ADMINS --json FILE
-knife decrypt [VAULT] [ITEM] [VALUES] --mode MODE
+chef &gt; node.run_list
+ =&gt; role[minecraft-server]
 </code></p>
 
-<p>The
-<a href="https://github.com/Nordstrom/chef-vault/blob/master/README.md">README</a>
-and
-<a href="https://github.com/Nordstrom/chef-vault/blob/master/KNIFE_EXAMPLES.md">Examples</a>
-document these quite well.</p>
-
-<h2>Mode: Solo vs Client</h2>
-
-<p>I&rsquo;m using Chef with a Chef Server (Enterprise Chef), so I&rsquo;ll specify
-<code>--mode client</code> for the knife commands.</p>
-
-<p>It is important to note the <code>MODE</code> in the chef-vault knife plugin
-commands affects where the encrypted data bags will be saved. Chef
-supports data bags with both Solo and Client/Server use. When using
-chef-solo, you&rsquo;ll need to configure <code>data_bag_path</code> in your
-<code>knife.rb</code>. That is, even if you&rsquo;re using Solo, since these are knife
-plugins, the configuration is for knife, not chef-solo. I&rsquo;m using a
-Chef Server though, so I&rsquo;m going to use <code>--mode client</code>.</p>
-
-<h1>Create a User with a Password</h1>
-
-<p>The user I&rsquo;m going to create is the arbitrarily named <code>vaultuser</code>,
-with the super secret password, <code>chef-vault</code>. I&rsquo;m going to use this on
-a Linux system with SHA512 hashing, so first I generate a password
-using mkpasswd:</p>
+<p>The cookbook itself sets a <code>node['minecraft']</code> attribute hash.</p>
 
 <p><code>
-% mkpasswd -m sha-512
-Password: chef-vault
-$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/
+chef &gt; node['minecraft']
+ =&gt; {"user"=&gt;"mcserver", "group"=&gt;"mcserver", "install_dir"=&gt;"/srv/minecraft", "install_type"=&gt;"vanilla" ... omg a huge hash of attributes}
 </code></p>
 
-<p><strong>Note</strong>: This is the <code>mkpasswd(1)</code> command from the Ubuntu 10.04
-  <a href="http://packages.ubuntu.com/lucid/mkpasswd">mkpasswd package</a>.</p>
-
-<h2>Create the Item</h2>
-
-<p>The command I&rsquo;m going to use is <code>knife encrypt create</code> since this is a
-new secret. I&rsquo;ll show two examples. First, I&rsquo;ll pass in the raw JSON
-data as &ldquo;values&rdquo;. You would do this if you&rsquo;re not going to store the
-unencrypted secret on disk or in a repository. Second, I&rsquo;ll pass a
-JSON file. You would do this if you want to store the unencrypted
-secret on disk or in a repository.</p>
+<p>Of note are the <a href="http://minecraft.gamepedia.com/Server.properties">server properties</a> attributes, which I customize in the role. Here is the <code>node['minecraft']['properties']</code> attributes hash on my node:</p>
 
 <p><code>
-% knife encrypt create secrets vaultuser \
-  '{"vaultuser":"$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/"}' \
-  --search 'role:base' \
-  --admins jtimberman --mode client
+chef &gt; node['minecraft']['properties']
+ =&gt; {"allow-flight"=&gt;false, "allow-nether"=&gt;true, "difficulty"=&gt;"1", "enable-query"=&gt;false, "enable-rcon"=&gt;false, "enable-command-block"=&gt;false, "force-gamemode"=&gt;true, "gamemode"=&gt;"0", "generate-structures"=&gt;true, "hardcore"=&gt;false, "level-name"=&gt;"creative-survival", "level-seed"=&gt;"", "level-type"=&gt;"DEFAULT", "max-build-height"=&gt;"256", "max-players"=&gt;"20", "motd"=&gt;"It's the will to survive", "online-mode"=&gt;true, "op-permission-level"=&gt;4, "player-idle-timeout"=&gt;0, "pvp"=&gt;"false", "query.port"=&gt;"25565", "rcon.password"=&gt;"", "rcon.port"=&gt;"25575", "server-ip"=&gt;"", "server-name"=&gt;"Housepub", "server-port"=&gt;"25565", "snooper-enabled"=&gt;"false", "spawn-animals"=&gt;true, "spawn-monsters"=&gt;true, "spawn-npcs"=&gt;true, "spawn-protection"=&gt;1, "texture-pack"=&gt;"", "view-distance"=&gt;10, "white-list"=&gt;false}
 </code></p>
 
-<p>The <code>[VALUES]</code> in this command is raw JSON that will be created in the
-data bag item by <code>chef-vault</code>. The <code>--search</code> option tells chef-vault
-to use the <strong>public</strong> keys of the nodes matching the SOLR query for
-encrypting the value. Then during the Chef run, chef-vault uses those
-node&rsquo;s <strong>private</strong> keys to decrypt the value. The <code>--admins</code> option tells chef-vault
-the list of users on the Chef Server who are also allowed to decrypt
-the secret. This is specified as a comma separated string for
-multiple admins. Finally, as I mentioned, I&rsquo;m using a Chef Server so I
-need to specify <code>--mode client</code>, since &ldquo;solo&rdquo; is the default.</p>
+<p>And I can see where these were set using the <code>#debug_value</code> method. Each sub-attribute should be passed as an argument.</p>
 
-<p>Here&rsquo;s the equivalent, using a JSON file named <code>secrets_vaultuser.json</code>. It has the content:</p>
-
-<p><code>json
-{"vaultuser":"$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/"}
+<p><code>
+chef &gt; pp node.debug_value('minecraft', 'properties')
+[["set_unless_enabled?", false],
+ ["default",
+  {"allow-flight"=&gt;false,
+   "allow-nether"=&gt;true,
+   "difficulty"=&gt;1,
+   "enable-query"=&gt;false,
+   "enable-rcon"=&gt;false,
+   "enable-command-block"=&gt;false,
+   "force-gamemode"=&gt;false,
+   "gamemode"=&gt;0,
+   "generate-structures"=&gt;true,
+   "hardcore"=&gt;false,
+   "level-name"=&gt;"world",
+   "level-seed"=&gt;"",
+   "level-type"=&gt;"DEFAULT",
+   "max-build-height"=&gt;"256",
+   "max-players"=&gt;"20",
+   "motd"=&gt;"A Minecraft Server",
+   "online-mode"=&gt;true,
+   "op-permission-level"=&gt;4,
+   "player-idle-timeout"=&gt;0,
+   "pvp"=&gt;true,
+   "query.port"=&gt;"25565",
+   "rcon.password"=&gt;"",
+   "rcon.port"=&gt;"25575",
+   "server-ip"=&gt;"",
+   "server-name"=&gt;"Unknown Server",
+   "server-port"=&gt;"25565",
+   "snooper-enabled"=&gt;true,
+   "spawn-animals"=&gt;true,
+   "spawn-monsters"=&gt;true,
+   "spawn-npcs"=&gt;true,
+   "spawn-protection"=&gt;16,
+   "texture-pack"=&gt;"",
+   "view-distance"=&gt;10,
+   "white-list"=&gt;false}],
+ ["env_default", :not_present],
+ ["role_default",
+  {"difficulty"=&gt;"1",
+   "gamemode"=&gt;"0",
+   "force-gamemode"=&gt;true,
+   "motd"=&gt;"It's the will to survive",
+   "pvp"=&gt;"false",
+   "server-name"=&gt;"Housepub",
+   "level-name"=&gt;"creative-survival",
+   "spawn-protection"=&gt;1,
+   "snooper-enabled"=&gt;"false"}],
+ ["force_default", :not_present],
+ ["normal", :not_present],
+ ["override", :not_present],
+ ["role_override", :not_present],
+ ["env_override", :not_present],
+ ["force_override", :not_present],
+ ["automatic", :not_present]]
 </code></p>
 
-<p>The command is:</p>
-
-<p><code>text
-% knife encrypt create secrets vaultuser \
-  --json secrets_vaultuser.json
-  --search 'role:base' \
-  --admins jtimberman --mode client
-</code></p>
-
-<p>Now, let&rsquo;s see what has been created on the Chef Server. I&rsquo;ll use the
-core Chef knife plugin, <code>data bag item show</code> for this.</p>
-
-<p><code>text
-% knife data bag show secrets
-vaultuser
-vaultuser_keys
-</code></p>
-
-<p>I now have a &ldquo;secrets&rdquo; data bag, with two items. The first,
-<code>vaultuser</code> is the one that contains the actual secret. Let&rsquo;s see:</p>
-
-<p><code>text
-% knife data bag show secrets vaultuser
-id:        vaultuser
-vaultuser:
-  cipher:         aes-256-cbc
-  encrypted_data: j+/fFM7ist6I7K360GNfzSgu6ix63HGyXN2ZAd99R6H4TAJ4pQKuFNpJXYnC
-  SXA5n68xn9frxHAJNcLuDXCkEv+F/MnW9vMlTaiuwW/jO++vS5mIxWU170mR
-  EgeB7gvPH7lfUdJFURNGQzdiTSSFua9E06kAu9dcrT83PpoQQzk=
-  iv:             cu2Ugw+RpTDVRu1QaaAfug==
-  version:        1
-</code></p>
-
-<p>As you can see, I have encrypted data. I also told chef-vault that my
-user can decrypt this. I need to use the knife plugin to do so:</p>
-
-<p>```text
-% knife decrypt secrets vaultuser &lsquo;vaultuser&rsquo; &mdash;mode client
-secrets/vaultuser</p>
-
-<pre><code>vaultuser: $6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/
-</code></pre>
-
-<p>```</p>
-
-<p>The <code>'vaultuser'</code> in quotes is the key from the hash of JSON data that
-I specified earlier. As you can see, the password is that which was
-generated from the mkpasswd command earlier.</p>
-
-<p>But what nodes have access to decrypt this password? That&rsquo;s what
-chef-vault stored in the <code>vaultuser_keys</code> item. Let&rsquo;s look:</p>
-
-<p>```text
-% knife data bag show secrets vaultuser_keys
-admins:              jtimberman
-clients:
-  os-945926465950316
-  os-2790002246935003
-id:                  vaultuser_keys
-jtimberman:          0Q2bhw/kJl2aIVEwqY6wYhrrfdz9fdsf8tCiIrBih2ZORvV7EEIpzzKQggRX
-4P4vnVQjMjfkRwIXndTzctCJONQYF50OSZi5ByXWqbich9iCWvVIbnhcLWSp
-z5mQoSTNXyZz/JQZGnubkckh4wGLBFDrLJ6WKl6UNXH1dRwqDNo5sEK7/3Wn
-b4ztVSRxzB01wVli0wLvFSZzGsKYJYINBcidnbIgLh/xGYGtBJVlgG2z/7TV
-uN0b/qvGj8VlhbS6zPlwh39O3mexDdkLwry/+gbO1nj8qKNkKDKaix5zypwE
-XdmdfMKNYGaM6kzG8cwuKZXLAgGAgblVUB1HP8+8kQ==</p>
-
-<p>os-2790002246935003: kGQLsxsFmBe9uPuWxZpKiNBnqJq55hQZJLgaKdjG2Vvivv98RrFGz1y8Xbwe
-uzeSgPgAURCZmxpNxpHrwvvKcvL77sBOL6TTKiNzs8n5B3ZOawy17dsuG24v
-41R0cRMnYLgbLcjln9dpVe4Esr4goPxko+1XqBPik1SBapthQq/pLUJ1BIKh
-Fxu1QVGj1w4HPUftLaUzeS33jKbtfvgZyZsYZBdVCVEVidOxC90WRf4wtkd6
-Ueyj+0gd1QKv84Q387O1R5LtRMS6u+17PJinrcRIkVNZ6P1z6oT2Dasfvrex
-rK3s5vD7v6jpkUW12Wj74Lz3Z6x3sKuIDzCtvEUnWw==</p>
-
-<p>os-945926465950316:  XzTJrJ3TZZZ1u9L9p6DZledf3bo2ToH2yrLGZQKPV6/ANzElHXGcYrEdtP0q
-14Nz1NzsqEftzviAebUUnc6ke91ltD8s6hNQQrPJRqkUoDlM7lNEwiUiz/dD
-+sFI6CSzQptO3zPrUbAlUI1Zog5h7k/CCtiYtmFRD6wbAWnxmCqvLhO1jwqL
-VNJ1vfjlFsG77BDm2HFw7jgleuxRGYEgBfCCuBuW70FAdUTvNHIAwKQVkfU/
-Am75UYm7N4N0E+W76ZwojLoYtXXTV/iOGG1cw3C75SVAmCsBOuxUK/otub67
-zsNDsKToKa+laxzXGylrmkTricYXIqVpIQO8OL5nnw==
-```</p>
-
-<p>As we can see, I have two nodes that are API clients with access to
-decrypt the data bag items. These values are all generated by
-chef-vault, and I&rsquo;ll talk about how to update the list and rotate
-secrets later in this post.</p>
-
-<h2>Manage a User Password</h2>
-
-<p>Let&rsquo;s manage a user resource with a password set to the value from our
-encrypted data bag using Chef Vault.</p>
-
-<p>First, I created a cookbook named <code>vault</code>, and added it to the base
-role. It contains the following recipe:</p>
-
-<p>```ruby
-chef_gem &ldquo;chef-vault&rdquo;
-require &ldquo;chef-vault&rdquo;</p>
-
-<p>vault = ChefVault::Item.load(&ldquo;secrets&rdquo;, &ldquo;vaultuser&rdquo;)</p>
-
-<p>user &ldquo;vaultuser&rdquo; do
-  password vault[&lsquo;vaultuser&rsquo;]
-  home &ldquo;/home/vaultuser&rdquo;
-  supports :manage_home => true
-  shell &ldquo;/bin/bash&rdquo;
-  comment &ldquo;Chef Vault User&rdquo;
-end
-```</p>
-
-<p>Let me break this down.</p>
+<p>From the role, we can see some properties attributes are set:</p>
 
 <p><code>ruby
-chef_gem "chef-vault"
-require "chef-vault"
+ ["role_default",
+  {"difficulty"=&gt;"1",
+   "gamemode"=&gt;"0",
+   "force-gamemode"=&gt;true,
+   "motd"=&gt;"It's the will to survive",
+   "pvp"=&gt;"false",
+   "server-name"=&gt;"Housepub",
+   "level-name"=&gt;"creative-survival",
+   "spawn-protection"=&gt;1,
+   "snooper-enabled"=&gt;"false"}],
 </code></p>
 
-<p><code>chef-vault</code> is distributed as a RubyGem, and I want to use it in my
-recipe(s), so here I use the
-<a href="http://docs.opscode.com/resource_chef_gem.html"><code>chef_gem</code> resource</a>.
-Then, I require it like any other Ruby library.</p>
-
-<p><code>ruby
-vault = ChefVault::Item.load("secrets", "vaultuser")
-</code></p>
-
-<p>This is where the decryption happens. If I do this under a
-<code>chef-shell</code>, I can see:</p>
-
-<p><code>text
-chef:recipe &gt; vault = ChefVault::Item.load("secrets", "vaultuser")
- =&gt; data_bag_item["secrets", "vaultuser", {"id"=&gt;"vaultuser", "vaultuser"=&gt;"$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/"}]
-</code></p>
-
-<p><code>ChefVault::Item.load</code> takes two arguments, the &ldquo;vault&rdquo; or data bag,
-in this case <code>secrets</code>, and the &ldquo;item&rdquo;, in this case <code>vaultuser</code>. It
-returns a data bag item. Then in the
-<a href="http://docs.opscode.com/resource_user.html"><code>user</code> resource</a>, I use
-the password:</p>
-
-<p><code>ruby
-user "vaultuser" do
-  password vault['vaultuser']
-  home "/home/vaultuser"
-  supports :manage_home =&gt; true
-  shell "/bin/bash"
-  comment "Chef Vault User"
-end
-</code></p>
-
-<p>The important resource attribute here is <code>password</code>, where I&rsquo;m using
-the local variable, <code>vault</code> and the <code>vaultuser</code> key from the item as
-decrypted by <code>ChefVault::Item.load</code>. When Chef runs, it will look like
-this:</p>
-
-<p>```text
-Recipe: vault::default
-  * chef_gem[chef-vault] action install</p>
-
-<pre><code>- install version 2.0.1 of package chef-vault
-</code></pre>
-
-<ul>
-<li>chef_gem[chef-vault] action install (up to date)</li>
-<li>user[vaultuser] action create
-
-<ul>
-<li>create user user[vaultuser]
-```</li>
-</ul>
-</li>
-</ul>
-
-
-<p>Now, I can su to <code>vaultuser</code> using the password I created:</p>
-
-<p><code>text
-ubuntu@-2790002246935003:~$ su - vaultuser
-Password: chef-vault
-vaultuser@os-2790002246935003:~$ id
-uid=1001(vaultuser) gid=1001(vaultuser) groups=1001(vaultuser)
-vaultuser@os-2790002246935003:~$ pwd
-/home/vaultuser
-</code></p>
-
-<p>Yay! To show that the user was created with the right password,
-here&rsquo;s the DEBUG log output:</p>
-
-<p><code>text
-INFO: Processing user[vaultuser] action create ((irb#1) line 12)
-DEBUG: user[vaultuser] user does not exist
-DEBUG: user[vaultuser] setting comment to Chef Vault User
-DEBUG: user[vaultuser] setting password to $6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/
-DEBUG: user[vaultuser] setting shell to /bin/bash
-INFO: user[vaultuser] created
-</code></p>
-
-<p>Next, I&rsquo;ll create a secret that is a file rendered on the system.</p>
-
-<h1>Create a Private SSH Key</h1>
-
-<p>Suppose this <code>vaultuser</code> is to be used for deploying code by cloning a
-repository. It will need a private SSH key to authenticate, so I&rsquo;ll
-create one, with an empty passphrase in this case.</p>
-
-<p><code>text
-% ssh-keygen -b 4096 -t rsa -f vaultuser-ssh
-Generating public/private rsa key pair.
-Enter passphrase (empty for no passphrase):
-Enter same passphrase again:
-Your identification has been saved in vaultuser-ssh.
-Your public key has been saved in vaultuser-ssh.pub.
-</code></p>
-
-<p>Get the SHA256 checksum of the private key. I use SHA256 because
-that&rsquo;s what Chef uses for file content. We&rsquo;ll use this to verify
-content later.</p>
-
-<p><code>text
-% sha256sum vaultuser-ssh
-a83221c243c9d39d20761e87db6c781ed0729b8ff4c3b330214ebca26e2ea89d  vaultuser-ssh
-</code></p>
-
-<p>Assume that I also
-<a href="https://help.github.com/articles/generating-ssh-keys">created the SSH key on GitHub</a>
-for this user.</p>
-
-<p>In order to have a file&rsquo;s contents be a JSON value for the data bag
-item, I&rsquo;ll remove the newlines (<code>\n</code>), and generate the JSON:</p>
-
-<p>```text
-ruby -rjson -e &lsquo;puts JSON.generate({&ldquo;vaultuser-ssh-private&rdquo; => File.read(&ldquo;vaultuser-ssh&rdquo;)})&rsquo; \</p>
-
-<blockquote><p>secrets_vaultuser-ssh-private.json
-```</p></blockquote>
-
-<p>Now, create the secret on the Chef Server:</p>
-
-<p><code>text
-knife encrypt create secrets vaultuser-ssh-private \
-  --search 'role:base' \
-  --json secrets_vaultuser-ssh-private.json \
-  --admins jtimberman \
-  --mode client
-</code></p>
-
-<p>Let&rsquo;s verify the server has what we need:</p>
-
-<p>```text
-% knife data bag show secrets vaultuser-ssh-private
-id:                    vaultuser-ssh-private
-vaultuser-ssh-private:
-  cipher:         aes-256-cbc
-  encrypted_data: mRRToM2N/0F+OyJxkYlHo/cUtHSIuy69ROAKuGoHIhX9Fr5vFTCM4RyWQSTN
-  trimmed for brevity even though scrollbars
-% knife decrypt secrets vaultuser-ssh-private &lsquo;vaultuser-ssh-private&rsquo; &mdash;mode client
-secrets/vaultuser-ssh-private</p>
-
-<pre><code>vaultuser-ssh-private: -----BEGIN RSA PRIVATE KEY-----
-</code></pre>
-
-<p>trimmed for brevity even though scrollbars
-```</p>
-
-<h2>Manage the Key File</h2>
-
-<p>Now, I&rsquo;ll manage the private key file with the vault cookbook.</p>
-
-<p>```ruby
-vault_ssh = ChefVault::Item.load(&ldquo;secrets&rdquo;, &ldquo;vaultuser-ssh-private&rdquo;)</p>
-
-<p>directory &ldquo;/home/vaultuser/.ssh&rdquo; do
-  owner &ldquo;vaultuser&rdquo;
-  group &ldquo;vaultuser&rdquo;
-  mode 0700
-end</p>
-
-<p>file &ldquo;/home/vaultuser/.ssh/id_rsa&rdquo; do
-  content vault_ssh[&ldquo;vaultuser-ssh-private&rdquo;]
-  owner &ldquo;vaultuser&rdquo;
-  group &ldquo;vaultuser&rdquo;
-  mode 0600
-end
-```</p>
-
-<p>Again, let&rsquo;s break this up a bit. First, load the item from the
-encrypted data bag like we did before.</p>
-
-<p><code>ruby
-vault_ssh = ChefVault::Item.load("secrets", "vaultuser-ssh-private")
-</code></p>
-
-<p>Next, make sure that the vaultuser has an <code>.ssh</code> directory with the
-correct permissions.</p>
-
-<p><code>ruby
-directory "/home/vaultuser/.ssh" do
-  owner "vaultuser"
-  group "vaultuser"
-  mode 0700
-end
-</code></p>
-
-<p>Finally, manage the content of the private key file with a <code>file</code>
-resource and the <code>content</code> resource attribute. The value of
-<code>vault_ssh["vaultuser-ssh-private"]</code> will be a string, with <code>\n</code>&rsquo;s
-embedded, but when it&rsquo;s rendered on disk, it will display properly.</p>
-
-<p><code>ruby
-file "/home/vaultuser/.ssh/id_rsa" do
-  content vault_ssh["vaultuser-ssh-private"]
-  owner "vaultuser"
-  group "vaultuser"
-  mode 0600
-end
-</code></p>
-
-<p>And now run chef on a target node:</p>
-
-<p>```text
-Recipe: vault::default
-  * chef_gem[chef-vault] action install (up to date)
-  * user[vaultuser] action create (up to date)
-  * directory[/home/vaultuser/.ssh] action create</p>
-
-<pre><code>- create new directory /home/vaultuser/.ssh
-- change mode from '' to '0700'
-- change owner from '' to 'vaultuser'
-- change group from '' to 'vaultuser'
-</code></pre>
-
-<ul>
-<li>file[/home/vaultuser/.ssh/id_rsa] action create
-
-<ul>
-<li>create new file /home/vaultuser/.ssh/id_rsa with content checksum a83221
-  &mdash;&ndash; /tmp/chef-tempfile20130909-1918-1v5hezo 2013-09-09 22:41:21.887239999 +0000
-  +++ /tmp/chef-diff20130909-1918-xwbmsn  2013-09-09 22:41:21.883240065 +0000
-  @@ -0,0 +1,51 @@
-  +&mdash;&mdash;-BEGIN RSA PRIVATE KEY&mdash;&mdash;&ndash;
-  +MIIJJwIBAAKCAgEAtZmwFTlVOBbr2ZfG+cDtUGx04xCcgaa0p0ISmeyMEoGYH/CP
-  output trimmed because its long even though scrollbars again
-```</li>
-</ul>
-</li>
-</ul>
-
-
-<p>Note the content checksum, <code>a83221</code>. This will match the checksum of
-the source file from earlier (scroll up!), and the one rendered:</p>
-
-<p><code>text
-ubuntu@os-2790002246935003:~$ sudo sha256sum /home/vaultuser/.ssh/id_rsa
-a83221c243c9d39d20761e87db6c781ed0729b8ff4c3b330214ebca26e2ea89d  /home/vaultuser/.ssh/id_rsa
-</code></p>
-
-<p>Yay! Now, we can SSH to GitHub (note, this is fake GitHub for example
-purposes).</p>
-
-<p><code>text
-ubuntu@os-2790002246935003:~$ su - vaultuser
-Password: chef-vault
-vaultuser@os-2790002246935003:~$ ssh -i .ssh/id_rsa github@172.31.7.15
-$ hostname
-os-945926465950316
-$ id
-uid=1002(github) gid=1002(github) groups=1002(github)
-</code></p>
-
-<h1>Updating a Secret</h1>
-
-<p>What happens if we need to update a secret? For example, if an
-administrator leaves the organization, we will want to change the
-<code>vaultuser</code> password (and SSH private key).</p>
-
-<p><code>text
-% mkpasswd -m sha-512
-Password: gone-user
-$6$zM5STNtXdmsrOSm$svJr0tauijqqxTjnMIGJGJPv5V3ovMFCQo.ZDBleiL.yOxcngRqh9yAjpMAsMBA7RlKPv5DKFd1aPZm/wUoKs.
-</code></p>
-
-<p>The <code>encrypt create</code> command will return an error if the target
-already exists:</p>
-
-<p><code>text
-% knife encrypt create secrets vaultuser --search 'role:base' --json secrets_vaultuser.json --admins jtimberman --mode client
-ERROR: ChefVault::Exceptions::ItemAlreadyExists: secrets/vaultuser already exists, use 'knife encrypt remove' and 'knife encrypt update' to make changes.
-</code></p>
-
-<p>So, I need to use <code>encrypt update</code>. <strong>Note</strong> make sure that the
-contents of the JSON file are valid JSON.</p>
-
-<p><code>text
-% knife encrypt update secrets vaultuser --search 'role:base' --json secrets_vaultuser.json --admins jtimberman --mode client
-</code></p>
-
-<p><code>encrypt update</code> only updates the things that change, so I can also
-shorten this:</p>
-
-<p><code>text
-% knife encrypt update secrets vaultuser --json secrets_vaultuser.json --mode client
-</code></p>
-
-<p>Since the search and the admins didn&rsquo;t change.</p>
-
-<p>Verify it:</p>
-
-<p>```text
-% knife decrypt secrets vaultuser &lsquo;vaultuser&rsquo; &mdash;mode client
-secrets/vaultuser</p>
-
-<pre><code>vaultuser: $6$zM5STNtXdmsrOSm$svJr0tauijqqxTjnMIGJGJPv5V3ovMFCQo.ZDBleiL.yOxcngRqh9yAjpMAsMBA7RlKPv5DKFd1aPZm/wUoKs.
-</code></pre>
-
-<p>```</p>
-
-<p>Now, just run Chef on any nodes affected.</p>
-
-<p>```text
-Recipe: vault::default
-  * chef_gem[chef-vault] action install (up to date)
-  * user[vaultuser] action create</p>
-
-<pre><code>- alter user user[vaultuser]
-</code></pre>
-
-<ul>
-<li>directory[/home/vaultuser/.ssh] action create (up to date)</li>
-<li>file[/home/vaultuser/.ssh/id_rsa] action create (up to date)
-Chef Client finished, 1 resources updated
-```</li>
-</ul>
-
-
-<p>And su to the vault user with the <code>gone-user</code> password:</p>
-
-<p><code>text
-ubuntu@os-2790002246935003:~$ su - vaultuser
-Password: gone-user
-vaultuser@os-2790002246935003:~$
-</code></p>
-
-<h1>Managing Access to Items</h1>
-
-<p>There are three common scenarios which require managing the access to an item
-in the vault.</p>
-
-<ol>
-<li>A system needs to be taken offline, or otherwise prevented from
-accessing the item(s).</li>
-<li>A new system comes online that needs access.</li>
-<li>An admin user has left the organization.</li>
-<li>A new admin user has joined the organization.</li>
-</ol>
-
-
-<p>Suppose we have a system that we need to take offline for some reason,
-so we want to disable its access to a secret. Or, perhaps we have a
-user who has left the organization that was an admin. We can do that in a
-few ways.</p>
-
-<h2>Update the Vault Item</h2>
-
-<p>The most straightforward way to manage access to an item is to use the
-<code>update</code> or <code>remove</code> sub-commands.</p>
-
-<h3>Remove a System</h3>
-
-<p>Suppose I want to remove node <code>DEADNODE</code>, I can qualify the search to
-exclude the node named <code>DEADNODE</code>:</p>
-
-<p><code>text
-% knife encrypt update secrets vaultuser \
-  --search 'role:base NOT name:DEADNODE' \
-  --json secrets_vaultuser.json \
-  --admins jtimberman --mode client
-</code></p>
-
-<p>Note, as before, admins didn&rsquo;t change so I don&rsquo;t need to pass that
-argument.</p>
-
-<h3>Add a New System</h3>
-
-<p>If the node has run Chef and is indexed on the Chef Server already,
-simply rerun the update command with the search:</p>
-
-<p><code>text
-% knife encrypt update secrets vaultuser \
-  --search 'role:base' \
-  --json secrets_vaultuser.json \
-  --admins jtimberman --mode client
-</code></p>
-
-<p>There&rsquo;s a bit of a &ldquo;Chicken and Egg&rdquo; problem here, in that a new node
-might not be indexed for search if it tried to load the secret during
-a bootstrap beforehand. For example, if I create an OpenStack instance
-with the base role in its run list, the node doesn&rsquo;t exist for the
-search yet. A solution here is to create the node with an empty run
-list, allowing it to register with the Chef Server, and then use
-<code>knife bootstrap</code> to rerun Chef with the proper run list. This is
-annoying, but no one claimed that chef-vault would solve <em>all</em>
-problems with shared secret management :&ndash;).</p>
-
-<h3>Remove an Admin</h3>
-
-<p>The admins argument takes a list. Earlier, I only had my userid as an
-admin. Suppose I created the item with &ldquo;bofh&rdquo; as an admin too:</p>
-
-<p><code>text
-% knife encrypt create secrets vaultuser \
-  --search 'role:base' \
-  --json secrets_vaultuser.json \
-  --admins "jtimberman,bofh" --mode client
-</code></p>
-
-<p>To remove the bofh user, use the <code>encrypt remove</code> subcommand. In this
-case, the <code>--admins</code> argument is the list of admins to remove, rather
-than add.</p>
-
-<p><code>text
-% knife encrypt remove secrets vaultuser --admins bofh --mode client
-</code></p>
-
-<h3>Add a New Admin</h3>
-
-<p>I want to add &ldquo;mandi&rdquo; as an administrator because she&rsquo;s awesome and
-will help manage our secrets. As above, I just pass a comma-separated
-string, <code>"jtimberman,mandi"</code> to the <code>--admins</code> argument.</p>
-
-<p><code>text
-% knife encrypt update secrets vaultuser \
-  --search 'role:base' \
-  --json secrets_vaultuser.json \
-  --admins "jtimberman,mandi" --mode client
-</code></p>
-
-<h2>Regenerate the Client</h2>
-
-<p>The heavyhanded way to remove access is to regenerate the API client
-on the Chef Server. For example, of my nodes, say I want to remove
-<code>os-945926465950316</code>:</p>
-
-<p><code>text
-% knife client reregister os-945926465950316
------BEGIN RSA PRIVATE KEY-----
-MIIEpAIBAAKCAQEAybzwv53tDLIzW+GHRJwLthZmiGTfZVyqQX6m6RGuZjemEIdy
-trim trim
-</code></p>
-
-<p>If you&rsquo;re familiar with Chef Server&rsquo;s authentication cycle, you&rsquo;ll
-know that until that private key is copied to the node, it will
-completely fail to authenticate. However, once the
-<code>/etc/chef/client.pem</code> file is updated with the content from the knife
-command, we&rsquo;ll see that the node fails to read the Chef Vault item:</p>
-
-<h1>```text</h1>
-
-<h1>Recipe Compile Error in /var/chef/cache/cookbooks/vault/recipes/default.rb</h1>
-
-<h2>OpenSSL::PKey::RSAError</h2>
-
-<p>padding check failed</p>
-
-<h2>Cookbook Trace:</h2>
-
-<p>  /var/chef/cache/cookbooks/vault/recipes/default.rb:4:in `from_file'</p>
-
-<h2>Relevant File Content:</h2>
-
-<p>/var/chef/cache/cookbooks/vault/recipes/default.rb:</p>
-
-<p>  1:  chef_gem &ldquo;chef-vault&rdquo;
-  2:  require &ldquo;chef-vault&rdquo;
-  3:
-  4>> vault = ChefVault::Item.load(&ldquo;secrets&rdquo;, &ldquo;vaultuser&rdquo;)
-  5:
-  6:  user &ldquo;vaultuser&rdquo; do
-  7:    password vault[&ldquo;vaultuser&rdquo;]
-  8:    home &ldquo;/home/vaultuser&rdquo;
-  9:    supports :manage_home => true
- 10:    shell &ldquo;/bin/bash&rdquo;
- 11:    comment &ldquo;Chef Vault User&rdquo;
- 12:  end
- 13:
-```</p>
-
-<p><strong>Note</strong> I say this is heavy-handed because if you make a mistake, you
-  need to re-upload every single secret that this node needs access to.</p>
-
-<h2>Removing Users</h2>
-
-<p>We can also remove user access from Enterprise Chef simply by
-disassociating that user from the organization on the Chef Server. I
-won&rsquo;t show an example of that here, since I&rsquo;m using Opscode&rsquo;s hosted
-Enterprise Chef server and I&rsquo;m the only admin, however :&ndash;).</p>
-
-<h1>Backing Up Secrets</h1>
-
-<p>To back up the secrets, as encrypted data from the Chef Server, use
-<code>knife-essentials</code> (comes with Chef 11+, available as a RubyGem for
-Chef 10).</p>
-
-<p><code>text
-% knife download data_bags/secrets/
-Created data_bags/secrets/vaultuser_keys.json
-Created data_bags/secrets/vaultuser.json
-Created data_bags/secrets/vaultuser-ssh-private_keys.json
-Created data_bags/secrets/vaultuser-ssh-private.json
-</code></p>
-
-<p>For example, the vaultuser.json file looks like this:</p>
-
-<p>```json
-{
-  &ldquo;id&rdquo;: &ldquo;vaultuser&rdquo;,
-  &ldquo;vaultuser&rdquo;: {</p>
-
-<pre><code>"encrypted_data": "3yREwInxdyKpf8nuTIivXAeuEzHt7o4vF4FsOwmVLHmMWol5nCBoMWF0YdaW\n3P3NpEAAAxYEYeJYdVkrdLqjjB2kTJdx0+ceh/RBHBWqmSeHOWFH9pCRGjV8\nfS5XaTueShb320b/+Ia8iqUJJWg6utnbJCDx+VMcGNggPXgPKC8=\n",
-"iv": "EI+y74Uj2uwq7EVaP+0K6Q==\n",
-"version": 1,
-"cipher": "aes-256-cbc"
-</code></pre>
-
-<p>  }
-}
-```</p>
-
-<p>Since these are encrypted using a strong cipher (AES 256), they should
-be safe to store in repository. Unless you think the NSA has access to
-that repository ;&ndash;).</p>
-
-<h1>Conclusion</h1>
-
-<p>Secrets management is hard! Especially when you need to store secrets
-that are used by multiple systems, services, and people. Chef&rsquo;s
-encrypted data bag feature isn&rsquo;t a panacea, but it certainly helps.
-Hopefully, this blog post was informative. While I don&rsquo;t always
-respond, I do read all comments posted here via Disqus, so let me know
-if something is out of whack, or needs an update.</p>
+<p>Note that even though these are also set by default, we get them in the output here too.</p>
 ]]></content>
   </entry>
   

@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: debian | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/debian/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-12-24T14:19:22-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Install Chef 10 Server on Ubuntu With Ruby 1.9]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/"/>
+    <updated>2012-11-17T11:27:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9</id>
+    <content type="html"><![CDATA[<p>I wanted to capture the minimal steps required to install a Chef
+version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
+Ubuntu 12.04.</p>
+
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
+
+<p>This does not include any customization to the
+installation and takes everything as default. This will all change
+when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
+
+<p>These steps were performed on a default server install of Ubuntu
+12.04.</p>
+
+<p>Update apt sources.</p>
+
+<p><code>
+sudo apt-get update
+</code></p>
+
+<p>Install required packages.</p>
+
+<p><code>
+sudo apt-get install ruby1.9.1-full build-essential wget ssl-cert curl
+</code></p>
+
+<p>Update RubyGems.</p>
+
+<p><code>
+REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
+</code></p>
+
+<p>Install Chef.</p>
+
+<p><code>
+sudo gem install chef --no-ri --no-rdoc
+</code></p>
+
+<p>Configure chef-solo.</p>
+
+<p><code>
+sudo mkdir -p /etc/chef
+sudo vi /etc/chef/solo.rb
+</code></p>
+
+<p>The config file should look like this:</p>
+
+<p><code>ruby
+file_cache_path "/tmp/chef-solo"
+cookbook_path "/tmp/chef-solo/cookbooks"
+recipe_url "http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz"
+</code></p>
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<p><code>
+sudo chef-solo -o chef-server::rubygems-install
+</code></p>
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<p><code>sh
+sudo knife configure -i
+</code></p>
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<p><code>ruby
+log_level                :info
+log_location             STDOUT
+node_name                'jtimberman'
+client_key               '/home/jtimberman/.chef/jtimberman.pem'
+validation_client_name   'chef-validator'
+validation_key           '/home/jtimberman/.chef/validation.pem'
+chef_server_url          'http://10.1.1.100:4000'
+cache_type               'BasicFile'
+cache_options( :path =&gt; '/home/jtimberman/.chef/checksums' )
+</code></p>
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<p><code>
+sudo cp /etc/chef/validation.pem ~/.chef
+</code></p>
+
+<p>Verify that the API client and configuration file work.</p>
+
+<p><code>
+knife client list
+  chef-validator
+  chef-webui
+  jtimberman
+</code></p>
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Autostarted Services]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/07/26/autostarted-services/"/>
+    <updated>2012-07-26T22:11:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/07/26/autostarted-services</id>
+    <content type="html"><![CDATA[<p>It is quite common in Debian and Ubuntu that when installing a package
+that provides a daemon, said daemon is started by the init script(s)
+included in the package. This is a matter of
+<a href="http://www.debian.org/doc/debian-policy/ch-opersys.html#s-sysvinit">Debian Policy</a>,
+though I don&rsquo;t interpret that section to literally mean it is
+required. However, it is
+<a href="http://wiki.debian.org/LSBInitScripts/">common enough practice</a> that <a href="https://www.varnish-cache.org/trac/ticket/1004">several people</a>
+have <a href="http://ask.debian.net/questions/how-to-prevent-daemons-from-starting-at-installation-time">asked</a> (or <a href="https://gist.github.com/1721727">ranted</a>) about <a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-02/msg00017.html">the topic</a>.</p>
+
+<p>The main issue of course is that the default configuration for the
+software being installed may not be appropriate before starting up the
+service and making it available on the network. Users of other Linux
+distributions may be smugly smirking as their distribution doesn&rsquo;t
+start the service on package installation.</p>
+
+<p>This post isn&rsquo;t about that.</p>
+
+<p>Instead, this post describes how this problem is resolved using
+configuration management, specifically Chef. I&rsquo;m also going to discuss
+a couple nuances about service management, so watch carefully.</p>
+
+<p>For the example service I&rsquo;m going to use memcached, from the memcached
+package. It is started on package installation as demonstrated:</p>
+
+<p><code>
+vagrant@precise-housepub:~$ sudo apt-get install memcached
+...
+Setting up memcached (1.4.13-0ubuntu2) ...
+Starting memcached: memcached.
+vagrant@precise-housepub:~$ service memcached status
+ * memcached is running
+vagrant@precise-housepub:~$ ps awux | grep memcached
+ memcache 15176  0.0  0.3 323212  1180 ?        Sl   04:32   0:00 /usr/bin/memcached -m 64 -p 11211 -u memcache -l 127.0.0.1
+</code></p>
+
+<p>As we can see, the memcached service is started. Of course, it is
+using the default configuration, which means that it has a very small
+memory size, and listens on localhost. While the recipe would be very
+simple:</p>
+
+<p><code>ruby
+package "memcached"
+</code></p>
+
+<p>This wouldn&rsquo;t be very useful for discussion, or practical use
+purposes. For now, I&rsquo;m going to post the entire recipe I&rsquo;m going to
+discuss, and then break it down.</p>
+
+<p>```ruby
+node.set[&lsquo;memcached&rsquo;][&lsquo;memory_max&rsquo;] = node[&lsquo;memory&rsquo;][&lsquo;total&rsquo;].to_i / 1024 * 0.65</p>
+
+<p>package &ldquo;memcached&rdquo;</p>
+
+<p>service &ldquo;memcached&rdquo; do
+  supports :restart => true, :status => true
+  action :enable
+end</p>
+
+<p>template &ldquo;/etc/memcached.conf&rdquo; do
+  source &ldquo;memcached.conf.erb&rdquo;
+  owner &ldquo;root&rdquo;
+  group &ldquo;root&rdquo;
+  mode 00644
+  notifies :restart, &ldquo;service[memcached]&rdquo;
+  variables(</p>
+
+<pre><code>:memory_max =&gt; node['memcached']['memory_max']
+:ip_addr =&gt; node['ipaddress']
+</code></pre>
+
+<p>  )
+end</p>
+
+<p>service &ldquo;memcached&rdquo; do
+  action :start
+end
+```</p>
+
+<p>This recipe is fairly straightforward. First, it sets a node attribute
+based on a calculation of the amount of memory installed in the
+system. Then, it will install the memcached package. This of course
+will start up the service with the unsuitable defaults already
+discussed.</p>
+
+<p>The first <code>service</code> resource occurance makes sure that the service is
+enabled. This is the default behavior of the package manager, but this
+also gives clear indication as to the intention of the recipe. Next,
+the configuration file is managed. The exact content of the
+<code>memcached.conf.erb</code> file isn&rsquo;t particularly important. Let us presume
+that the variables passed in are what we care about &ndash; that we want to
+use 65% of the system&rsquo;s total memory for memcached, and listen on the
+default IP address. Maybe other tuning is happening, maybe not. Of
+course, when the configuration is updated, we need to notify the
+memcached service to restart.</p>
+
+<p>Finally, the memcached service is started if it is not already
+running. This occurs at the end to help remedy an issue where the
+service might have been halted, or the configuration file was rendered
+incorrectly (a typo?), so that we can correct such configuration
+problems with Chef in a single subsequent run. This uses a feature of
+Chef where resources can be declared multiple times with different
+actions (or if desired, parameters).</p>
+
+<p>The first time this recipe is run on a node, memcached will be
+installed, started, configured, restarted. We&rsquo;re not aiming to prevent
+the auto-start from occurring at all, but we do automate the
+additional steps required for handling that easily.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby In Ubuntu 11.10]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2011/11/24/ruby-in-ubuntu-11-dot-10/"/>
+    <updated>2011-11-24T00:16:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2011/11/24/ruby-in-ubuntu-11-dot-10</id>
+    <content type="html"><![CDATA[<p>I was playing around with Ubuntu 11.10 the other day, to explore some of the
+changes that have happened to Ruby lately, and thought I&rsquo;d share my findings.</p>
+
+<p>First off, there are still Ruby 1.8(.7p352) packages. This is the
+default you get with the <code>ruby</code> package. However, the <code>ruby1.9.1</code> has
+Ruby 1.9.2p290 as the default version. This isn&rsquo;t the absolute latest
+released (officially, 1.9.3 is the latest stable release), but it&rsquo;s a
+widespread release that a lot of people are using in production.</p>
+
+<p>The main package for getting the Ruby executables is <code>ruby1.9.1</code>. It
+is now a &ldquo;full&rdquo; installation and includes:</p>
+
+<ul>
+<li>/usr/bin/gem1.9.1</li>
+<li>/usr/bin/rdoc1.9.1</li>
+<li>/usr/bin/rake1.9.1</li>
+<li>/usr/bin/erb1.9.1</li>
+<li>/usr/bin/ri1.9.1</li>
+<li>/usr/bin/ruby1.9.1</li>
+<li>/usr/bin/irb1.9.1</li>
+<li>/usr/bin/testrb1.9.1</li>
+</ul>
+
+
+<p>Previous versions had these as separate packages, and you had to
+remember to install everything to have a full Ruby installation
+available.</p>
+
+<p>In the package name and the above binaries, <code>1.9.1</code> indicates the Ruby
+library compatibility, <code>1.9.2</code> is compatible with <code>1.9.1</code>.</p>
+
+<p>The Debian alternatives system is used to set the default ruby, gem
+and irb binaries in the $PATH as links to the 1.9.1 versions, e.g.:</p>
+
+<p><code>
+% ls -l /usr/bin/ruby /etc/alternatives/ruby
+lrwxrwxrwx 1 root root 18 2011-11-24 00:02 /etc/alternatives/ruby -&gt; /usr/bin/ruby1.9.1
+lrwxrwxrwx 1 root root 22 2011-11-24 00:02 /usr/bin/ruby -&gt; /etc/alternatives/ruby
+</code></p>
+
+<p>Users can also update RubyGems via the <code>gem update --system</code> command,
+but a shell environment variable must be exported first.</p>
+
+<p><code>bash
+export REALLY_GEM_UPDATE_SYSTEM=yes
+sudo -E gem update --system
+</code></p>
+
+<p>The <code>-E</code> is significant so the variable is available via
+<code>sudo</code>. Without this variable set, this command will warn noisily
+that you should know what you&rsquo;re doing, and what this is up
+to. Personally, I&rsquo;m fine with RubyGems 1.3.7, as that is the version
+that the Chef <code>gem_package</code> provider uses for the API. With the
+default RubyGems, you also get binaries in <code>/usr/local/bin</code>, rather than
+the awkward <code>/var/lib/ruby</code> location in earlier versions.</p>
+
+<p>These changes are a result of work that has been going in
+<a href="http://wiki.debian.org/Teams/Ruby/Packaging">Debian Wheezy by the Ruby packaging team</a>,
+kicked off by
+<a href="http://lists.debian.org/debian-devel/2011/03/msg00210.html">Lucas Nussbaum</a>.</p>
+
+<p>That said, let&rsquo;s put this to use so we can have Chef running under the
+Ruby 1.9.2 available via APT.</p>
+
+<p><code>
+% sudo apt-get install ruby1.9.1 ruby1.9.1-dev build-essential
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+build-essential is already the newest version.
+Suggested packages:
+  ruby1.9.1-examples ri1.9.1 graphviz
+The following NEW packages will be installed:
+  libruby1.9.1 ruby1.9.1 ruby1.9.1-dev
+0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+Need to get 0 B/5,027 kB of archives.
+After this operation, 19.5 MB of additional disk space will be used.
+Selecting previously deselected package libruby1.9.1.
+(Reading database ... 141637 files and directories currently installed.)
+Unpacking libruby1.9.1 (from .../libruby1.9.1_1.9.2.290-2_amd64.deb) ...
+Selecting previously deselected package ruby1.9.1.
+Unpacking ruby1.9.1 (from .../ruby1.9.1_1.9.2.290-2_amd64.deb) ...
+Selecting previously deselected package ruby1.9.1-dev.
+Unpacking ruby1.9.1-dev (from .../ruby1.9.1-dev_1.9.2.290-2_amd64.deb) ...
+Processing triggers for man-db ...
+Setting up libruby1.9.1 (1.9.2.290-2) ...
+Setting up ruby1.9.1 (1.9.2.290-2) ...
+update-alternatives: using /usr/bin/gem1.9.1 to provide /usr/bin/gem (gem) in auto mode.
+update-alternatives: using /usr/bin/ruby1.9.1 to provide /usr/bin/ruby (ruby) in auto mode.
+Setting up ruby1.9.1-dev (1.9.2.290-2) ...
+Processing triggers for libc-bin ...
+ldconfig deferred processing now taking place
+</code></p>
+
+<p>One of Chef&rsquo;s dependency gems is <code>json</code>, which has native C
+extensions, so the development headers for Ruby, and build tools are
+required (though already installed on my system).</p>
+
+<p><code>
+% ruby --version
+ruby 1.9.2p290 (2011-07-09 revision 32553) [x86_64-linux]
+% gem --version
+1.3.7
+</code></p>
+
+<p>Now, I can install Chef as a RubyGem.</p>
+
+<p><code>
+% sudo gem install chef
+Building native extensions.  This could take a while...
+[Version 0.7.8] test suite cleanup (eliminated some race conditions related to queue.message_count)
+Building native extensions.  This could take a while...
+Successfully installed mixlib-config-1.1.2
+Successfully installed mixlib-cli-1.2.2
+Successfully installed mixlib-log-1.3.0
+Successfully installed mixlib-authentication-1.1.4
+Successfully installed yajl-ruby-1.1.0
+Successfully installed systemu-2.2.0
+Successfully installed ohai-0.6.10
+Successfully installed mime-types-1.17.2
+Successfully installed rest-client-1.6.7
+Successfully installed bunny-0.7.8
+Successfully installed json-1.5.2
+Successfully installed polyglot-0.3.3
+Successfully installed treetop-1.4.10
+Successfully installed net-ssh-2.1.4
+Successfully installed net-ssh-gateway-1.1.0
+Successfully installed net-ssh-multi-1.1
+Successfully installed erubis-2.7.0
+Successfully installed moneta-0.6.0
+Successfully installed highline-1.6.8
+Successfully installed uuidtools-2.1.2
+Successfully installed chef-0.10.4
+21 gems installed
+</code></p>
+
+<p>And running Chef just works:</p>
+
+<p><code>
+% sudo chef-client
+[Thu, 24 Nov 2011 14:02:38 -0700] INFO: *** Chef 0.10.4 ***
+...
+[Thu, 24 Nov 2011 14:02:50 -0700] INFO: Chef Run complete in 9.862972181 seconds
+</code></p>
+
+<p>The results of the node object on the Chef Server:</p>
+
+<p><code>
+% knife node show virt1test -a languages.ruby
+languages.ruby:
+  bin_dir:        /usr/bin
+  gem_bin:        /usr/bin/gem1.9.1
+  gems_dir:       /var/lib/gems/1.9.1
+  host:           x86_64-pc-linux-gnu
+  host_cpu:       x86_64
+  host_os:        linux-gnu
+  host_vendor:    pc
+  platform:       x86_64-linux
+  release_date:   2011-07-09
+  ruby_bin:       /usr/bin/ruby1.9.1
+  target:         x86_64-pc-linux-gnu
+  target_cpu:     x86_64
+  target_os:      linux
+  target_vendor:  pc
+  version:        1.9.2
+</code></p>
+
+<p>Overall, I&rsquo;m happy with the changes that the Debian Ruby Packaging
+Team has made, and I&rsquo;m glad to see these come to Ubuntu in
+11.10+. It&rsquo;s not the absolute latest version available, but this is
+good forward progress for binary Linux distributions. I also like that
+the alternatives system is used, so users could choose to install and
+use other Ruby interpreters. Hopefully these changes quell some of the
+arguments about Debian and Ubuntu and their handling of Ruby.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Debian/Ubuntu Package for Ruby 1.9.2 with fpm]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2011/04/02/debian-ubuntu-package-for-ruby-1-9-2-with-fpm/"/>
+    <updated>2011-04-02T00:00:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2011/04/02/debian-ubuntu-package-for-ruby-1-9-2-with-fpm</id>
+    <content type="html"><![CDATA[<p>Jordan Sissel created <a href="https://github.com/jordansissel/fpm">fpm</a> a few months ago. It is a quick and easy way to create packages for Debian, Ubuntu and Red Hat family Linux distributions. I created a Ruby 1.9.2 package for my personal server.</p>
+
+
+<p><script src="https://gist.github.com/881058.js"></script></p>
+
+]]></content>
+  </entry>
+  
+</feed>

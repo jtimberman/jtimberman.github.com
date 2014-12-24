@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: rhel | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/rhel/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-12-24T14:19:22-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Install Chef 11 Server on CentOS 6]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/10/install-chef-11-server-on-centos-6/"/>
+    <updated>2013-02-10T07:57:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/10/install-chef-11-server-on-centos-6</id>
+    <content type="html"><![CDATA[<p>A few months ago, I posted briefly on
+<a href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos/">how to install Chef 10 server on CentOS</a>.
+This post revisits the process for Chef 11.</p>
+
+<p>These steps were performed on a default CentOS 6.3 server install.</p>
+
+<p>First, navigate to the
+<a href="http://www.opscode.com/chef/install">Chef install page</a> to get the
+package download URL. Use the form on the &ldquo;Chef Server&rdquo; tab to select
+the appropriate drop-down items for your system.</p>
+
+<p>Install the package from the given URL.</p>
+
+<p><code>
+rpm -Uvh https://opscode-omnitruck-release.s3.amazonaws.com/el/6/x86_64/chef-server-11.0.4-1.el6.x86_64.rpm
+</code></p>
+
+<p>The package just puts the bits on disk (in <code>/opt/chef-server</code>). The
+next step is to configure the Chef Server and start it.</p>
+
+<p><code>
+% chef-server-ctl reconfigure
+</code></p>
+
+<p>This runs the embedded <code>chef-solo</code> with the included cookbooks, and
+sets up everything required &ndash; Erchef, RabbitMQ, PostgreSQL, etc.</p>
+
+<p>Next, run the Opscode Pedant test suite. This will verify that
+everything is working.</p>
+
+<p><code>
+% chef-server-ctl test
+</code></p>
+
+<p>Copy the default admin user&rsquo;s key and the validator key to your local
+workstation system that you have Chef <em>client</em> installed on, and
+create a new user for yourself with knife. You&rsquo;ll need version 11.2.0.
+The key files on the Chef Server are readable only by root.</p>
+
+<p><code>
+scp root@chef-server:/etc/chef-server/admin.pem .
+scp root@chef-server:/etc/chef-server/chef-validator.pem .
+</code></p>
+
+<p>Use <code>knife configure -i</code> to create an initial <code>~/.chef/knife.rb</code> and
+new administrative API user for yourself. Use the FQDN of your newly
+installed Chef Server, with HTTPS. The validation key needs to be
+copied over from the Chef Server from
+<code>/etc/chef-server/chef-validator.pem</code> to <code>~/.chef</code> to use it for
+automatically bootstrapping nodes with <code>knife bootstrap</code>.</p>
+
+<p><code>
+% knife configure -i
+</code></p>
+
+<p>The <code>.chef/knife.rb</code> file should look something like this:</p>
+
+<p><code>ruby
+log_level                :info
+log_location             STDOUT
+node_name                'jtimberman'
+client_key               '/home/jtimberman/.chef/jtimberman.pem'
+validation_client_name   'chef-validator'
+validation_key           '/home/jtimberman/.chef/chef-validator.pem'
+chef_server_url          'https://chef-server.example.com'
+syntax_check_cache_path  '/home/jtimberman/.chef/syntax_check_cache'
+</code></p>
+
+<p>Your Chef Server is now ready to use. Test connectivity as your user
+with knife:</p>
+
+<p><code>
+% knife client list
+chef-validator
+chef-webui
+% knife user list
+admin
+jtimberman
+</code></p>
+
+<p>In previous versions of Open Source Chef Server, users were API
+clients. In Chef 11, users are separate entities on the Server.</p>
+
+<p>The <code>chef-server-ctl</code> command is used on the Chef Server system for
+management. It has built-in help (<code>-h</code>) that will display the various
+sub-commands.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Install Chef 10 Server on CentOS]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos/"/>
+    <updated>2012-11-17T19:49:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos</id>
+    <content type="html"><![CDATA[<p>In addition to capturing the minimal steps required to <a href="/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/">install a Chef
+10 Server on Ubuntu</a>, I also wanted to capture the steps for CentOS.
+Unfortunately, Ruby 1.9 isn&rsquo;t available in the default distribution
+repositories, and almost all third party repositories are quite out of
+date. As such, I&rsquo;ll use the Ruby 1.8.7 that comes with CentOS, despite
+being an EOL version of Ruby.</p>
+
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
+
+<p>This does not include any customization to the installation and takes
+everything as default. This will all change when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
+
+<p>These steps were performed on a default server install of CentOS 6.3.</p>
+
+<p>Install required packages.</p>
+
+<p><code>
+yum install ruby ruby-devel rubygems wget gcc gcc-c++ kernel-devel make
+</code></p>
+
+<p>Update RubyGems.</p>
+
+<p><code>
+gem update --system
+</code></p>
+
+<p>Install Chef.</p>
+
+<p><code>
+gem install chef --no-ri --no-rdoc
+</code></p>
+
+<p>Configure chef-solo.</p>
+
+<p><code>
+mkdir -p /etc/chef
+vi /etc/chef/solo.rb
+</code></p>
+
+<p>The config file should look like this:</p>
+
+<p><code>ruby
+file_cache_path "/tmp/chef-solo"
+cookbook_path "/tmp/chef-solo/cookbooks"
+recipe_url "http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz"
+</code></p>
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<p><code>
+chef-solo -o chef-server::rubygems-install
+</code></p>
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<p><code>sh
+knife configure -i
+</code></p>
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<p><code>ruby
+log_level                :info
+log_location             STDOUT
+node_name                'jtimberman'
+client_key               '/root/.chef/jtimberman.pem'
+validation_client_name   'chef-validator'
+validation_key           '/root/.chef/validation.pem'
+chef_server_url          'http://10.1.1.100:4000'
+cache_type               'BasicFile'
+cache_options( :path =&gt; '/root/.chef/checksums' )
+</code></p>
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<p><code>
+cp /etc/chef/validation.pem ~/.chef
+</code></p>
+
+<p>Verify that the API client and configuration file work.</p>
+
+<p><code>
+knife client list
+  chef-validator
+  chef-webui
+  jtimberman
+</code></p>
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+]]></content>
+  </entry>
+  
+</feed>

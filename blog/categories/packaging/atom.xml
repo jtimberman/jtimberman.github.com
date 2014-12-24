@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: packaging | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/packaging/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-12-24T14:19:22-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Debian/Ubuntu Package for Ruby 1.9.2 with fpm]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2011/04/02/debian-ubuntu-package-for-ruby-1-9-2-with-fpm/"/>
+    <updated>2011-04-02T00:00:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2011/04/02/debian-ubuntu-package-for-ruby-1-9-2-with-fpm</id>
+    <content type="html"><![CDATA[<p>Jordan Sissel created <a href="https://github.com/jordansissel/fpm">fpm</a> a few months ago. It is a quick and easy way to create packages for Debian, Ubuntu and Red Hat family Linux distributions. I created a Ruby 1.9.2 package for my personal server.</p>
+
+
+<p><script src="https://gist.github.com/881058.js"></script></p>
+
+]]></content>
+  </entry>
+  
+</feed>

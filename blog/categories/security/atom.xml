@@ -4,7 +4,7 @@
   <title><![CDATA[Category: security | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/security/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-11T15:55:01-07:00</updated>
+  <updated>2014-12-24T14:19:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -41,7 +41,7 @@ ERROR: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=SSLv3 read s
 <p>```
 Connecting to host chef-server.example.com:443
 ERROR: The SSL certificate of chef-server.example.com could not be verified
-Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#109;&#97;&#x69;&#x6c;&#x74;&#111;&#58;&#121;&#x6f;&#x75;&#64;&#101;&#x78;&#97;&#x6d;&#112;&#108;&#x65;&#x2e;&#x63;&#x6f;&#109;">&#121;&#111;&#x75;&#64;&#x65;&#x78;&#x61;&#x6d;&#112;&#x6c;&#x65;&#x2e;&#x63;&#111;&#109;</a></p>
+Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#109;&#x61;&#105;&#x6c;&#x74;&#x6f;&#58;&#x79;&#x6f;&#117;&#x40;&#101;&#x78;&#x61;&#x6d;&#x70;&#108;&#101;&#x2e;&#x63;&#x6f;&#109;">&#x79;&#x6f;&#117;&#x40;&#x65;&#x78;&#97;&#x6d;&#x70;&#x6c;&#101;&#x2e;&#99;&#111;&#x6d;</a></p>
 
 <p>Configuration Info:</p>
 
@@ -116,6 +116,161 @@ node-output.example.com Adding certificate for chef-server.example.com in /etc/c
 </code></p>
 
 <p>The output will be interleaved for all the nodes returned by <code>knife ssh</code>. Of course, we should verify the SHA256 checksums like before, which can be done again with <code>knife ssh</code>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Managing Multiple AWS Account Credentials]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials/"/>
+    <updated>2013-10-19T17:55:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials</id>
+    <content type="html"><![CDATA[<p><strong>UPDATE</strong>: All non-default profiles must have their profile name
+  start with &ldquo;profile.&rdquo; Below, this is &ldquo;profile nondefault.&rdquo; The ruby
+  code is updated to reflect this.</p>
+
+<p>In this post, I will describe my local setup for using the
+<a href="http://aws.amazon.com/cli/">AWS CLI</a>, the
+<a href="http://aws.amazon.com/sdkforruby/">AWS Ruby SDK</a>, and of course the
+<a href="http://rubygems.org/gems/knife-ec2">Knife EC2 plugin</a>.</p>
+
+<p>The general practice I&rsquo;ve used is to set the appropriate shell
+environment variables that are used by default by these tools (and the
+&ldquo;legacy&rdquo; ec2-api-tools, the java-based CLI). Over time and between
+tools, there have been several environment variables set:</p>
+
+<p><code>sh
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_DEFAULT_REGION
+AWS_SSH_KEY
+AMAZON_ACCESS_KEY_ID
+AMAZON_SECRET_ACCESS_KEY
+AWS_ACCESS_KEY
+AWS_SECRET_KEY
+</code></p>
+
+<p>There is now a config file (ini-flavored) that can be used to set
+credentials, <code>~/.aws/config</code>. Each ini section in this file is a
+different account&rsquo;s credentials. For example:</p>
+
+<p><code>
+[default]
+aws_access_key_id=MY_DEFAULT_KEY
+aws_secret_access_key=MY_DEFAULT_SECRET
+region=us-east-1
+[profile nondefault]
+aws_access_key_id=NOT_MY_DEFAULT_KEY
+aws_secret_access_key=NOT_MY_DEFAULT_SECRET
+region=us-east-1
+</code></p>
+
+<p>I have two accounts listed here. Obviously, the actual keys are not
+listed :). I source a shell script that sets the environment variables
+with these values. Before, I maintained a separate script for each
+account. Now, I install the <code>inifile</code>
+<a href="http://rubygems.org/gems/inifile">RubyGem</a> and use a one-liner for
+each of the keys.</p>
+
+<p><code>sh
+export AWS_ACCESS_KEY_ID=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['default']['aws_access_key_id']"`
+export AWS_SECRET_ACCESS_KEY=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['default']['aws_secret_access_key']"`
+export AWS_DEFAULT_REGION="us-east-1"
+export AWS_SSH_KEY='jtimberman'
+</code></p>
+
+<p>This will load the specified file, <code>~/.aws/config</code> with the
+<code>IniFile.load</code> method, retrieving the <code>default</code> section&rsquo;s
+<code>aws_access_key_id</code> value. Then repeat the same for the
+<code>aws_secret_access_key</code>.</p>
+
+<p>To use the nondefault profile:</p>
+
+<p><code>
+export AWS_ACCESS_KEY_ID=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['profile nondefault']['aws_access_key_id']"`
+export AWS_SECRET_ACCESS_KEY=`ruby -rinifile -e "puts IniFile.load(File.join(File.expand_path('~'), '.aws', 'config'))['profile nondefault']['aws_secret_access_key']"`
+</code></p>
+
+<p>Note that this uses <code>['profile nondefault']</code>.</p>
+
+<p>Since different tools historically have used slightly different
+environment variables, I export those too:</p>
+
+<p><code>sh
+export AMAZON_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export AMAZON_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+export AWS_ACCESS_KEY=$AWS_ACCESS_KEY_ID
+export AWS_SECRET_KEY=$AWS_SECRET_ACCESS_KEY
+</code></p>
+
+<p>I create a separate config script for each account.</p>
+
+<p>The AWS CLI tool will automatically use the <code>~/.aws/config</code>, and can
+load different profiles with the <code>--profile</code> option. The <code>aws-sdk</code>
+Ruby library will use the environment variables, however. So
+authentication in a Ruby script is automatically set up.</p>
+
+<p><code>ruby
+require 'aws-sdk'
+iam = AWS::IAM.new
+</code></p>
+
+<p>Without this, it would be:</p>
+
+<p>```ruby
+require &lsquo;aws-sdk&rsquo;
+iam = AWS::IAM.new(:access_key_id => &lsquo;YOUR_ACCESS_KEY_ID&rsquo;,</p>
+
+<pre><code>               :secret_access_key =&gt; 'YOUR_SECRET_ACCESS_KEY')
+</code></pre>
+
+<p>```</p>
+
+<p>Which is a little ornerous.</p>
+
+<p>To use this with <code>knife-ec2</code>, I have the following in my
+<code>.chef/knife.rb</code>:</p>
+
+<p><code>ruby
+knife[:aws_access_key_id]      = ENV['AWS_ACCESS_KEY_ID']
+knife[:aws_secret_access_key]  = ENV['AWS_SECRET_ACCESS_KEY']
+</code></p>
+
+<p>Naturally, since <code>knife.rb</code> is Ruby, I could use <code>Inifile.load</code> there,
+but I only started using that library recently, and I have my knife
+configuration setup already.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Switching MyOpenID to Google OpenID]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/09/23/switching-myopenid-to-google-openid/"/>
+    <updated>2013-09-23T10:38:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/09/23/switching-myopenid-to-google-openid</id>
+    <content type="html"><![CDATA[<p>You may be aware that MyOpenID is
+<a href="http://thenextweb.com/insider/2013/09/04/myopenid-to-shut-down/">shutting down in February 2014</a>.</p>
+
+<p>The next best thing to use IMO, is Google&rsquo;s OpenID, since they have
+2-factor authentication. Google doesn&rsquo;t really expose the OpenID URL
+in a way that makes it as easy to use as &ldquo;username.myopenid.com.&rdquo;
+Fortunately, it&rsquo;s relatively simple to add to a custom domain hosted
+by, for example, <a href="http://pages.github.com/">GitHub pages</a>. My
+coworker, Stephen Delano, pointed me to this pro-tip.</p>
+
+<p>The requirement is to put a <code>&lt;link&gt;</code> tag in the HTML header of the
+site. It should look like this:</p>
+
+<p><code>html
+&lt;link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud?source=profiles" /&gt;
+&lt;link rel="openid2.local_id" href="http://www.google.com/profiles/A_UNIQUE_GOOGLE_PROFILE_ID /&gt;
+</code></p>
+
+<p>Obviously you need a Google Profile, but anyone interested in doing
+this probably has a Google+ account for Google Hangouts anyway :).</p>
+
+<p>If you&rsquo;re like me and have your custom domain hosted as an
+<a href="http://octopress.org/">Octopress</a> blog, this goes in
+<code>source/_includes/custom/head.html</code>. Then deploy the site and in a few
+moments you&rsquo;ll be able to start using your site as an OpenID.</p>
 ]]></content>
   </entry>
   
@@ -898,6 +1053,161 @@ encrypted data bag feature isn&rsquo;t a panacea, but it certainly helps.
 Hopefully, this blog post was informative. While I don&rsquo;t always
 respond, I do read all comments posted here via Disqus, so let me know
 if something is out of whack, or needs an update.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Encrypted Data Bag for Postfix SASL Authentication]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/"/>
+    <updated>2011-08-06T00:00:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication</id>
+    <content type="html"><![CDATA[<p>I recently had a chance to sit down and implemented an encrypted data bag in my personal environment. This should translate nicely to anyone that wants to use encrypted data bags in their environment.</p>
+
+
+<h3>The use case</h3>
+
+
+<p>I send mail out through an SASL authenticated SMTP server. My local network has a postfix SMTP relay that connects to the SASL auth relay. I'm using the Opscode postfix cookbook with the sasl_auth recipe, since I wrote it originally for this use case.</p>
+
+
+<p>The <a href="https://github.com/opscode/cookbooks/blob/master/postfix/recipes/sasl_auth.rb">postfix::sasl_auth recipe</a> is applied in an "operations master" role. The attributes for configuring the user and password for SASL are attributes. Relevant lines from the role:</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>name &quot;ops_master&quot;
+run_list(&quot;recipe[postfix::sasl_auth]&quot;)
+override_attributes(
+  &quot;postfix&quot; =&gt; {
+    &quot;relayhost&quot; =&gt; &quot;[smtp.example.com]:587&quot;,
+    &quot;smtp_sasl_auth_enable&quot; =&gt; &quot;yes&quot;,
+    &quot;smtp_sasl_passwd&quot; =&gt; &quot;AWESOME!!&quot;,
+    &quot;smtp_sasl_user_name&quot; =&gt; &quot;MYUSER&quot;
+  }
+)</pre></div>
+</div>
+
+
+
+
+<h3>Encrypted Secrets</h3>
+
+
+<p>Chef's data bags are a great way to store infrastructure wide, but not role or node specific information. <a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags"><em>Encrypted</em> data bags</a> are a great way to store sensitive information, like passwords. Here are the steps I followed to get the encrypted data bag set up.</p>
+
+
+<p>First, I created the secret key file that is used to encrypt the contents of the data bag item. This file will not be stored in source control, as it is highly sensitive, and only gets copied to the systems that need it.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>openssl rand -base64 512 &gt; ~/.chef/encrypted_data_bag_secret</pre></div>
+</div>
+
+
+
+
+<p>Next, I created the actual data bag.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>knife data bag create secrets</pre></div>
+</div>
+
+
+
+
+<p>Next I created the data bag item using the secret key. This is created directly on the Chef Server, rather than a plain text file.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>knife data bag create secrets postfix --secret-file ~/.chef/encrypted_data_bag_secret</pre></div>
+</div>
+
+
+
+
+<p>I'm not saving the plaintext data bag item, but will store the encrypted item, so I'll retrieve it from the Chef Server and redirect the output to a JSON file.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>mkdir data_bags/secrets
+knife data bag show secrets postfix -Fj &gt; data_bags/secrets/postfix.json
+cat data_bags/secrets/postfix.json
+{
+  &quot;id&quot;: &quot;postfix&quot;,
+  &quot;user&quot;: &quot;encrypted string here&quot;,
+  &quot;passwd&quot;: &quot;encrypted string here&quot;
+}</pre></div>
+</div>
+
+
+
+
+<p>The current recipe doesn't support using an encrypted data bag item, so I had to modify it. First, load the encrypted data bag item.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;,
+  Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)</pre></div>
+</div>
+
+
+
+
+<p>This access the "secrets" data bag for the "postfix" item, and uses the default value for the secret key file (which is "/etc/chef/encrypted_data_bag_secret".</p>
+
+
+<p>Next, I update the sasl_passwd template to pass in the user and password from the data bag item.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>template &quot;/etc/postfix/sasl_passwd&quot; do
+  #...
+  variables(:smtp_sasl_passwd =&gt; smtp_sasl['passwd'],
+            :smtp_sasl_user_name =&gt; smtp_sasl['user'])
+  #...
+end</pre></div>
+</div>
+
+
+
+
+<p>Finally, the template is updated to use the new values.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>&lt;%= node[:postfix][:relayhost] %&gt; &lt;%= @smtp_sasl_user_name %&gt;:&lt;%= @smtp_sasl_passwd %&gt;</pre></div>
+</div>
+
+
+
+
+<p>After uploading the cookbook and the role (I removed the username and password), I copied the secret key file over to the node I needed to run Chef on, then ran Chef Client.</p>
+
+
+<div class="CodeRay">
+  <div class="code"><pre>sudo cat /etc/postfix/sasl_passwd
+[smtp.example.com]:587 MYUSER:AWESOME!!</pre></div>
+</div>
+
+
+
+
+<p>Yay!</p>
+
+
+<p>The full recipe is:</p>
+
+
+<p><script src="https://gist.github.com/1130006.js"></script></p>
+
+
+<p>The library file
+  (cookbooks/helper_libs/libraries/encrypted_data_bag_item.rb)
+  is: </p>
+
+
+<p><script src="https://gist.github.com/2364164.js"></script></p>
+
 ]]></content>
   </entry>
   

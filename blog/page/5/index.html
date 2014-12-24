@@ -9,10 +9,8 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Earlier this month, I completed a
-switch to DNSimple for my
-domain&rsquo;s DNS provider. I am still happy with the switch, and finally,
-just now, got &hellip;">
+  <meta name="description" content="In this post, I&rsquo;m going to talk about the fission gem: http://rubygems.org/gems/fission
+https://github.com/thbishop/fission I primarily use &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +80,286 @@ just now, got &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/15/testing-with-fission/">Testing With Fission</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-15T22:53:00-07:00" pubdate data-updated="true">Feb 15<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>In this post, I&rsquo;m going to talk about the fission gem:</p>
+
+<ul>
+<li><a href="http://rubygems.org/gems/fission">http://rubygems.org/gems/fission</a></li>
+<li><a href="https://github.com/thbishop/fission">https://github.com/thbishop/fission</a></li>
+</ul>
+
+
+<p>I primarily use this to manage the VMware Fusion virtual machines I
+use for testing <a href="http://community.opscode.com/users/opscode">Opscode&rsquo;s Chef Cookbooks</a>.</p>
+
+<p>This post is rather light on specific details about things that are
+either &ldquo;common&rdquo; knowledge or documented elsewhere. Particularly, I
+won&rsquo;t tell you how to set up the virtual machines, other than a few
+notes that I think make it easier to manage virtual machines in this
+way. In other words, you&rsquo;re smart and can figure them out.</p>
+
+<h2>Install and Configure</h2>
+
+<p>The first step to use the fission RubyGem is to install it. If you
+don&rsquo;t like RubyGems, then create a package or grab the source from the
+GitHub link, above.</p>
+
+<pre><code>gem install fission
+</code></pre>
+
+<p>Test that it is detecting your VMware Fusion VMs:</p>
+
+<pre><code>fission status
+</code></pre>
+
+<p>Fission has a configuration file, <code>~/.fissionrc</code>, which is yaml
+format. If the status command fails, you may need to configure fission
+to find the <code>vmrun</code> command. Here&rsquo;s the example from my system:</p>
+
+<pre><code>---
+vmrun_bin: /Applications/VMware Fusion.app/Contents/Library/vmrun
+</code></pre>
+
+<h2>Install an OS on a VM</h2>
+
+<p>If you&rsquo;re reading this, I presume you know how to install an OS in a
+VMware virtual machine. I do a number of tasks during the installation
+to make it easy and consistent to work with all my test VMs.</p>
+
+<ul>
+<li>Use bridged networking with DHCP</li>
+</ul>
+
+
+<p>This usually results in the least amount of hassle for connecting to
+the VM without any tunneling or port forwarding tomfoolery.</p>
+
+<ul>
+<li>Give it a simple VM name with alphanumeric characters only.</li>
+<li>Use the same hostname during installation as the VM name</li>
+</ul>
+
+
+<p>In the examples below, I use my &ldquo;guineapig&rdquo; system. I also have other
+systems like &ldquo;ubuntu1110&rdquo;, &ldquo;freebsd82&rdquo; and &ldquo;centos6&rdquo;. This is the name
+you&rsquo;ll use to refer to the VM with fission, so it should be short,
+easy to type and clearly identifiable.</p>
+
+<ul>
+<li>Set the root password, even if the OS doesn&rsquo;t use the root account</li>
+<li>Make sure SSH as root is enabled</li>
+</ul>
+
+
+<p>Some Linux distributions such as Ubuntu do not enable the root login.
+This is for testing, so I really don&rsquo;t care, and I can always write a
+Chef recipe to lock things down (as I would in production) if
+required.</p>
+
+<p>I also set a simple password that I can use with <code>-P</code> to <code>knife
+bootstrap</code> without the shell doing anything with special characters.</p>
+
+<ul>
+<li>Use NTP</li>
+</ul>
+
+
+<p>Install the NTP package for your operating system. The workflow here
+(and the whole point really) is to make heavy use of VMware Fusion
+snapshots and rollback, so it is important that the system time is
+correct. I customized the bootstrap templates I use to add <code>ntpdate</code>.</p>
+
+<h2>Using Fission</h2>
+
+<p>And now the moment you&rsquo;ve been waiting for. First, see the fission
+README for full detail on the commands available. I&rsquo;m going to focus
+here on how I use it.</p>
+
+<p>After the install and post install tasks are done, I create a
+new snapshot for the VM.</p>
+
+<pre><code>% fission status
+guineapig        [running]
+% fission snapshot create guineapig base
+</code></pre>
+
+<p>The name is &ldquo;base&rdquo; because thats a good name for a baseline. It can be
+useful to create specifically named snapshots for particular purposes.</p>
+
+<p>I use Opscode Hosted Chef as my server and I already have my local
+workstation set up with the validation key, a Chef repository and have
+uploaded the cookbook(s) I use for testing. I&rsquo;ll use &ldquo;knife
+bootstrap&rdquo; to kick off a run on my VM:</p>
+
+<pre><code>% knife bootstrap 10.1.1.129 -x root -Pvanilla -r 'recipe[apache2]'
+...
+INFO: service[apache2] restarted
+INFO: Chef Run complete in 44.324473 seconds
+</code></pre>
+
+<p>Sweet, it worked. However, if the Chef run fails, I can log in as
+root, fix the bug and rerun, or whatever else may need to be done.
+Then once I&rsquo;m ready to reset the VM, fission comes back to play.</p>
+
+<pre><code>% fission snapshot revert guineapig base
+Reverting to snapshot 'base'
+Reverted to snapshot 'base'
+</code></pre>
+
+<p>Note that fission will poweroff the VM when reverting the snapshot.
+Turn it on again with the start command.</p>
+
+<pre><code>% fission status
+guineapig        [not running]
+
+% fission start guineapig
+Starting 'guineapig'
+VM 'guineapig' started
+
+% fission status
+guineapig        [running]
+</code></pre>
+
+<p>And after logging in, we can see that apache2 is not installed as it
+should not be after the snapshot is restored.</p>
+
+<pre><code>% ssh root@guineapig
+root@guineapig's password:
+root@guineapig:~# dpkg -l apache2
+No packages found matching apache2.
+</code></pre>
+
+<p>The VM is now ready to do my bidding once again.</p>
+
+<h1>Cleanup</h1>
+
+<p>Note that reverting the snapshot doesn&rsquo;t delete the Chef node or
+client objects. Since fission is a Ruby library, a simple knife plugin
+can wrap up all the fission revert, restart and Chef cleanup, though.
+I called mine nukular.</p>
+
+<pre><code>% knife nukular guineapig base guineapig.int.example.com
+</code></pre>
+
+<p>And here&rsquo;s the plugin I&rsquo;m using:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">KnifePlugins</span>
+</span><span class='line'>    <span class="k">class</span> <span class="nc">Nukular</span> <span class="o">&lt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Knife</span>
+</span><span class='line'>      <span class="n">deps</span> <span class="k">do</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;fission&#39;</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;chef/node&#39;</span>
+</span><span class='line'>        <span class="nb">require</span> <span class="s1">&#39;chef/api_client&#39;</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">banner</span> <span class="s2">&quot;knife nukular VM SNAPSHOT [NODE]&quot;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">def</span> <span class="nf">run</span>
+</span><span class='line'>        <span class="n">vm</span><span class="p">,</span> <span class="n">snapshot</span> <span class="o">=</span> <span class="vi">@name_args</span>
+</span><span class='line'>        <span class="n">node</span> <span class="o">=</span> <span class="vi">@name_args</span><span class="o">[</span><span class="mi">2</span><span class="o">].</span><span class="n">nil?</span> <span class="p">?</span> <span class="n">vm</span> <span class="p">:</span> <span class="vi">@name_args</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span>
+</span><span class='line'>        <span class="ss">Fission</span><span class="p">:</span><span class="ss">:Command</span><span class="o">::</span><span class="no">SnapshotRevert</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">args</span><span class="o">=[</span><span class="n">vm</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span>
+</span><span class='line'>        <span class="ss">Fission</span><span class="p">:</span><span class="ss">:Command</span><span class="o">::</span><span class="no">Start</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">args</span><span class="o">=[</span><span class="n">vm</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Node</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">destroy</span>
+</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:ApiClient</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">destroy</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The command-line usage takes 2 or 3 arguments. The first two must be
+the VM name and the snapshot name, e.g. <code>guineapig</code> and <code>base</code>. If the
+node name is different than the VM name, then specify it.</p>
+
+<pre><code>% knife nukular guineapig base guineapig.int.example.com
+</code></pre>
+
+<p>Note that the plugin has <em>zero</em> error handling or any other sensible
+things. You may want to modify it before you use it. Or not, these are
+just test systems after all.</p>
+
+<h2>Full example</h2>
+
+<p>Minus the output from the commands, here is the full output of testing
+the Opscode apache2 cookbook on my guinea pig. Assume that all the
+required things from my Chef Repository have been uploaded to the Chef
+Server and the knife configuration is correct. Also, the <code>chef-full</code>
+bootstrap template specified here is a customized version of the
+template in the
+<a href="https://github.com/opscode/chef/blob/master/chef/lib/chef/knife/bootstrap/chef-full.erb">Chef source master branch template</a>
+that has <code>ntpdate -u pool.ntp.org</code> in it.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% fission </span><span class="n">status</span>
+</span><span class='line'><span class="sx">% fission </span><span class="n">snapshot</span> <span class="n">create</span> <span class="n">guineapig</span> <span class="n">testing</span><span class="o">-</span><span class="n">apache2</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">bootstrap</span> <span class="mi">10</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">129</span> <span class="o">-</span><span class="n">x</span> <span class="n">root</span> <span class="o">-</span><span class="n">P</span> <span class="n">vanilla</span> <span class="p">\</span>
+</span><span class='line'>  <span class="o">-</span><span class="n">r</span> <span class="s1">&#39;recipe[apache2]&#39;</span> <span class="o">-</span><span class="n">d</span> <span class="n">chef</span><span class="o">-</span><span class="n">full</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">nukular</span> <span class="n">guineapig</span> <span class="n">testing</span><span class="o">-</span><span class="n">apache2</span> <span class="n">guineapig</span><span class="o">.</span><span class="n">int</span><span class="o">.</span><span class="n">housepub</span><span class="o">.</span><span class="n">org</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&rsquo;s it. I hope you find this helpful!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -498,7 +776,7 @@ created issues on the GitHub project for the two items on the roadmap, too.</p>
 
 
   <div class="entry-content"><p><font size="-2">Reminder: this blog reflects my opinions and thoughts, and not
-those of my employer, Opscode, Inc.</font></p>
+those of my employer, Chef Software, Inc.</font></p>
 
 <p>Like any good sysadmin, I have my own domain for email and other
 purposes. I actually have had a couple, but this post is about my
@@ -1661,7 +1939,8 @@ more posts.</p>
   </header>
 
 
-  <div class="entry-content"><p>It has been a few months and several thousand page views since my original post on how I <a href="http://bit.ly/guCtmD" title="Managing My Workstations with Chef" target="_blank">manage my workstations with Chef</a>. I have made some changes to my repository, and have a few additional notes for working with Mac OS X Lion. I also added a new system in my network, an iMac.</p>
+  <div class="entry-content"><p><em>Update: This post is old and outdated. I&#8217;ll have another post in 2015 about workstation management with Chef.</em></p>
+<p>It has been a few months and several thousand page views since my original post on how I <a href="http://bit.ly/guCtmD" title="Managing My Workstations with Chef" target="_blank">manage my workstations with Chef</a>. I have made some changes to my repository, and have a few additional notes for working with Mac OS X Lion. I also added a new system in my network, an iMac.</p>
 <h2>Mac OS X Cookbook</h2>
 <p>First, I would like to point out the cookbook I created, <a href="http://ckbk.it/mac_os_x" title="Mac OS X Cookbook" target="_blank">mac_os_x</a>. In the original post, I discussed using Pivotal Lab&#8217;s workstation recipes, which use the Mac OS X user defaults system to update system preferences from the command-line (with an execute resource). One of the first things I did in the mac_os_x cookbook is create a lightweight resource and provider for managing user defaults. It can be used, for example, like this:</p>
 <div class="CodeRay">
@@ -1801,7 +2080,7 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
 <p>In <code>templates/default/smartmontools.default.erb</code>, the smartmontools daemon will be enabled based on the <code>start_smartd</code> attribute. Additional options will be passed per <code>smartd_opts</code>:</p>
 <div class="CodeRay">
   <div class="code"><pre>start_smartd=&lt;%= node['smartmontools']['start_smartd'] %&gt;
- 
+
 &lt;% if node['smartmontools']['smartd_opts'].length &gt; 0 -%&gt;
 smartd_opts=&quot;&lt;%= node['smartmontools']['smartd_opts'] %&gt;&quot;
 &lt;% else -%&gt;
@@ -1873,7 +2152,7 @@ cookbooks/smartmontools
   <div class="code"><pre>% knife cookbook upload smartmontools
 Uploading smartmontools             [0.5.0]
 upload complete
- 
+
 % knife node run list add virt1test 'recipe[smartmontools]'
 run_list:
     role[ubuntu]
@@ -1901,122 +2180,6 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
 <p>Now we can take this same recipe and apply it to other systems. I tested smartmontools on an Ubuntu system. Notice earlier that I had an <code>ubuntu</code> role on my node. I actually modified that role to include the smartmontools recipe, and then all my Ubuntu nodes were configured for smartmontools when they ran Chef again.</p>
 <h2>Conclusion</h2>
 <p>I hope this guide was helpful. I shared the cookbook on the <a href="http://community.opscode.com/cookbooks/smartmontools" name="Chef Community: Smartmontools">Chef Community web site</a>, and the source code is available on <a href="https://github.com/jtimberman/smartmontools-cookbook" name="GitHub">Chef Community web site</a>. Note that while I said this would be easy, it certainly isn&#8217;t trivial. There are a lot of steps involved in making cookbooks that are dynamic, easily customized and shareable with others. It takes practice, but after a few you get the hang of it. End to end, this cookbook took me about 2 hours to write, test, tweak (fix bugs) and document.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">Encrypted Data Bag for Postfix SASL Authentication</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-08-06T00:00:00-06:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I recently had a chance to sit down and implemented an encrypted data bag in my personal environment. This should translate nicely to anyone that wants to use encrypted data bags in their environment.</p>
-<h3>The use case</h3>
-<p>I send mail out through an SASL authenticated SMTP server. My local network has a postfix SMTP relay that connects to the SASL auth relay. I&#8217;m using the Opscode postfix cookbook with the sasl_auth recipe, since I wrote it originally for this use case.</p>
-<p>The <a href="https://github.com/opscode/cookbooks/blob/master/postfix/recipes/sasl_auth.rb">postfix::sasl_auth recipe</a> is applied in an &#8220;operations master&#8221; role. The attributes for configuring the user and password for SASL are attributes. Relevant lines from the role:</p>
-<div class="CodeRay">
-  <div class="code"><pre>name &quot;ops_master&quot;
-run_list(&quot;recipe[postfix::sasl_auth]&quot;)
-override_attributes(
-  &quot;postfix&quot; =&gt; {
-    &quot;relayhost&quot; =&gt; &quot;[smtp.example.com]:587&quot;,
-    &quot;smtp_sasl_auth_enable&quot; =&gt; &quot;yes&quot;,
-    &quot;smtp_sasl_passwd&quot; =&gt; &quot;AWESOME!!&quot;,
-    &quot;smtp_sasl_user_name&quot; =&gt; &quot;MYUSER&quot;
-  }
-)</pre></div>
-</div>
-
-<h3>Encrypted Secrets</h3>
-<p>Chef&#8217;s data bags are a great way to store infrastructure wide, but not role or node specific information. <a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags"><em>Encrypted</em> data bags</a> are a great way to store sensitive information, like passwords. Here are the steps I followed to get the encrypted data bag set up.</p>
-<p>First, I created the secret key file that is used to encrypt the contents of the data bag item. This file will not be stored in source control, as it is highly sensitive, and only gets copied to the systems that need it.</p>
-<div class="CodeRay">
-  <div class="code"><pre>openssl rand -base64 512 &gt; ~/.chef/encrypted_data_bag_secret</pre></div>
-</div>
-
-<p>Next, I created the actual data bag.</p>
-<div class="CodeRay">
-  <div class="code"><pre>knife data bag create secrets</pre></div>
-</div>
-
-<p>Next I created the data bag item using the secret key. This is created directly on the Chef Server, rather than a plain text file.</p>
-<div class="CodeRay">
-  <div class="code"><pre>knife data bag create secrets postfix --secret-file ~/.chef/encrypted_data_bag_secret</pre></div>
-</div>
-
-<p>I&#8217;m not saving the plaintext data bag item, but will store the encrypted item, so I&#8217;ll retrieve it from the Chef Server and redirect the output to a JSON file.</p>
-<div class="CodeRay">
-  <div class="code"><pre>mkdir data_bags/secrets
-knife data bag show secrets postfix -Fj &gt; data_bags/secrets/postfix.json
-cat data_bags/secrets/postfix.json
-{
-  &quot;id&quot;: &quot;postfix&quot;,
-  &quot;user&quot;: &quot;encrypted string here&quot;,
-  &quot;passwd&quot;: &quot;encrypted string here&quot;
-}</pre></div>
-</div>
-
-<p>The current recipe doesn&#8217;t support using an encrypted data bag item, so I had to modify it. First, load the encrypted data bag item.</p>
-<div class="CodeRay">
-  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;, 
-  Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)</pre></div>
-</div>
-
-<p>This access the &#8220;secrets&#8221; data bag for the &#8220;postfix&#8221; item, and uses the default value for the secret key file (which is &#8220;/etc/chef/encrypted_data_bag_secret&#8221;.</p>
-<p>Next, I update the sasl_passwd template to pass in the user and password from the data bag item.</p>
-<div class="CodeRay">
-  <div class="code"><pre>template &quot;/etc/postfix/sasl_passwd&quot; do
-  #...
-  variables(:smtp_sasl_passwd =&gt; smtp_sasl['passwd'],
-            :smtp_sasl_user_name =&gt; smtp_sasl['user'])
-  #...
-end</pre></div>
-</div>
-
-<p>Finally, the template is updated to use the new values.</p>
-<div class="CodeRay">
-  <div class="code"><pre>&lt;%= node[:postfix][:relayhost] %&gt; &lt;%= @smtp_sasl_user_name %&gt;:&lt;%= @smtp_sasl_passwd %&gt;</pre></div>
-</div>
-
-<p>After uploading the cookbook and the role (I removed the username and password), I copied the secret key file over to the node I needed to run Chef on, then ran Chef Client.</p>
-<div class="CodeRay">
-  <div class="code"><pre>sudo cat /etc/postfix/sasl_passwd
-[smtp.example.com]:587 MYUSER:AWESOME!!</pre></div>
-</div>
-
-<p>Yay!</p>
-<p>The full recipe is:</p>
-<p><script src="https://gist.github.com/1130006.js"></script></p>
-<p>The library file
-  (cookbooks/helper_libs/libraries/encrypted_data_bag_item.rb)
-  is: </p>
-<p><script src="https://gist.github.com/2364164.js"></script></p>
 </div>
   
   
@@ -2058,6 +2221,10 @@ end</pre></div>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
@@ -2071,10 +2238,6 @@ end</pre></div>
     
       <li class="post">
         <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
       </li>
     
   </ul>

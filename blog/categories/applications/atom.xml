@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: applications | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/applications/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-12-24T14:19:22-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Local Templates for Application Configuration]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/01/28/local-templates-for-application-configuration/"/>
+    <updated>2013-01-28T09:57:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/01/28/local-templates-for-application-configuration</id>
+    <content type="html"><![CDATA[<p>Today I joined the
+<a href="http://foodfightshow.org/2013/01/application-deployment.html">Food Fight Show</a>
+for a conversation about Application Deployment. Along the way, the
+question came up about where to store application specific
+configuration files. Should they be stored in a Chef cookbook for
+setting up the system for the application? Or shoud they be stored in
+the application codebase itself?</p>
+
+<p>The answer is either, as far as Chef is concerned. Chef&rsquo;s
+<a href="http://docs.opscode.com/resource_template.html">template resource</a>
+can render a template from a local file on disk, or retrieve the
+template from a cookbook. The latter is the most common pattern, so
+let&rsquo;s examine the former, using a local file on disk.</p>
+
+<p>For sake of discussion, let&rsquo;s use a Rails application that needs a
+<code>database.yml</code> file rendered. Also, we&rsquo;ll assume that information
+about the application (database user, password, server) we need is
+stored in a Chef
+<a href="http://docs.opscode.com/essentials_data_bags_store.html">data bag</a>.
+Finally, we&rsquo;re going to assume that the application is already
+deployed on the system somehow and we just want to render the
+database.yml.</p>
+
+<p>The application source tree looks something like this:</p>
+
+<p>```
+myapp/
+&ndash;> config/</p>
+
+<pre><code>-&gt; database.yml.erb
+</code></pre>
+
+<p>```</p>
+
+<p>Note that there should not be a database.yml (non-.erb) here, as it
+will be rendered with Chef. The deployment of the app will end up
+in <code>/srv</code>, so the full path of this template is, for example,
+<code>/srv/myapp/current/config/database.yml.erb</code>. The content of the
+template may look like this:</p>
+
+<p><code>yaml
+&lt;%= @rails_env %&gt;:
+  adapter: &lt;%= @adapter %&gt;
+  host: &lt;%= @host %&gt;
+  database: &lt;%= @database %&gt;
+  username: &lt;%= @username %&gt;
+  password: &lt;%= @password %&gt;
+  encoding: 'utf8'
+  reconnect: true
+</code></p>
+
+<p>The Chef recipe looks like this. Note we&rsquo;ll use a search to find
+the first node that should be the database master (there should only
+be one). For the adapter, we may have set an attribute in the role
+that selects the adapter to use.</p>
+
+<p>```ruby
+results = search(:node, &ldquo;role:myapp_database_master AND environment:#{node.chef_environment}&rdquo;)
+db_master = results[0]</p>
+
+<p>template &ldquo;/srv/myapp/shared/database.yml&rdquo; do
+  source &ldquo;/srv/myapp/current/config/database.yml.erb&rdquo;
+  local true
+  variables(</p>
+
+<pre><code>:rails_env =&gt; node.chef_environment,
+:adapter =&gt; db_master['myapp']['db_adapter'],
+:host =&gt; db_master['fqdn'],
+:database =&gt; "myapp_#{node.chef_environment}",
+:username =&gt; "myapp",
+:password =&gt; "SUPERSECRET",
+</code></pre>
+
+<p>  )
+end
+```</p>
+
+<p>The rendered template, <code>/srv/myapp/shared/database.yml</code>, will look
+like this:</p>
+
+<p><code>yaml
+production:
+  adapter: mysql
+  host: domU-12-31-39-14-F1-C3.compute-1.internal
+  database: myapp_production
+  username: myapp
+  password: SUPERSECRET
+  encoding: utf8
+  reconnect: true
+</code></p>
+
+<p>This post is only part of the puzzle, mainly to explain what I
+mentioned on the Food Fight Show today. There are a number of
+unanswered questions like,</p>
+
+<ul>
+<li>Should database.yml be .gitignore&rsquo;d?</li>
+<li>How do developers run the app locally?</li>
+<li>How do I use this with Chef Solo?</li>
+</ul>
+
+
+<p>As mentioned on the show, there&rsquo;s currently a
+<a href="http://lists.opscode.com/sympa/arc/chef/2013-01/msg00392.html">thread</a>
+related to this topic on the Chef mailing list.</p>
+]]></content>
+  </entry>
+  
+</feed>

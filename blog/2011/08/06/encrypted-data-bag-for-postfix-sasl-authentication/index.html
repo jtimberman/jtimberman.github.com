@@ -153,7 +153,7 @@ cat data_bags/secrets/postfix.json
 
 <p>The current recipe doesn&#8217;t support using an encrypted data bag item, so I had to modify it. First, load the encrypted data bag item.</p>
 <div class="CodeRay">
-  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;, 
+  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;,
   Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)</pre></div>
 </div>
 
@@ -211,6 +211,12 @@ end</pre></div>
 <time datetime="2011-08-06T00:00:00-06:00" pubdate data-updated="true"></time>
       
 
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/security/'>security</a>
+  
+</span>
+
 
     </p>
     
@@ -258,6 +264,10 @@ end</pre></div>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
@@ -271,10 +281,6 @@ end</pre></div>
     
       <li class="post">
         <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
       </li>
     
   </ul>

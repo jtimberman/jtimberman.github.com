@@ -4,7 +4,7 @@
   <title><![CDATA[Category: plugins | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/plugins/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-11T15:55:01-07:00</updated>
+  <updated>2014-12-24T14:19:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -182,6 +182,381 @@ running: true
 <li><a href="https://github.com/jtimberman/knife-report-resource">GitHub repository</a></li>
 </ul>
 
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Last Check-in Time for Nodes]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes/"/>
+    <updated>2013-02-16T20:14:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes</id>
+    <content type="html"><![CDATA[<p>This one liner uses the knife exec sub-command to iterate over all the
+node objects on the Chef Server, and print out their <code>ohai_time</code>
+attribute in a human readable format.</p>
+
+<p><code>
+knife exec -E 'nodes.all {|n| puts "#{n.name} #{Time.at(n[:ohai_time])}"}'
+</code></p>
+
+<p>Let&rsquo;s break this up a little.</p>
+
+<p><code>
+knife exec -E
+</code></p>
+
+<p>The exec plugin for knife executes a script or the given string of
+Ruby code in the same context as <code>chef-shell</code> (or <code>shef</code> in Chef 10
+and earlier) if you start it up in it&rsquo;s &ldquo;main&rdquo; context. Since it is
+knife, it will also use your <code>.chef/knife.rb</code> settings, so it knows
+about your user, key and Chef Server.</p>
+
+<p><code>
+nodes.all
+</code></p>
+
+<p>The <code>chef-shell</code> main context has helper methods to access the
+corresponding endpoints in the Chef Server API. Clearly we&rsquo;re working
+with &ldquo;nodes&rdquo; here, and the <code>#all</code> method returns all the node objects
+from the Chef Server. This differs from search in that there&rsquo;s a
+commit delay between the time when data is saved to the server, and
+the data is indexed by Solr. This is usually a few seconds, but
+depending on various factors like the hardware you&rsquo;re using, how many
+nodes are converging, etc, it can take longer.</p>
+
+<p>Anyway, we can pass a block to nodes.all and do something with each
+node object. The example above is a oneliner, so let&rsquo;s make it more
+readable.</p>
+
+<p><code>ruby
+nodes.all do |n|
+  puts "#{n.name} #{Time.at(n[:ohai_time])}"
+end
+</code></p>
+
+<p>We&rsquo;re simply going to use <code>n</code> as the iterator for each node object,
+and we&rsquo;ll print a string about the node. The <code>#{}</code>&rsquo;s in the string to
+print with puts is Ruby string interpolation. That is, everything
+inside the braces is a Ruby expression. First, the <code>Chef::Node</code> object
+has a method, <code>#name</code>, that returns the node&rsquo;s name. This is usually
+the FQDN, but depending on your configuration (<code>node_name</code> in
+<code>/etc/chef/client.rb</code> or using the <code>-N</code> option for <code>chef-client</code>), it
+could be something else. Then, we&rsquo;re going to use the node&rsquo;s
+<code>ohai_time</code> attribute. Every time Chef runs and it gathers data about
+the node with Ohai, it generates the <code>ohai_time</code> attribute, which is
+the Unix epoch of the timestamp when Ohai ran. When Chef saves the
+node data at the end of the run, we know approximately the last time
+the node ran Chef. In this particular string, we&rsquo;re converting the
+Unix epoch, like <code>1358962351.444405</code> to a human readable timestamp
+like <code>2013-01-23 10:32:31 -0700</code>.</p>
+
+<p>Of course, you can get similar data from the Chef Server by using
+<code>knife status</code>:</p>
+
+<p><code>
+knife status
+</code></p>
+
+<p>The <code>ohai_time</code> attribute will be displayed as a relative time, e.g.,
+&ldquo;585 hours ago.&rdquo; It will include some more data about the nodes like IP&rsquo;s. This
+uses Chef&rsquo;s search feature, so you can also pass in a query:</p>
+
+<p><code>
+knife status "role:webserver"
+</code></p>
+
+<p>The <code>knife exec</code> example is simple, but you can get a lot more data
+about the nodes than what <code>knife status</code> reports.</p>
+
+<p>In either case, <code>ohai_time</code> isn&rsquo;t 100% accurate, since it is generated
+at the beginning of the run, and depending on what you&rsquo;re doing with
+Chef on your systems, it can take a long time before the node data is
+saved. However, it&rsquo;s close enough for many use cases.</p>
+
+<p>If more detailed or completely accurate information about the Chef run
+is required for your purposes, you should use a
+<a href="http://docs.opscode.com/chef/essentials_handlers.html">report handler</a>,
+which does have more data about the run available, including whether
+the run was successful or not.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Some Knife Plugins]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins/"/>
+    <updated>2012-11-29T19:11:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve shared my <code>~/.chef/plugins/knife</code> directory as a Git repository
+on <a href="https://github.com/jtimberman/chef-plugins-knife">GitHub</a>. There&rsquo;s
+only a few, but I hope you find them useful. They are licensed under
+the Apache 2.0 software license, but please only use them for awesome.</p>
+
+<h2>gem</h2>
+
+<p>This plugin will install a gem into the Ruby environment that knife is
+executing in. This is handy if you want to install knife plugins that
+are gems.</p>
+
+<p>If you have Ruby and Chef/Knife installed in an area where your user
+can write:</p>
+
+<p><code>
+knife gem install knife-config
+</code></p>
+
+<p>If you&rsquo;re using an Omnibus package install of Chef, or otherwise
+require root access to install:</p>
+
+<p><code>
+knife gem install knife-config
+</code></p>
+
+<p><strong>Note</strong> If you&rsquo;re trying to install a gem for <em>Chef</em> to use, you
+  should put it in a <code>chef_gem</code> resource in a recipe.</p>
+
+<h2>metadata</h2>
+
+<p>This plugin prints out information from a cookbook&rsquo;s metadata. It
+currently only works with <code>metadata.rb</code> files, and not <code>metadata.json</code>
+files.</p>
+
+<p>In a cookbook&rsquo;s directory, display the cookbook&rsquo;s dependencies:</p>
+
+<p><code>
+knife metadata dependencies
+</code></p>
+
+<p>Show the dependencies and supported platforms:</p>
+
+<p><code>
+knife metadata dependencies platforms
+</code></p>
+
+<p>Use the <code>-P</code> option to pass a path to a cookbook.</p>
+
+<p><code>
+knife metadata name dependencies -P ~/.berkshelf/cookbooks/rabbitmq-1.6.4
+</code></p>
+
+<h2>nukular</h2>
+
+<p><a href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/">I wrote on this blog about this plugin awhile ago</a>.</p>
+
+<p>This plugin cleans up after running <code>chef-client</code> on a VMware Fusion machine.</p>
+
+<p><code>
+knife nukular guineapig base guineapig.int.example.com
+</code></p>
+
+<h2>plugin_create</h2>
+
+<p>This creates a plugin scaffolding in <code>~/.chef/plugins/knife</code>. It will
+join underscored words as CamelCaseClasses.</p>
+
+<p>For example,</p>
+
+<p><code>
+knife plugin create awesometown
+</code></p>
+
+<p>Creates a plugin that is class <code>Awesometown</code> that can be executed with:</p>
+
+<p><code>
+knife awesometown
+</code></p>
+
+<p>Whereas this,</p>
+
+<p><code>
+knife plugin create awesome_town
+</code></p>
+
+<p>Creates a plugin that is class <code>AwesomeTown</code> that can be executed
+with:</p>
+
+<p><code>
+knife plugin awesome town
+</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Knife Config Plugin]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/03/25/knife-config-plugin/"/>
+    <updated>2012-03-25T14:47:00-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/03/25/knife-config-plugin</id>
+    <content type="html"><![CDATA[<p>I created a plugin for knife that will display a specified option from
+Chef&rsquo;s configuration object, <code>Chef::Config</code>. It operates with the
+scope of the automatically detected
+<a href="http://wiki.opscode.com/display/chef/Knife#Knife-ConfiguringYourSystemForKnife">knife configuration file</a>,
+or by passing the <code>-c</code> option with a configuration file.</p>
+
+<h2>Installation</h2>
+
+<p>It&rsquo;s a gem.</p>
+
+<p><code>
+% gem install knife-config
+</code></p>
+
+<p>You can get the <a href="https://github.com/jtimberman/knife-config">source on GitHub</a>.</p>
+
+<h2>Examples</h2>
+
+<p>Without any options:</p>
+
+<p><code>
+% knife config
+WARNING: No knife configuration file found
+</code></p>
+
+<p>If an config option were specified, its default value would be printed.</p>
+
+<p>With a single option, <code>chef_server_url</code>, but no configuration file available:</p>
+
+<p><code>
+% knife config chef_server_url
+WARNING: No knife configuration file found
+chef_server_url:  http://localhost:4000
+</code></p>
+
+<p>In a &ldquo;Chef Repository&rdquo; with a <code>.chef/knife.rb</code>:</p>
+
+<p><code>
+% cd chef-repo
+% knife config chef_server_url
+chef_server_url:  https://api.opscode.com/organizations/MY_ORG
+</code></p>
+
+<p>With a few more options:</p>
+
+<p><code>
+% cd chef-repo
+% knife config chef_server_url node_name validation_client_name
+chef_server_url:  https://api.opscode.com/organizations/MY_ORG
+node_name:        jtimberman
+validation_client_name:  housepub-validator
+</code></p>
+
+<p>With a different config file (<code>/etc/chef/client.rb</code> on the same
+system):</p>
+
+<p><code>
+% knife config node_name -c /etc/chef/client.rb
+node_name:  imac.int.example.com
+</code></p>
+
+<p>With <code>--all</code>, to show all the options:</p>
+
+<p><code>
+% knife config --all
+amqp_consumer_id:               default
+amqp_host:                      0.0.0.0
+amqp_pass:                      testing
+amqp_port:                      5672
+amqp_user:                      chef
+amqp_vhost:                     /chef
+authorized_openid_identifiers:
+authorized_openid_providers:
+cache_options:
+  path:  /Users/jtimberman/.chef/checksums
+cache_type:                     BasicFile
+checksum_path:                  /var/chef/checksums
+chef_server_url:                https://api.opscode.com/organizations/housepub
+client_key:                     /Users/jtimberman/.chef/jtimberman.pem
+client_registration_retries:    5
+client_url:                     http://localhost:4042
+[output truncated, trust me, it shows them all :)]
+</code></p>
+
+<p>Show the &ldquo;knife&rdquo; configuration, which includes things like cloud
+provider authentication. This doesn&rsquo;t currently support showing
+sub-keys (like <code>knife[aws_access_key_id]</code>).</p>
+
+<p><code>
+% knife config knife
+knife:
+  aws_access_key_id:      ZOMGAWS_KEY
+  aws_secret_access_key:  ZOMGAWS_SECRET
+</code></p>
+
+<h2>Contributing</h2>
+
+<p>If you&rsquo;d like to contribute, that&rsquo;s awesome! Please create a fork,
+branch, and a pull request.
+<a href="https://github.com/jtimberman/knife-config/issues">Reporting issues</a>
+is helpful too.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Chef Report Handler for Growl]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/01/02/chef-report-handler-for-growl/"/>
+    <updated>2012-01-02T20:37:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/01/02/chef-report-handler-for-growl</id>
+    <content type="html"><![CDATA[<p>A few weeks ago, I listened to the
+<a href="http://thechangelog.com/post/11317828888/episode-0-6-8-growl-and-open-source-in-the-app-store-wit">Changelog Podcast</a>
+episode featuring Chris Forsythe, lead of the Growl project. I
+actually don&rsquo;t<sup>Wdidn</sup>&rsquo;t use Growl for a long time, because I really
+disliked notifications of any kind, as they are distracting. However,
+I do appreciate the project, and supporting them by purchasing Growl
+on the App Store seemed totally reasonable.</p>
+
+<p>Of course, buying the app means it was installed on the spot. I always
+resisted it in the past because it was bundled with so many apps, but
+I don&rsquo;t want unsolicited software to show up on my computer. Now, it
+seemed a bit more natural, and I made a few configuration tweaks (I
+should put those into Chef&hellip;). I&rsquo;m actually happy to use it now,
+especially since it has a nice network accessible API.</p>
+
+<h1>Growlnotify</h1>
+
+<p>Shortly after I started using Growl on my work system, I looked into
+ways I could get notifications fired off from the command-line after
+long running processes finished. In particular, I wanted to get a
+notification that <code>knife ec2 server create</code> was done. I found the
+<code>growlnotify</code> program, which is available via
+<a href="https://github.com/mxcl/homebrew">homebrew</a>. This is quite a nifty
+tool, and I set it to use immediately, doing things like this:</p>
+
+<p><code>sh
+knife ec2 server create \
+  -f m1.small -I $lucid_small -x ubuntu \
+  -r 'role[base],role[webserver]' &amp;&amp; \
+growlnotify -m "Finished launching 1 instance" || \
+growlnotify -m "failed to launch instance"
+</code></p>
+
+<p>I could kick off the server creation, switch focus to another
+workspace, and then know via growl if the instance was created.</p>
+
+<h1>Chef Handler</h1>
+
+<p>As many know, I
+<a href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef/">manage my workstations with Chef</a>.
+Chef has a pretty cool
+<a href="http://wiki.opscode.com/display/chef/Exception+and+Report+Handlers">exception and report handler API</a>
+that has a lot of flexibility. I thought it would be fun to throw
+together a simple report handler that would send a growl notification
+after a Chef run. In this case, it will report the elapsed time of the
+run if it was successful, or report an exception if it failed.</p>
+
+<p>Using the handler is pretty straightforward. Install the
+<code>chef-handler-growl</code> Gem, then configure chef-client (or solo).</p>
+
+<p><code>ruby
+require "chef/handler/growl"
+report_handlers &lt;&lt; Chef::Handler::Growl.new
+exception_handlers &lt;&lt; Chef::Handler::Growl.new
+</code></p>
+
+<p>Then run Chef, and see something like this:</p>
+
+<p><img src="https://img.skitch.com/20120103-emxnsfht3557xjcp4rshxcufka.png" alt="Chef Handler Growl" /></p>
+
+<p>The handler is available as a
+<a href="http://rubygems.org/gems/chef-handler-growl">RubyGem</a>. You can also
+view the <a href="https://github.com/jtimberman/chef-handler-growl">source</a>. I
+created issues on the GitHub project for the two items on the roadmap, too.</p>
 ]]></content>
   </entry>
   

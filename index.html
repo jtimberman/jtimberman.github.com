@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Scenario: You&rsquo;ve started up a brand new Chef Server using version 12, and you have installed Chef 12 on your local system. You log into the &hellip;">
+  <meta name="description" content="I have a new goal for 2015, and that is to write at least one &ldquo;Quick Tip&rdquo; per week about Chef. I&rsquo;ve added the category &ldquo; &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,190 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-24T10:00:40-07:00" pubdate data-updated="true">Dec 24<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I have a new goal for 2015, and that is to write at least one &ldquo;Quick Tip&rdquo; per week about Chef. I&rsquo;ve added the category &ldquo;<a href="/blog/categories/quicktips">quicktips</a>&rdquo; to make these easier to find.</p>
+
+<p>In this quick tip, I want to talk about a new feature of Chef 12. The new feature is the ability to remove an attribute from all levels (default, normal, override) on a node so it doesn&rsquo;t get saved back to the Chef Server. This was brought up in <a href="https://github.com/opscode/chef-rfc/blob/master/rfc023-chef-12-attributes-changes.md#global-level-removals">Chef RFC 23</a>. The reason I don&rsquo;t want to save the attribute in question back to the server is that it is a secret that I have in a <a href="https://github.com/Nordstrom/chef-vault">Chef Vault item</a>.</p>
+
+<p>I&rsquo;m using <a href="https://www.datadoghq.com">Datadog</a> for my home systems, and the wonderful folks at Datadog have a <a href="https://supermarket.chef.io/cookbooks/datadog">cookbook</a> to set it up. The documentation requires that you set two attributes to authenticate, the API key, and the application key:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;Secrets In Plain Text Attributes??&#39;</span>
+</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;application_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;It is probably fine.&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I prefer to use chef-vault because <a href="http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault/">I think it&rsquo;s the best way</a> to manage shared secrets in Chef recipes. I still need to set the attributes for Datadog&rsquo;s recipe to work, however. In order to accomplish the goal here, I will use a custom cookbook, <code>housepub-datadog</code>. It has one recipe that looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">include_recipe</span> <span class="s1">&#39;chef-vault&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span>
+</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;application_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;chef&#39;</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">include_recipe</span> <span class="s1">&#39;datadog::dd-agent&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">ruby_block</span> <span class="s1">&#39;smash-datadog-auth-attributes&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">block</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;api_key&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;application_key&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>  <span class="n">subscribes</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;template[/etc/dd-agent/datadog.conf]&#39;</span><span class="p">,</span> <span class="ss">:immediately</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s take a closer look at the recipe.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">include_recipe</span> <span class="s1">&#39;chef-vault&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here, the <code>chef-vault</code> recipe is included to ensure everything works, and I have a dependency on <code>chef-vault</code> in my cookbook&rsquo;s metadata. Next, we see the attributes set:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span>
+</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;application_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;chef&#39;</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>secrets/datadog</code> item looks like this in plaintext:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;datadog&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;api_key&quot;</span><span class="p">:</span> <span class="s2">&quot;My datadog API key&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;chef&quot;</span><span class="p">:</span> <span class="s2">&quot;Application key for the &#39;chef&#39; application&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When Chef runs, it will load the vault-encrypted data bag item, and populate the attributes that will be used in the template. This template comes from the <code>datadog::dd-agent</code> recipe, which is included next. The template from that recipe looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">template</span> <span class="s1">&#39;/etc/dd-agent/datadog.conf&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s1">&#39;root&#39;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s1">&#39;root&#39;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">0644</span>
+</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">:api_key</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:dd_url</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;url&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, for the grand finale of this post, I delete the attributes that were set using a <code>ruby_block</code> resource. The timing here is important, because these attributes must be deleted after Chef has converged the template. This does get updated every run, because the attributes are populated every run. I could write additional logic to make this convergent, but I&rsquo;m okay with the behavior. The <code>subscribes</code> ensures that as soon as the template is written, the node object is updated to remove the attributes. Otherwise, this happens next after the <code>dd-agent</code> recipe.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">ruby_block</span> <span class="s1">&#39;smash-datadog-auth-attributes&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">block</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;api_key&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;application_key&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>  <span class="n">subscribes</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;template[/etc/dd-agent/datadog.conf]&#39;</span><span class="p">,</span> <span class="ss">:immediately</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s see this in action:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">managed</span><span class="o">-</span><span class="n">node</span><span class="err">$</span> <span class="n">chef</span><span class="o">-</span><span class="n">client</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="n">housepub</span><span class="o">-</span><span class="ss">datadog</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">ruby_block</span><span class="o">[</span><span class="n">smash</span><span class="o">-</span><span class="n">datadog</span><span class="o">-</span><span class="n">auth</span><span class="o">-</span><span class="n">attributes</span><span class="o">]</span> <span class="n">action</span> <span class="n">run</span>
+</span><span class='line'>    <span class="o">-</span> <span class="n">execute</span> <span class="n">the</span> <span class="n">ruby</span> <span class="n">block</span> <span class="n">smash</span><span class="o">-</span><span class="n">datadog</span><span class="o">-</span><span class="n">auth</span><span class="o">-</span><span class="n">attributes</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="n">workstation</span><span class="o">%</span> <span class="n">knife</span> <span class="n">node</span> <span class="n">show</span> <span class="n">managed</span><span class="o">-</span><span class="n">node</span> <span class="o">-</span><span class="n">a</span> <span class="n">datadog</span><span class="o">.</span><span class="n">api_key</span> <span class="o">-</span><span class="n">a</span> <span class="n">datadog</span><span class="o">.</span><span class="n">application_key</span>
+</span><span class='line'><span class="n">managed</span><span class="o">-</span><span class="ss">node</span><span class="p">:</span>
+</span><span class='line'>  <span class="n">datadog</span><span class="o">.</span><span class="n">api_key</span><span class="p">:</span>
+</span><span class='line'>  <span class="n">datadog</span><span class="o">.</span><span class="n">application_key</span><span class="p">:</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Bonus quick tip!</strong> <code>knife node show</code> can take the <code>-a</code> option multiple times to display more attributes. I just discovered this in writing this post, and I don&rsquo;t know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2648,68 +2832,6 @@ attend the Chef Community Summit (November 12-13, 2013 in Seattle).</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-23T10:38:00-06:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>You may be aware that MyOpenID is
-<a href="http://thenextweb.com/insider/2013/09/04/myopenid-to-shut-down/">shutting down in February 2014</a>.</p>
-
-<p>The next best thing to use IMO, is Google&rsquo;s OpenID, since they have
-2-factor authentication. Google doesn&rsquo;t really expose the OpenID URL
-in a way that makes it as easy to use as &ldquo;username.myopenid.com.&rdquo;
-Fortunately, it&rsquo;s relatively simple to add to a custom domain hosted
-by, for example, <a href="http://pages.github.com/">GitHub pages</a>. My
-coworker, Stephen Delano, pointed me to this pro-tip.</p>
-
-<p>The requirement is to put a <code>&lt;link&gt;</code> tag in the HTML header of the
-site. It should look like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='html'><span class='line'><span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;openid2.provider&quot;</span> <span class="na">href=</span><span class="s">&quot;https://www.google.com/accounts/o8/ud?source=profiles&quot;</span> <span class="nt">/&gt;</span>
-</span><span class='line'><span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;openid2.local_id&quot;</span> <span class="na">href=</span><span class="s">&quot;http://www.google.com/profiles/A_UNIQUE_GOOGLE_PROFILE_ID</span> <span class="nt">/&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Obviously you need a Google Profile, but anyone interested in doing
-this probably has a Google+ account for Google Hangouts anyway :).</p>
-
-<p>If you&rsquo;re like me and have your custom domain hosted as an
-<a href="http://octopress.org/">Octopress</a> blog, this goes in
-<code>source/_includes/custom/head.html</code>. Then deploy the site and in a few
-moments you&rsquo;ll be able to start using your site as an OpenID.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -2742,6 +2864,10 @@ moments you&rsquo;ll be able to start using your site as an OpenID.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
@@ -2755,10 +2881,6 @@ moments you&rsquo;ll be able to start using your site as an OpenID.</p>
     
       <li class="post">
         <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
       </li>
     
   </ul>

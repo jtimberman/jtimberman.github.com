@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: saas | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/saas/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2014-12-24T14:19:22-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[DNSimple Self Registration Recipe]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/01/29/dnsimple-self-registration-recipe/"/>
+    <updated>2012-01-29T19:00:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/01/29/dnsimple-self-registration-recipe</id>
+    <content type="html"><![CDATA[<p>Earlier this month, I completed a
+<a href="/blog/2012/01/02/switching-to-dnsimple/">switch to DNSimple</a> for my
+domain&rsquo;s DNS provider. I am still happy with the switch, and finally,
+just now, got around to writing a recipe to have my systems
+automatically register themselves in DNS.</p>
+
+<p>In the post, I described automatically adding the DNS entries with the
+<a href="http://community.opscode.com/cookbooks/dnsimple">dnsimple cookbook</a>.
+I did this as a proof of concept, but I didn&rsquo;t add it to all my nodes,
+instead using my existing data bag-driven solution.</p>
+
+<p>That said, this post serves as a brief document on how you can mimic
+this behavior with your own environment.</p>
+
+<h1>Encrypted Data Bag</h1>
+
+<p>I put my DNSimple credentials in an
+<a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags">encrypted data bag</a>.
+Since I have to decrypt and read the entire thing anyway, I also store
+the relevant data there. I keep my encrypted data bags in a bag called
+secrets. The structure looks like this:</p>
+
+<p><code>javascript
+{
+  "id": "dnsimple",
+  "api_token": "DNSimple API Token Here",
+  "domain": "your-domain.example.com",
+  "username": "DNSimple username",
+  "password": "DNSimple password"
+}
+</code></p>
+
+<p>Replace the values with your values. Encrypting the data is optional,
+but requires that you create a secret key or key file. Read my
+<a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">previous post on the topic</a>
+for more information.</p>
+
+<p><code>
+% knife data bag from file secrets dnsimple.json
+% knife data bag from file secrets dnsimple.json --secret-file /etc/chef/encrypted_data_bag_secret
+</code></p>
+
+<p>The first command just uploads the data bag item, the second encrypts
+it. Note that I manage my workstation with Chef, so I will use the
+same secret file as the Chef default. The secret file needs to be
+copied to each system that will need it.</p>
+
+<h1>Recipe</h1>
+
+<p>The recipe looks like this:</p>
+
+<p><code>ruby
+dnsimple = encrypted_data_bag_item("secrets", "dnsimple")
+dnsimple_record "#{node['hostname']}.int.#{dnsimple['domain']}" do
+  content node['ipaddress']
+  type "A"
+  action :create
+  username dnsimple['username']
+  password dnsimple['password']
+  domain dnsimple['domain']
+end
+</code></p>
+
+<p>As
+<a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">mentioned in the previous blog post</a>,
+the <code>encrypted_data_bag_item</code> method is in a library. Either add that
+library to your cookbook, or use the class directly.</p>
+
+<p><code>ruby
+dnsimple = Chef::EncryptedDataBagItem.load("secrets", "dnsimple")
+</code></p>
+
+<p>If you&rsquo;re not using an encrypted data bag, then the item can be
+accessed with the normal method:</p>
+
+<p><code>ruby
+dnsimple = data_bag_item("bagname", "dnsimple")
+</code></p>
+
+<p>The real work happens in the <code>dnsimple_record</code> LWRP, which will add an
+&ldquo;A&rdquo; record for the system running the recipe. Note that the actual
+entry is going to use the <code>int</code> subdomain, and it will use the domain
+stored in the data bag item. It also will use the default IP address
+of the node, which means the IP for the interface with the default
+route.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Switching to DNSimple]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/01/02/switching-to-dnsimple/"/>
+    <updated>2012-01-02T13:03:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/01/02/switching-to-dnsimple</id>
+    <content type="html"><![CDATA[<p><font size="-2">Reminder: this blog reflects my opinions and thoughts, and not
+those of my employer, Chef Software, Inc.</font></p>
+
+<p>Like any good sysadmin, I have my own domain for email and other
+purposes. I actually have had a couple, but this post is about my
+current one. I originally set it up through Google Apps a couple years
+ago, including registering the new domain with Google Apps' default
+registrar, GoDaddy. For the most part, it was pretty simple and
+painless to set up, including private registration via Domains by
+Proxy. Yay!</p>
+
+<p>However, as I automated more components of my home network with Chef,
+I found the lack of API driven DNS rather frustrating. At last count,
+I had 15 distinct networked devices, counting all the computers,
+consoles, mobile devices, etc. This does not count the virtual
+machines that I manage as a part of my daily job in doing Chef
+cookbook development and testing, which should all have their own DNS
+entries, since I&rsquo;ll access them over the network, and remembering IPs
+is ridiculous.</p>
+
+<h1>Internal DNS Server</h1>
+
+<p>I use <a href="http://cr.yp.to/djbdns.html">DJB&rsquo;s tinydns</a> as my DNS server,
+and it is automated with the
+<a href="http://community.opscode.com/cookbooks/djbdns">Opscode Chef Cookbook</a>.
+The first incarnation of this setup was a single monolithic template
+file containing all the entries in my local network zone, delivered by
+the <code>djbdns::tinydns-internal</code> recipe, like so:</p>
+
+<p><code>ruby
+template "#{node[:djbdns][:tinydns_internal_dir]}/root/data" do
+  source "tinydns-internal-data.erb"
+  mode 0644
+  notifies :run, resources("execute[build-tinydns-internal-data]")
+end
+</code></p>
+
+<p>This was great, and simple to manage for this single purpose setup. At
+some point, I wrote cookbooks for
+<a href="http://community.opscode.com/cookbooks/unbound">unbound</a> and
+<a href="http://community.opscode.com/cookbooks/pdns">powerdns</a>, as I was
+evaluating whether one or the other might be easier to modularize. In
+the process, I created a data bag of all my DNS entries that I could
+step through in templates, so I could use the same data without caring
+which software was going to consume it. In the end, I extended the
+djbdns cookbook with a lightweight resource and provider, and added
+usage to the <code>djbdns::tinydns-internal</code> recipe like this:</p>
+
+<p>```ruby
+dns = data_bag_item(&ldquo;djbdns&rdquo;, node[:djbdns][:domain].gsub(/./, &ldquo;_&rdquo;))
+#
+file &ldquo;#{node[:djbdns][:tinydns_internal_dir]}/root/data&rdquo; do
+  action :create
+end
+#
+%w{ ns host alias }.each do |type|
+  dns[type].each do |record|</p>
+
+<pre><code>record.each do |fqdn,ip|
+  #
+  djbdns_rr "#{fqdn}.#{dns['domain']}" do
+    cwd "#{node[:djbdns][:tinydns_internal_dir]}/root"
+    ip ip
+    type type
+    action :add
+    notifies :run, "execute[build-tinydns-internal-data]"
+  end
+  #
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>The data bag itself looks something like this:</p>
+
+<p>```javascript
+{
+  &ldquo;id&rdquo;: &ldquo;int_example_com&rdquo;,
+  &ldquo;domain&rdquo;: &ldquo;example.com&rdquo;,
+  &ldquo;ns&rdquo;: [</p>
+
+<pre><code>{ "ns: "127.0.0.1" }
+</code></pre>
+
+<p>  ],
+  &ldquo;alias&rdquo;: [</p>
+
+<pre><code>{ "gw":         "10.10.20.1" },
+{ "smb":        "10.10.20.20" },
+{ "files":      "10.10.20.20" },
+{ "apt":        "10.10.20.120" },
+{ "yum":        "10.10.20.120" }
+</code></pre>
+
+<p>  ],
+  &ldquo;host&rdquo;: [</p>
+
+<pre><code>{ "tavern":          "10.10.20.1" },
+{ "cask":            "10.10.20.20" },
+{ "cider":           "10.10.20.101" },
+{ "merlot":          "10.10.20.103" },
+{ "bourbon":         "10.10.20.104" },
+{ "iphone":          "10.10.20.105" },
+{ "doppelbock":      "10.10.20.106" },
+{ "ipad":            "10.10.20.107" },
+{ "wii":             "10.10.20.108" },
+{ "xbox":            "10.10.20.109" },
+{ "htpc":            "10.10.20.110" },
+{ "virt1test":       "10.10.20.120" }
+</code></pre>
+
+<p>  ]
+}
+```</p>
+
+<p>I am pretty pleased with this approach in that this data can be used
+no matter what DNS resolver software I choose. While this is great for
+the more static part of my network, as I mentioned I do have some
+dynamic usage where I create new virtual machines, and I really want
+them to register themselves in DNS automatically.</p>
+
+<h1>Enter DNSimple</h1>
+
+<p>A few months ago I decided to switch over to DNSimple. The service was
+compelling over the alternatives for a few reasons:</p>
+
+<ul>
+<li>Low cost ($3/mo) for my size of account.</li>
+<li>Very simple interface</li>
+<li>API for managing records (!)</li>
+<li>Reputation for great service</li>
+</ul>
+
+
+<p><a href="https://github.com/dje">Darrin Eden</a>
+wrote a <a href="http://community.opscode.com/cookbooks/dnsimple">cookbook</a>
+for automatically creating records through the API, too, so half my
+work for automating with Chef was already done!</p>
+
+<p>However, for various reasons I procrastinated the switchover. After
+all, my existing solution worked ok for my purposes. Then after seeing
+GoDaddy show up on the SOPA supporters list, and being one a
+contributing author to the legislation(*), I decided that was the last
+straw and I busted a move to finish the
+<a href="http://blog.dnsimple.com/godaddy-sopa-and-you/">switch</a>.</p>
+
+<p>Honestly, from the DNSimple side, it couldn&rsquo;t have been a better
+experience. They have one-click services for managing DNS records for
+a variety of common services &ndash; including Google Apps! It took some
+time and hassle to move my domain out of GoDaddy, since their
+interface is rather clunky, and I had to unprotect things through
+Domains by Proxy to make the move, but after a couple hours everything
+was fine. DNSimple has some
+<a href="http://blog.dnsimple.com/things-to-know-about-transferring-a-domain/">tips for migrating</a>,
+no matter who your current registrar is.</p>
+
+<p>Now for the truly fun part!</p>
+
+<h1>Automated DNS with Chef</h1>
+
+<p>Using the dnsimple cookbook is very straightforward. You create an &ldquo;A&rdquo;
+record like this:</p>
+
+<p><code>ruby
+dnsimple_record "cask.example.com" do
+  name "cask"
+  domain "example.com"
+  content "10.10.20.20"
+  type "A"
+  action :create
+  username node[:dnsimple][:username]
+  password node[:dnsimple][:password]
+  domain node[:dnsimple][:domain]
+end
+</code></p>
+
+<p>Yes, that is a private network IP, and yes it is going to be
+registered in public DNS. It really doesn&rsquo;t matter that much in my
+(<a href="http://serverfault.com/questions/4458/private-ip-address-in-public-dns">and others'</a>)
+opinion. Especially given that zomg, I just created a DNS entry with
+Chef!</p>
+
+<p>By default, the cookbook does assume, and use, node attributes for
+storing the username and password. This can be set by a role, but it
+means that all nodes will have the data. For my use, I decided to put
+these values in a data bag, and because they are sensitive, I used an
+<a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags">encrypted data bag</a>.
+I also wanted to reuse the data bag from my earlier DNS example, so I
+wrote a recipe like this:</p>
+
+<p>```ruby
+dnsimple = encrypted_data_bag_item(&ldquo;secrets&rdquo;, &ldquo;dnsimple&rdquo;)
+dns = data_bag_item(&ldquo;dns&rdquo;, &ldquo;int_example_com&rdquo;)
+#
+%w{ host alias }.each do |type|
+  dns[type].each do |record|</p>
+
+<pre><code>record_type = type =~ /^host$/ ? "A" : "CNAME"
+record.each do |hostname,ip|
+  #
+  dnsimple_record "#{hostname}.#{dns['domain']}" do
+    name hostname
+    content ip
+    type record_type
+    action :create
+    username dnsimple['username']
+    password dnsimple['password']
+    domain dnsimple['domain']
+  end
+  #
+end
+</code></pre>
+
+<p>  end
+#
+end
+```</p>
+
+<p>I put that recipe in my &ldquo;dnsserver&rdquo; role, ran Chef, and boom, all my
+DNS entries are updated on systems I don&rsquo;t have to manage, and all
+around the world.</p>
+
+<pre><code>% host cask.int.example.com 8.8.8.8
+Using domain server:
+Name: 8.8.8.8
+Address: 8.8.8.8#53
+Aliases:
+
+cask.int.example.com has address 10.10.20.20
+</code></pre>
+
+<p>What a wonderful redundant distributed key value store :&ndash;).</p>
+
+<p>Note that the <code>encrypted_data_bag_item</code> method used in the recipe is in a cookbook
+library. I wrote about that in an
+<a href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">earlier blog post</a>.
+It is pretty simple:</p>
+
+<p>```ruby
+class Chef
+  class Recipe</p>
+
+<pre><code>#
+def encrypted_data_bag_item(bag, item, secret_file =
+    Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)
+  DataBag.validate_name!(bag.to_s)
+  DataBagItem.validate_id!(item)
+  secret = EncryptedDataBagItem.load_secret(secret_file)
+  EncryptedDataBagItem.load(bag, item, secret)
+rescue Exception
+  Log.error("Failed to load data bag item: #{bag.inspect} #{item.inspect}")
+  raise
+end
+#
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<h2>Drawbacks</h2>
+
+<p>While conveniently reusing the data I already had for my DNS entries,
+the <code>dnsimple_record</code> provider does take about a second on my internet
+connection for each entry to check if it&rsquo;s there. This makes the DNS
+server&rsquo;s Chef client run take over a minute, where it used to be less
+than 12 seconds. Many of the entries that are in the DNS data bag are
+on systems that can add their own records, and will soon once I
+refactor things a bit.</p>
+
+<h1>Other Uses</h1>
+
+<p>A number of the entries in the DNS data bag are CNAMEs for services
+that run on my home LAN server. I have internal services like
+Netatalk/Time Machine, Samba, or Munin. I also have external services
+like OpenVPN, SSH and Teamspeak. I&rsquo;ll add DNSimple records for each of
+these so the recipes can automatically register new DNS entries,
+eliminating a step in bringing up a new service.</p>
+
+<h1>Open Source is Awesome</h1>
+
+<p>Chef is open source, of course, as is the
+<a href="https://github.com/heavywater/chef-dnsimple/blob/master/LICENSE">dnsimple cookbook</a>
+that I&rsquo;m using. While working with the cookbook as describe above over
+the last couple days, I made some improvements and I sent a
+<a href="https://github.com/heavywater/chef-dnsimple/pull/1">pull request</a>,
+which has been merged and released. Thanks Darrin!</p>
+
+<p>If you use Chef and are looking for an API driven way to manage DNS
+entries for your systems, I strongly recommend DNSimple as a provider,
+and the <code>dnsimple</code> cookbook to tie it all together.</p>
+
+<p><font size="-2">(*) This isn&rsquo;t a political-blog-soap-box, but this
+really was the final motivator.</font></p>
+]]></content>
+  </entry>
+  
+</feed>

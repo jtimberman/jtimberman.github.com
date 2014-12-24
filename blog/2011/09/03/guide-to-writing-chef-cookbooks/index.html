@@ -186,7 +186,7 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
 <p>In <code>templates/default/smartmontools.default.erb</code>, the smartmontools daemon will be enabled based on the <code>start_smartd</code> attribute. Additional options will be passed per <code>smartd_opts</code>:</p>
 <div class="CodeRay">
   <div class="code"><pre>start_smartd=&lt;%= node['smartmontools']['start_smartd'] %&gt;
- 
+
 &lt;% if node['smartmontools']['smartd_opts'].length &gt; 0 -%&gt;
 smartd_opts=&quot;&lt;%= node['smartmontools']['smartd_opts'] %&gt;&quot;
 &lt;% else -%&gt;
@@ -258,7 +258,7 @@ cookbooks/smartmontools
   <div class="code"><pre>% knife cookbook upload smartmontools
 Uploading smartmontools             [0.5.0]
 upload complete
- 
+
 % knife node run list add virt1test 'recipe[smartmontools]'
 run_list:
     role[ubuntu]
@@ -311,6 +311,12 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
 <time datetime="2011-09-03T00:00:00-06:00" pubdate data-updated="true"></time>
       
 
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/oldstuff/'>oldstuff</a>
+  
+</span>
+
 
     </p>
     
@@ -358,6 +364,10 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
@@ -371,10 +381,6 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
     
       <li class="post">
         <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
       </li>
     
   </ul>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-11T15:55:01-07:00</updated>
+  <updated>2014-12-24T14:19:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -277,6 +277,76 @@ directory source/stylesheets/
   </entry>
   
   <entry>
+    <title type="html"><![CDATA[Chef and Net::SSH Dependency Broken]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2013/02/06/chef-and-net-ssh-dependency-broken/"/>
+    <updated>2013-02-06T10:34:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2013/02/06/chef-and-net-ssh-dependency-broken</id>
+    <content type="html"><![CDATA[<p><strong>2nd UPDATE</strong>
+<a href="http://tickets.opscode.com/browse/CHEF-3835">CHEF-3835</a> was opened by
+a member of the community; Chef versions 11.2.0 and 10.20.0 have been
+released by Opscode to resolve the issue.</p>
+
+<p><strong>UPDATE</strong> Opscode is working on getting a new release of the Chef gem
+  with updated version constraints.</p>
+
+<h1>What Happened?</h1>
+
+<p>Earlier today (February 6, 2013), a new version of the various net-ssh
+RubyGems were published. This includes:</p>
+
+<ul>
+<li>net-ssh 2.6.4</li>
+<li>net-ssh-multi 1.1.1</li>
+<li>net-ssh-gateway 1.1.1</li>
+</ul>
+
+
+<p>Chef&rsquo;s dependencies have a pessimistic version constraint (<code>~&gt;</code>) on
+net-ssh 2.2.2.</p>
+
+<h1>What&rsquo;s the Problem?</h1>
+
+<p>So what is the problem?</p>
+
+<p>It appears to lie with net-ssh-gateway. The version of net-ssh-gateway
+went from 1.1.0 (released in April 2011), to 1.1.1. It depends on
+net-ssh. In net-ssh-gateway 1.1.0, the net-ssh version constraint was
+<code>&gt;= 1.99.1</code>, which is fine with Chef&rsquo;s constraint against <code>~&gt; 2.2.2</code>.
+However, in net-ssh-gateway 1.1.1, the net-ssh version constraint was
+changed to <code>&gt;= 2.6.4</code>, which is obviously a conflict with Chef&rsquo;s
+constraint.</p>
+
+<h1>What&rsquo;s the Solution?</h1>
+
+<p>So, how can we fix it?</p>
+
+<p>One solution is to use the Opscode Omnibus Package for Chef. This
+isn&rsquo;t a solution for everyone, of course, but it does include and
+contain all the dependencies. This also doesn&rsquo;t help if one wishes to
+install another gem that depends on Chef under the &ldquo;Omnibus&rdquo; Ruby
+environment along with Chef, because the conflict will be found. For
+example, to use the minitest-chef-handler gem for running
+minitest-chef tests.</p>
+
+<p><code>vagrant@ubuntu-12-04:~$ /opt/chef/embedded/bin/gem install
+minitest-chef-handler ERROR: While executing gem ...
+(Gem::DependencyError) Unable to resolve dependencies: net-ssh-gateway
+requires net-ssh (&gt;= 2.6.4)</code></p>
+
+<p>Another solution is to relax / modify the constraint in Chef. This may
+be okay, but as of <em>right now</em> we don&rsquo;t know if this will affect
+anything in the way that Chef uses net-ssh. We have tickets related to
+net-ssh version constraints in Chef:</p>
+
+<ul>
+<li><a href="http://tickets.opscode.com/browse/CHEF-2977">http://tickets.opscode.com/browse/CHEF-2977</a></li>
+<li><a href="http://tickets.opscode.com/browse/CHEF-3156">http://tickets.opscode.com/browse/CHEF-3156</a></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Some Knife Plugins]]></title>
     <link href="http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins/"/>
     <updated>2012-11-29T19:11:00-07:00</updated>
@@ -372,6 +442,179 @@ with:</p>
 <p><code>
 knife plugin awesome town
 </code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Install Chef 10 Server on Ubuntu With Ruby 1.9]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/"/>
+    <updated>2012-11-17T11:27:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9</id>
+    <content type="html"><![CDATA[<p>I wanted to capture the minimal steps required to install a Chef
+version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
+Ubuntu 12.04.</p>
+
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
+
+<p>This does not include any customization to the
+installation and takes everything as default. This will all change
+when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
+
+<p>These steps were performed on a default server install of Ubuntu
+12.04.</p>
+
+<p>Update apt sources.</p>
+
+<p><code>
+sudo apt-get update
+</code></p>
+
+<p>Install required packages.</p>
+
+<p><code>
+sudo apt-get install ruby1.9.1-full build-essential wget ssl-cert curl
+</code></p>
+
+<p>Update RubyGems.</p>
+
+<p><code>
+REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
+</code></p>
+
+<p>Install Chef.</p>
+
+<p><code>
+sudo gem install chef --no-ri --no-rdoc
+</code></p>
+
+<p>Configure chef-solo.</p>
+
+<p><code>
+sudo mkdir -p /etc/chef
+sudo vi /etc/chef/solo.rb
+</code></p>
+
+<p>The config file should look like this:</p>
+
+<p><code>ruby
+file_cache_path "/tmp/chef-solo"
+cookbook_path "/tmp/chef-solo/cookbooks"
+recipe_url "http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz"
+</code></p>
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<p><code>
+sudo chef-solo -o chef-server::rubygems-install
+</code></p>
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<p><code>sh
+sudo knife configure -i
+</code></p>
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<p><code>ruby
+log_level                :info
+log_location             STDOUT
+node_name                'jtimberman'
+client_key               '/home/jtimberman/.chef/jtimberman.pem'
+validation_client_name   'chef-validator'
+validation_key           '/home/jtimberman/.chef/validation.pem'
+chef_server_url          'http://10.1.1.100:4000'
+cache_type               'BasicFile'
+cache_options( :path =&gt; '/home/jtimberman/.chef/checksums' )
+</code></p>
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<p><code>
+sudo cp /etc/chef/validation.pem ~/.chef
+</code></p>
+
+<p>Verify that the API client and configuration file work.</p>
+
+<p><code>
+knife client list
+  chef-validator
+  chef-webui
+  jtimberman
+</code></p>
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Changing Class Names]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2012/02/25/changing-class-names/"/>
+    <updated>2012-02-25T09:39:00-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2012/02/25/changing-class-names</id>
+    <content type="html"><![CDATA[<p>If you change a class name in your library, <em>do a major version
+change</em>! You don&rsquo;t know who is using your library, even the
+undocumented parts.</p>
+
+<h2>Background</h2>
+
+<p>Recently, we had a post on the
+<a href="http://lists.opscode.com">Chef mailing list</a> that using bluepill for
+the Chef Server daemon process(es) was broken. Upon further
+investigation of the output from
+<a href="https://gist.github.com/1847128">Chef debug output</a>, it appeared to
+be an issue with
+<a href="https://github.com/arya/bluepill/issues/132">Bluepill itself</a>, but
+after looking into that ticket, the <a href="http://rubygems.org/gems/daemons">daemons gem</a> had made a change.</p>
+
+<p>Out of curiosity, I was compelled to find out what the source of the
+change in the daemons gem was. This lead to a yak shave, as first, I
+had to look up the <a href="http://rubygems.org/gems/daemons">daemons gem</a> on
+RubyGems.org to try and find the source. The author of the gem still
+uses RubyForge rather than GitHub. That&rsquo;s fine, but it means I have to
+do some link-spelunking to find where the <a href="http://rubyforge.org/projects/daemons">source code lives</a>.</p>
+
+<p>Now I take a look at the change log:</p>
+
+<pre><code>Release 1.1.8: February 7, 2012
+rename to daemonization.rb to daemonize.rb (and Daemonization to Daemonize) to ensure compatibility.
+
+Release 1.1.7: February 6, 2012
+start_proc: Write out the PID file in the newly created proc to avoid race conditions.
+daemonize.rb: remove to simplify licensing (replaced by daemonization.rb).
+
+Release 1.1.6: January 18, 2012
+Add the :app_name option for the "call" daemonization mode.
+
+Release 1.1.5: December 19, 2011
+Catch the case where the pidfile is empty but not deleted and restart
+the app (thanks to Rich Healey)
+</code></pre>
+
+<p>I then went to the ticket tracker to find out what the source of the
+changes might be. Fortunately, there was an open issue that I could
+<a href="http://rubyforge.org/tracker/index.php?func=detail&amp;aid=29516&amp;group_id=524&amp;atid=2084">reference</a>.</p>
+
+<p>My question (which I posted to the ticket) is why wouldn&rsquo;t renaming a
+class cause the author to do a new major version? This way other Gems
+that rely on this as a dependency could use the paranoia operator,
+<code>~&gt;</code> so the broken class name wouldn&rsquo;t break usage elsewhere.</p>
+
+<p>I&rsquo;m glad that the daemons gem author did the right thing and yanked
+the broken version. Open source worked well here. The process of
+finding this was a bit slower than it should have been, and I think
+that the bluepill maintainers moved too quickly to &ldquo;resolve&rdquo; the
+issue, rather than post their concern about the class naming. Kudos to
+thuehlinger for fixing his gem, though.</p>
 ]]></content>
   </entry>
   

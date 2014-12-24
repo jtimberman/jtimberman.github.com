@@ -9,10 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Two years ago, I wrote a post about
-using Chef encrypted data bags
-for SASL authentication with Postfix. At the time, my ISP didn&rsquo;t allow
-non- &hellip;">
+  <meta name="description" content="You may be aware that MyOpenID is
+shutting down in February 2014. The next best thing to use IMO, is Google&rsquo;s OpenID, since they have
+2-factor &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +81,68 @@ non- &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/23/switching-myopenid-to-google-openid/">Switching MyOpenID to Google OpenID</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-23T10:38:00-06:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>You may be aware that MyOpenID is
+<a href="http://thenextweb.com/insider/2013/09/04/myopenid-to-shut-down/">shutting down in February 2014</a>.</p>
+
+<p>The next best thing to use IMO, is Google&rsquo;s OpenID, since they have
+2-factor authentication. Google doesn&rsquo;t really expose the OpenID URL
+in a way that makes it as easy to use as &ldquo;username.myopenid.com.&rdquo;
+Fortunately, it&rsquo;s relatively simple to add to a custom domain hosted
+by, for example, <a href="http://pages.github.com/">GitHub pages</a>. My
+coworker, Stephen Delano, pointed me to this pro-tip.</p>
+
+<p>The requirement is to put a <code>&lt;link&gt;</code> tag in the HTML header of the
+site. It should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'><span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;openid2.provider&quot;</span> <span class="na">href=</span><span class="s">&quot;https://www.google.com/accounts/o8/ud?source=profiles&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'><span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;openid2.local_id&quot;</span> <span class="na">href=</span><span class="s">&quot;http://www.google.com/profiles/A_UNIQUE_GOOGLE_PROFILE_ID</span> <span class="nt">/&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Obviously you need a Google Profile, but anyone interested in doing
+this probably has a Google+ account for Google Hangouts anyway :).</p>
+
+<p>If you&rsquo;re like me and have your custom domain hosted as an
+<a href="http://octopress.org/">Octopress</a> blog, this goes in
+<code>source/_includes/custom/head.html</code>. Then deploy the site and in a few
+moments you&rsquo;ll be able to start using your site as an OpenID.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2949,103 +3010,6 @@ sub-commands.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/02/06/chef-and-net-ssh-dependency-broken/">Chef and Net::SSH Dependency Broken</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-02-06T10:34:00-07:00" pubdate data-updated="true">Feb 6<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><strong>2nd UPDATE</strong>
-<a href="http://tickets.opscode.com/browse/CHEF-3835">CHEF-3835</a> was opened by
-a member of the community; Chef versions 11.2.0 and 10.20.0 have been
-released by Opscode to resolve the issue.</p>
-
-<p><strong>UPDATE</strong> Opscode is working on getting a new release of the Chef gem
-  with updated version constraints.</p>
-
-<h1>What Happened?</h1>
-
-<p>Earlier today (February 6, 2013), a new version of the various net-ssh
-RubyGems were published. This includes:</p>
-
-<ul>
-<li>net-ssh 2.6.4</li>
-<li>net-ssh-multi 1.1.1</li>
-<li>net-ssh-gateway 1.1.1</li>
-</ul>
-
-
-<p>Chef&rsquo;s dependencies have a pessimistic version constraint (<code>~&gt;</code>) on
-net-ssh 2.2.2.</p>
-
-<h1>What&rsquo;s the Problem?</h1>
-
-<p>So what is the problem?</p>
-
-<p>It appears to lie with net-ssh-gateway. The version of net-ssh-gateway
-went from 1.1.0 (released in April 2011), to 1.1.1. It depends on
-net-ssh. In net-ssh-gateway 1.1.0, the net-ssh version constraint was
-<code>&gt;= 1.99.1</code>, which is fine with Chef&rsquo;s constraint against <code>~&gt; 2.2.2</code>.
-However, in net-ssh-gateway 1.1.1, the net-ssh version constraint was
-changed to <code>&gt;= 2.6.4</code>, which is obviously a conflict with Chef&rsquo;s
-constraint.</p>
-
-<h1>What&rsquo;s the Solution?</h1>
-
-<p>So, how can we fix it?</p>
-
-<p>One solution is to use the Opscode Omnibus Package for Chef. This
-isn&rsquo;t a solution for everyone, of course, but it does include and
-contain all the dependencies. This also doesn&rsquo;t help if one wishes to
-install another gem that depends on Chef under the &ldquo;Omnibus&rdquo; Ruby
-environment along with Chef, because the conflict will be found. For
-example, to use the minitest-chef-handler gem for running
-minitest-chef tests.</p>
-
-<p><code>vagrant@ubuntu-12-04:~$ /opt/chef/embedded/bin/gem install
-minitest-chef-handler ERROR: While executing gem ...
-(Gem::DependencyError) Unable to resolve dependencies: net-ssh-gateway
-requires net-ssh (&gt;= 2.6.4)</code></p>
-
-<p>Another solution is to relax / modify the constraint in Chef. This may
-be okay, but as of <em>right now</em> we don&rsquo;t know if this will affect
-anything in the way that Chef uses net-ssh. We have tickets related to
-net-ssh version constraints in Chef:</p>
-
-<ul>
-<li><a href="http://tickets.opscode.com/browse/CHEF-2977">http://tickets.opscode.com/browse/CHEF-2977</a></li>
-<li><a href="http://tickets.opscode.com/browse/CHEF-3156">http://tickets.opscode.com/browse/CHEF-3156</a></li>
-</ul>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -3080,6 +3044,10 @@ net-ssh version constraints in Chef:</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
@@ -3093,10 +3061,6 @@ net-ssh version constraints in Chef:</p>
     
       <li class="post">
         <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a>
       </li>
     
   </ul>
