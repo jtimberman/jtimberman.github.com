@@ -3,7 +3,7 @@ layout: post
 title: "Changing Class Names"
 date: 2012-02-25 09:39
 comments: true
-categories:
+categories: [ruby, development]
 ---
 
 If you change a class name in your library, *do a major version

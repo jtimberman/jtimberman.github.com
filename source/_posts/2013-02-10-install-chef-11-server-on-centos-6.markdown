@@ -3,7 +3,7 @@ layout: post
 title: "Install Chef 11 Server on CentOS 6"
 date: 2013-02-10 07:57
 comments: true
-categories: chef
+categories: [chef, rhel]
 ---
 
 A few months ago, I posted briefly on

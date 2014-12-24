@@ -3,8 +3,9 @@ layout: post
 title: "OS X Workstation Management with Chef"
 date: 2012-07-29 12:36
 comments: true
-categories: chef
+categories: [chef, workstation, osx]
 ---
+**Update: This post is old and outdated. I'll have another post in 2015 about workstation management with Chef.**
 
 I have written
 [twice](/blog/2011/04/03/managing-my-workstations-with-chef/)

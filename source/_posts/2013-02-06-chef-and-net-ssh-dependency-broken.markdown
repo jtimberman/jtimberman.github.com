@@ -3,7 +3,7 @@ layout: post
 title: "Chef and Net::SSH Dependency Broken"
 date: 2013-02-06 10:34
 comments: true
-categories: ruby,chef
+categories: [chef, ruby]
 ---
 
 **2nd UPDATE**
@@ -63,4 +63,3 @@ net-ssh version constraints in Chef:
 
 * http://tickets.opscode.com/browse/CHEF-2977
 * http://tickets.opscode.com/browse/CHEF-3156
-

@@ -3,7 +3,7 @@ layout: post
 title: "Github Is Classy"
 date: 2012-03-04 18:42
 comments: true
-categories:
+categories: [development, github]
 ---
 
 Fact: GitHub is classy. This isn't just because

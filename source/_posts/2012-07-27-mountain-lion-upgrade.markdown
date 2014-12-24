@@ -3,7 +3,7 @@ layout: post
 title: "Mountain Lion Upgrade"
 date: 2012-07-27 16:25
 comments: true
-categories:
+categories: [osx, workstation]
 ---
 
 I upgraded my work laptop to Mountain Lion today. It was not as smooth

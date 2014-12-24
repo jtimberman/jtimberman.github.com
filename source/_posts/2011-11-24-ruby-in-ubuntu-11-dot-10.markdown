@@ -3,7 +3,7 @@ layout: post
 title: "Ruby In Ubuntu 11.10"
 date: 2011-11-24 00:16
 comments: true
-categories:
+categories: [ruby, debian]
 ---
 
 I was playing around with Ubuntu 11.10 the other day, to explore some of the

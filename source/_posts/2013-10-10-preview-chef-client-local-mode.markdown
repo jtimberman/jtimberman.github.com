@@ -3,7 +3,7 @@ layout: post
 title: "Preview Chef Client Local Mode"
 date: 2013-10-10 23:39
 comments: true
-categories: chef
+categories: [chef]
 ---
 
 Opscode Developer John Keiser

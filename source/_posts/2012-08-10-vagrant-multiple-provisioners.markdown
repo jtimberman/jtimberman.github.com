@@ -3,7 +3,7 @@ layout: post
 title: "Using Multiple Provisioners in Vagrant"
 date: 2012-08-10 11:39
 comments: true
-categories: vagrant
+categories: [virtualization, chef]
 ---
 
 **Update** Chef 10.14 is

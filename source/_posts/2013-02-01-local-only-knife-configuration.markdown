@@ -3,7 +3,7 @@ layout: post
 title: "Local-only Knife Configuration"
 date: 2013-02-01 10:57
 comments: true
-categories: chef,workflow
+categories: [chef, development]
 ---
 
 In this post I want to discuss briefly an approach to setting up a

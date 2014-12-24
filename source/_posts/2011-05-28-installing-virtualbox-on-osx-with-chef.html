@@ -1,7 +1,8 @@
---- 
+---
 layout: post
 title: Installing Virtualbox on OSX with Chef
 published: true
+categories: [chef, osx, virtualization]
 ---
 <p>There's a rumor floating around that I automate everything on my laptop with Chef, including <a href="https://twitter.com/#!/jtimberman/status/73450718429847552" target="_blank">window maximizing</a>. While that's not entirely true, I do automate as much as possible on my <a href="http://jtimberman.posterous.com/managing-my-workstations-with-chef" target="_blank">workstations with Chef</a>, as I have three laptops I use regularly. One application I like to have installed is VirtualBox, because I do some Chef recipe testing with it and <a href="http://vagrantup.com" target="_blank">Vagrant</a>.</p>
 <p>I did the most natural thing ever, I wrote a cookbook to automate installation of VirtualBox on OS X. The disk image file that Oracle distributes for VirtualBox on OSX uses an "mpkg" installer package, so I couldn't just use the dmg_package LWRP I wrote to install it in /Applications. I extended the dmg_package provider to allow a type to be specified and pushed a new release of the <a href="http://community.opscode.com/cookbooks/dmg" target="_blank">dmg cookbook (v.0.6.0)</a>. The recipe in my cookbook builds the URL, which may seem convoluted (maybe it is), but it makes it more dynamic and customizable with fewer assumptions. The actual usage looks like this:</p>
@@ -13,8 +14,8 @@ published: true
 INFO: Processing remote_file[/Users/jtimberman/.chef/cache/Virtualbox.dmg] action create (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 36)
 INFO: Processing execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg] action run (/Users/jtimberman/.chef/cache/cookbooks/dmg/providers/package.rb line 42)
 INFO: execute[hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg] sh(hdid /Users/jtimberman/.chef/cache/Virtualbox.dmg)
-/dev/disk1                  Apple_partition_scheme                 
-/dev/disk1s1                Apple_partition_map                    
+/dev/disk1                  Apple_partition_scheme
+/dev/disk1s1                Apple_partition_map
 /dev/disk1s2                Apple_HFS                              /Volumes/VirtualBox
 INFO: execute[sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /] sh(sudo installer -pkg /Volumes/Virtualbox/Virtualbox.mpkg -target /)
 Password: &lt;-- unlock sudo before running to avoid this prompt. &quot;sudo -l&quot; should be sufficient.

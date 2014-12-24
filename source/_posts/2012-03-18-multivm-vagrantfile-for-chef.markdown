@@ -3,7 +3,7 @@ layout: post
 title: "MultiVM Vagrantfile for Chef"
 date: 2012-03-18 00:16
 comments: true
-categories:
+categories: [virtualization, chef, development]
 ---
 
 Most commonly, [Vagrant's](http://vagrantup.com)

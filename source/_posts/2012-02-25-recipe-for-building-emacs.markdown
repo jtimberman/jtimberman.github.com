@@ -3,7 +3,7 @@ layout: post
 title: "Recipe for Building Emacs"
 date: 2012-02-25 23:51
 comments: true
-categories: 
+categories: [emacs, chef]
 ---
 
 It is no secret that

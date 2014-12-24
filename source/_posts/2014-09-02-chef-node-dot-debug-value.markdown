@@ -3,7 +3,7 @@ layout: post
 title: "Chef::Node.debug_value"
 date: 2014-09-02 14:26:21 -0600
 comments: true
-categories: chef
+categories: [chef]
 ---
 
 Update: As mentioned by [Dan DeLeo](https://twitter.com/kallistec/status/506953082404483072), he discussed this feature on [Chef 11 In-Depth: Attributes Changes](http://www.getchef.com/blog/2013/02/05/chef-11-in-depth-attributes-changes/) last year when Chef 11 was released. I somehow never got a chance to use it, and thought this post would be a helpful example.
@@ -113,4 +113,3 @@ From the role, we can see some properties attributes are set:
 ```
 
 Note that even though these are also set by default, we get them in the output here too.
-

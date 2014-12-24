@@ -3,7 +3,7 @@ layout: post
 title: "DNSimple Self Registration Recipe"
 date: 2012-01-29 19:00
 comments: true
-categories: 
+categories: [dns, saas, chef]
 ---
 
 Earlier this month, I completed a

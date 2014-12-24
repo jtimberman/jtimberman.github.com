@@ -3,7 +3,7 @@ layout: post
 title: "Process Supervision: Solved Problem"
 date: 2012-12-29 21:41
 comments: true
-categories: process supervision, services, daemons, unix
+categories: [unix, daemontools, process supervision]
 ---
 
 **TL;DR**: Use [runit](http://smarden.org/runit/index.html); skip to

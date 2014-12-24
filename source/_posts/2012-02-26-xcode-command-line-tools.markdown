@@ -3,7 +3,7 @@ layout: post
 title: "Xcode Command Line Tools"
 date: 2012-02-26 00:07
 comments: true
-categories:
+categories: [chef, osx, development]
 ---
 
 Recently, Apple did the most awesome thing for non-Xcode developers.

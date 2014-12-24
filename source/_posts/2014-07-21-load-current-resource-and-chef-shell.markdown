@@ -3,7 +3,7 @@ layout: post
 title: "load_current_resource and chef-shell"
 date: 2014-07-21 09:50:56 -0600
 comments: true
-categories: chef
+categories: [chef]
 ---
 
 This post will illustrate `load_current_resource` and a basic use of chef-shell.

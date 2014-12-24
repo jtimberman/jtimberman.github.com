@@ -3,7 +3,7 @@ layout: post
 title: "Getting Started With Zones on OmniOS"
 date: 2013-06-23 23:47
 comments: true
-categories: omnios, illumos, zones, virtualization
+categories: [omnios, illumos, zones, virtualization]
 ---
 
 I've become enamored with

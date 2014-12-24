@@ -3,7 +3,7 @@ layout: post
 title: "Last Check-in Time for Nodes"
 date: 2013-02-16 20:14
 comments: true
-categories: chef knife reporting
+categories: [chef, plugins]
 ---
 
 This one liner uses the knife exec sub-command to iterate over all the

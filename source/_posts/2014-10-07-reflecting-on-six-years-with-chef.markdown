@@ -3,7 +3,7 @@ layout: post
 title: "Reflecting on Six Years with Chef"
 date: 2014-10-07 11:36:43 -0600
 comments: true
-categories: chef, personal
+categories: [chef, personal]
 ---
 
 It actually started a bit over seven years ago. I saw the writing on the wall at IBM; my job was soon to be outsourced. I found an open position with the SANS institute, accepted an offer there, and was due to start work in a couple of weeks. Around the same time, my friends Adam Jacob and Nathan Haneysmith had started HJK Solutions. They invited me to join them then, but it wasn't the right time for me. Adam told me that at SANS I should at least use the [automation](https://puppetlabs.com) [tools](http://capistranorb.com/) and general [infrastructure management model](http://infrastructures.org) they planned to use. It turned out this was sage advice, for a number of reasons.

@@ -3,7 +3,7 @@ layout: post
 title: "Testing with fission"
 date: 2012-02-15 22:53
 comments: true
-categories: 
+categories: [virtualization, ruby, development]
 ---
 
 In this post, I'm going to talk about the fission gem:
@@ -126,8 +126,8 @@ Turn it on again with the start command.
 And after logging in, we can see that apache2 is not installed as it
 should not be after the snapshot is restored.
 
-    % ssh root@guineapig 
-    root@guineapig's password: 
+    % ssh root@guineapig
+    root@guineapig's password:
     root@guineapig:~# dpkg -l apache2
     No packages found matching apache2.
 
@@ -146,7 +146,7 @@ And here's the plugin I'm using:
 
 ```ruby
 require 'chef/knife'
-  
+
   module KnifePlugins
     class Nukular < Chef::Knife
       deps do
@@ -154,9 +154,9 @@ require 'chef/knife'
         require 'chef/node'
         require 'chef/api_client'
       end
-  
+
       banner "knife nukular VM SNAPSHOT [NODE]"
-  
+
       def run
         vm, snapshot = @name_args
         node = @name_args[2].nil? ? vm : @name_args[2]

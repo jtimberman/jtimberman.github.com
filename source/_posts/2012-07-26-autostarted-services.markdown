@@ -3,7 +3,7 @@ layout: post
 title: "Autostarted Services"
 date: 2012-07-26 22:11
 comments: true
-categories: chef
+categories: [chef, debian, services]
 ---
 
 It is quite common in Debian and Ubuntu that when installing a package

@@ -3,7 +3,7 @@ layout: post
 title: "Cookbook Integration Testing With Real Examples"
 date: 2012-12-13 20:54
 comments: true
-categories: chef,test-kitchen
+categories: [chef, development]
 ---
 
 This blog post starts with a [gist](https://gist.github.com/4281314),

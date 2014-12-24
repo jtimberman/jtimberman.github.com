@@ -3,7 +3,7 @@ layout: post
 title: "Chef 12: Fix Untrusted Self Sign Certs"
 date: 2014-12-11 13:42:41 -0700
 comments: true
-categories: chef, security
+categories: [chef, security]
 ---
 
 Scenario: You've started up a brand new Chef Server using version 12, and you have installed Chef 12 on your local system. You log into the Management Console to create a user and organization (or do this with the command-line `chef-server-ctl` commands), and you're ready to rock with this knife.rb:

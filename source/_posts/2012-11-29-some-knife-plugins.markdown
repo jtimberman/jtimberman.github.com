@@ -3,7 +3,7 @@ layout: post
 title: "Some Knife Plugins"
 date: 2012-11-29 19:11
 comments: true
-categories: chef ruby
+categories: [chef, ruby, plugins]
 ---
 
 I've shared my `~/.chef/plugins/knife` directory as a Git repository

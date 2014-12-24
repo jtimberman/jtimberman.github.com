@@ -3,7 +3,7 @@ layout: post
 title: "Install Chef 10 Server on Ubuntu With Ruby 1.9"
 date: 2012-11-17 11:27
 comments: false
-categories: chef
+categories: [chef, ruby, debian]
 ---
 
 I wanted to capture the minimal steps required to install a Chef

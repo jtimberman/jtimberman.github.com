@@ -1,7 +1,8 @@
---- 
+---
 layout: post
 title: Chef 0.10's Knife Plugins
 published: true
+categories: [chef, knife, plugins]
 ---
 <p>Earlier today^Wyesterday, Opscode previewed a new feature of the upcoming Chef 0.10, <a href="http://www.opscode.com/blog/2011/04/22/chef-0-10-preview-knife-plugins-and-ui/" title="Chef 0.10 Preview: Knife Plugins" target="_blank">Knife Plugins</a>. I've been excited about this feature since Dan DeLeo first created the <a href="http://tickets.opscode.com/browse/CHEF-1248" title="CHEF-1248" target="_blank">ticket for it</a>. I already created the "grep" plugin that Dan illustrates on the blog post, and it is quite useful already (and I only have a few systems!).</p>
 <p>A few months ago, I wrote a <a href="https://rubygems.org/gems/ubuntu_ami" title="UbuntuAmi RubyGem" target="_blank">silly library</a> that will retrieve the list of Canonical's released AMIs. They make this available as a text file per distribution codename (lucid, maverick, etc), and my library supports that. For even greater silliness, but perhaps usefulness, I wrote a knife plugin to retrieve the AMI data. The code is really simple.</p>

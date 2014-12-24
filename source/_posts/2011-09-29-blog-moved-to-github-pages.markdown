@@ -3,7 +3,7 @@ layout: post
 title: "Blog Moved to GitHub Pages"
 date: 2011-09-29 22:59
 comments: true
-categories:
+categories: [development, personal]
 ---
 
 I moved my blog from Posterous to GitHub Pages. Posterous isn't a bad

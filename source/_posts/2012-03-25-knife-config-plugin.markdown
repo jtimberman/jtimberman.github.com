@@ -3,7 +3,7 @@ layout: post
 title: "Knife Config Plugin"
 date: 2012-03-25 14:47
 comments: true
-categories:
+categories: [chef, plugins]
 ---
 
 I created a plugin for knife that will display a specified option from

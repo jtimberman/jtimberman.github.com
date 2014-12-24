@@ -3,7 +3,7 @@ layout: post
 title: "iTerm2 with tmux"
 date: 2012-01-28 15:03
 comments: true
-categories:
+categories: [development]
 ---
 
 A new "which tool is best" battle is raging in the internets amongst

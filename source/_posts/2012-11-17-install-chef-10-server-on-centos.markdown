@@ -3,7 +3,7 @@ layout: post
 title: "Install Chef 10 Server on CentOS"
 date: 2012-11-17 19:49
 comments: false
-categories: chef
+categories: [chef, rhel]
 ---
 
 In addition to capturing the minimal steps required to [install a Chef

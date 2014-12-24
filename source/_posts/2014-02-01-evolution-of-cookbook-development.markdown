@@ -3,7 +3,7 @@ layout: post
 title: "Evolution of Cookbook Development"
 date: 2014-02-01 12:48:49 -0700
 comments: true
-categories: chef, cookbooks
+categories: [chef, cookbooks, development]
 ---
 
 In this post, I will explore some development patterns that I've seen

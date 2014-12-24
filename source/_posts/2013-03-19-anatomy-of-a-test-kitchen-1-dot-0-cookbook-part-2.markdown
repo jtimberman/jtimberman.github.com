@@ -3,7 +3,7 @@ layout: post
 title: "Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)"
 date: 2013-03-19 09:28
 comments: true
-categories: chef testing test-kitchen
+categories: [chef, development]
 ---
 
 **DISCLAIMER** Test Kitchen 1.0 is still in *alpha* at the time of

@@ -3,7 +3,7 @@ layout: post
 title: "Chef on Windows HTPC"
 date: 2011-11-21 07:15
 comments: true
-categories:
+categories: [chef, windows]
 ---
 
 Over the past 20 years, I always had a Windows (or DOS!) PC as the

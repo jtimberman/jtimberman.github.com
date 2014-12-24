@@ -1,7 +1,8 @@
---- 
+---
 layout: post
 title: Encrypted Data Bag for Postfix SASL Authentication
 published: true
+categories: [chef, security]
 ---
 <p>I recently had a chance to sit down and implemented an encrypted data bag in my personal environment. This should translate nicely to anyone that wants to use encrypted data bags in their environment.</p>
 <h3>The use case</h3>
@@ -51,7 +52,7 @@ cat data_bags/secrets/postfix.json
 
 <p>The current recipe doesn't support using an encrypted data bag item, so I had to modify it. First, load the encrypted data bag item.</p>
 <div class="CodeRay">
-  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;, 
+  <div class="code"><pre>postfix_creds = Chef::EncryptedDataBagItem.load(&quot;secrets&quot;,&quot;postfix&quot;,
   Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE)</pre></div>
 </div>
 

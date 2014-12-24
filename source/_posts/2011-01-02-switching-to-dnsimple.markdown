@@ -3,11 +3,11 @@ layout: post
 title: "Switching to DNSimple"
 date: 2012-01-02 13:03
 comments: true
-categories:
+categories: [dns, saas]
 ---
 
 <font size="-2">Reminder: this blog reflects my opinions and thoughts, and not
-those of my employer, Opscode, Inc.</font>
+those of my employer, Chef Software, Inc.</font>
 
 Like any good sysadmin, I have my own domain for email and other
 purposes. I actually have had a couple, but this post is about my

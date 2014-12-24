@@ -3,7 +3,7 @@ layout: post
 title: "Managing Multiple AWS Account Credentials"
 date: 2013-10-19 17:55
 comments: true
-categories: aws, amazon
+categories: [aws, amazon, security]
 ---
 
 **UPDATE**: All non-default profiles must have their profile name

@@ -3,7 +3,7 @@ layout: post
 title: "Managing Secrets With Chef Vault"
 date: 2013-09-10 09:30
 comments: true
-categories: chef, security
+categories: [chef, security]
 ---
 
 Two years ago, I wrote a post about

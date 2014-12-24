@@ -3,7 +3,7 @@ layout: post
 title: "Test Kitchen and Jenkins"
 date: 2013-05-08 23:53
 comments: true
-categories: chef test-kitchen jenkins
+categories: [chef, development]
 ---
 
 I've been working more with test-kitchen 1.0 alpha lately. The most

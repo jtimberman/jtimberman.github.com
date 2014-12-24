@@ -3,7 +3,7 @@ layout: post
 title: "ChefDK and Ruby"
 date: 2014-04-30 22:32:18 -0600
 comments: true
-categories: chef ruby
+categories: [chef, ruby]
 ---
 
 Recently, Chef [released ChefDK](http://www.getchef.com/blog/2014/04/15/chef-development-kit/), the "Chef Development Kit." This is a self-contained package of everything required to run Chef, work with Chef cookbooks, and includes the best of breed community tools, test frameworks, and other utility programs that are commonly used when working with Chef in infrastructure as code. [ChefDK version 0.1.0 was released last week](http://www.getchef.com/blog/2014/04/29/chefdk-0-1-0-released/). A new feature mentioned in the [README.md](https://github.com/opscode/chef-dk/blob/master/README.md#using-chefdk-as-your-primary-development-environment) is very important, in my opinion.

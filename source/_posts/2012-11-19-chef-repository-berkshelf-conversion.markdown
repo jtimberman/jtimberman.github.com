@@ -3,7 +3,7 @@ layout: post
 title: "Chef Repository Berkshelf Conversion"
 date: 2012-11-19 22:10
 comments: true
-categories: chef
+categories: [chef, personal, development]
 ---
 
 I've been managing my personal systems with Chef since Chef was

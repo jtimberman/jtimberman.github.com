@@ -1,7 +1,8 @@
---- 
+---
 layout: post
 title: Guide to Writing Chef Cookbooks
 published: true
+categories: [oldstuff, chef]
 ---
 <p>I wanted smartmontools installed to monitor the disk health of my LAN server at home. This is not an uncommon thing to want to do, so I thought I'd write and share a Chef cookbook for it. I also took this opportunity to write up the experience so I can illustrate how easy it is to write a cookbook for Chef.</p>
 <p>The first thing to do when writing a cookbook is to create the cookbook directory structure with <code>knife cookbook create</code>. This command will create a README.rdoc by default, and I prefer Markdown, so I specify the <code>-r md</code> option.</p>
@@ -84,7 +85,7 @@ DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
 <p>In <code>templates/default/smartmontools.default.erb</code>, the smartmontools daemon will be enabled based on the <code>start_smartd</code> attribute. Additional options will be passed per <code>smartd_opts</code>:</p>
 <div class="CodeRay">
   <div class="code"><pre>start_smartd=&lt;%= node['smartmontools']['start_smartd'] %&gt;
- 
+
 &lt;% if node['smartmontools']['smartd_opts'].length &gt; 0 -%&gt;
 smartd_opts=&quot;&lt;%= node['smartmontools']['smartd_opts'] %&gt;&quot;
 &lt;% else -%&gt;
@@ -156,7 +157,7 @@ cookbooks/smartmontools
   <div class="code"><pre>% knife cookbook upload smartmontools
 Uploading smartmontools             [0.5.0]
 upload complete
- 
+
 % knife node run list add virt1test 'recipe[smartmontools]'
 run_list:
     role[ubuntu]

@@ -3,7 +3,7 @@ layout: post
 title: "Chef Reporting API and Resource Updates"
 date: 2014-10-07 06:18:34 -0600
 comments: true
-categories: chef, knife, reporting, plugins
+categories: [chef, knife, reporting, plugins]
 ---
 
 Have you ever wanted to find a list of nodes that updated a specific resource in a period of time? Such as "show me all the nodes in production that had an application service restart in the last hour"? Or, "which nodes have updated their apt cache recently?" For example,

@@ -3,7 +3,7 @@ layout: post
 title: "Starting ChefSpec Example"
 date: 2013-05-09 21:10
 comments: true
-categories: chef chefspec test-kitchen
+categories: [chef, development]
 ---
 
 This is a quick post to introduce what I'm starting on testing with

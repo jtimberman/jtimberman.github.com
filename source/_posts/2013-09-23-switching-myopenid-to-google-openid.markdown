@@ -3,7 +3,7 @@ layout: post
 title: "Switching MyOpenID to Google OpenID"
 date: 2013-09-23 10:38
 comments: true
-categories: openid, authentication
+categories: [openid, authentication, security]
 ---
 
 You may be aware that MyOpenID is

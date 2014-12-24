@@ -3,7 +3,7 @@ layout: post
 title: "Local Templates for Application Configuration"
 date: 2013-01-28 09:57
 comments: true
-categories: chef,deploy,rails
+categories: [chef, deployment, applications]
 ---
 
 Today I joined the

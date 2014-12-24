@@ -3,7 +3,7 @@ layout: post
 title: "Chef Report Handler for Growl"
 date: 2012-01-02 20:37
 comments: true
-categories: 
+categories: [chef, plugins, osx]
 ---
 
 A few weeks ago, I listened to the

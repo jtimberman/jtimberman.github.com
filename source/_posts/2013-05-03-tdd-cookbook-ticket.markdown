@@ -3,7 +3,7 @@ layout: post
 title: "TDD Cookbook Ticket"
 date: 2013-05-03 14:36
 comments: true
-categories: chef testing tdd cookbooks
+categories: [chef, cookbooks, development]
 ---
 
 This post will briefly describe how I did a TDD update to Opscode's
