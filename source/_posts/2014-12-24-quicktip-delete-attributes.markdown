@@ -103,3 +103,5 @@ managed-node:
 ```
 
 **Bonus quick tip!** `knife node show` can take the `-a` option multiple times to display more attributes. I just discovered this in writing this post, and I don't know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).
+
+*Update* This [feature was added](https://github.com/opscode/chef/commit/4133160972a9972a9a062579504faa40eaa4c8db) by [Awesome Chef Ranjib Dey](https://twitter.com/RanjibDey).
