@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chef | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-24T18:46:50-07:00</updated>
+  <updated>2014-12-25T14:18:11-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -130,6 +130,8 @@ managed-node:
 ```</p>
 
 <p><strong>Bonus quick tip!</strong> <code>knife node show</code> can take the <code>-a</code> option multiple times to display more attributes. I just discovered this in writing this post, and I don&rsquo;t know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).</p>
+
+<p><em>Update</em> This <a href="https://github.com/opscode/chef/commit/4133160972a9972a9a062579504faa40eaa4c8db">feature was added</a> by <a href="https://twitter.com/RanjibDey">Awesome Chef Ranjib Dey</a>.</p>
 ]]></content>
   </entry>
   
@@ -161,7 +163,7 @@ ERROR: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=SSLv3 read s
 <p>```
 Connecting to host chef-server.example.com:443
 ERROR: The SSL certificate of chef-server.example.com could not be verified
-Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#109;&#97;&#x69;&#108;&#x74;&#x6f;&#x3a;&#121;&#x6f;&#117;&#x40;&#x65;&#x78;&#97;&#x6d;&#x70;&#x6c;&#101;&#46;&#x63;&#x6f;&#x6d;">&#x79;&#111;&#x75;&#x40;&#101;&#120;&#97;&#109;&#112;&#108;&#x65;&#46;&#99;&#111;&#x6d;</a></p>
+Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#109;&#x61;&#105;&#108;&#x74;&#x6f;&#x3a;&#121;&#111;&#x75;&#64;&#x65;&#x78;&#x61;&#x6d;&#112;&#x6c;&#x65;&#x2e;&#99;&#111;&#x6d;">&#121;&#x6f;&#117;&#x40;&#x65;&#120;&#x61;&#x6d;&#x70;&#x6c;&#101;&#46;&#x63;&#x6f;&#x6d;</a></p>
 
 <p>Configuration Info:</p>
 
