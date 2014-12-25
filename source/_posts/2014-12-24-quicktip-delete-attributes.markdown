@@ -75,7 +75,7 @@ template '/etc/dd-agent/datadog.conf' do
 end
 ```
 
-Now, for the grand finale of this post, I delete the attributes that were set using a `ruby_block` resource. The timing here is important, because these attributes must be deleted after Chef has converged the template. This does get updated every run, because the attributes are populated every run. I could write additional logic to make this convergent, but I'm okay with the behavior. The `subscribes` ensures that as soon as the template is written, the node object is updated to remove the attributes. Otherwise, this happens next after the `dd-agent` recipe.
+Now, for the grand finale of this post, I delete the attributes that were set using a `ruby_block` resource. The timing here is important, because these attributes must be deleted after Chef has converged the template. This does get updated every run, because the ruby block is not convergent, and this is okay because the attributes are updated every run, too. I could write additional logic to make this convergent, but I'm okay with the behavior. The `subscribes` ensures that as soon as the template is written, the node object is updated to remove the attributes. Otherwise, this happens next after the `dd-agent` recipe.
 
 ```ruby
 ruby_block 'smash-datadog-auth-attributes' do
