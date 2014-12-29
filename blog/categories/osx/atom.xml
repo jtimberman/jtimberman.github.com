@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-29T11:42:29-07:00</updated>
+  <updated>2014-12-29T11:43:11-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Chef 12 Homebrew User Mixin]]></title>
+    <title type="html"><![CDATA[Quick Tip: Chef 12 Homebrew User Mixin]]></title>
     <link href="http://jtimberman.housepub.org/blog/2014/12/29/chef-12-homebrew-user-mixin/"/>
     <updated>2014-12-29T08:56:01-07:00</updated>
     <id>http://jtimberman.housepub.org/blog/2014/12/29/chef-12-homebrew-user-mixin</id>
