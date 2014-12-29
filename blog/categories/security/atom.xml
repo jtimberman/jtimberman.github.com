@@ -4,7 +4,7 @@
   <title><![CDATA[Category: security | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/security/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-29T11:43:11-07:00</updated>
+  <updated>2014-12-29T11:46:12-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -41,7 +41,7 @@ ERROR: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=SSLv3 read s
 <p>```
 Connecting to host chef-server.example.com:443
 ERROR: The SSL certificate of chef-server.example.com could not be verified
-Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#x6d;&#97;&#105;&#x6c;&#116;&#x6f;&#x3a;&#121;&#111;&#x75;&#64;&#x65;&#120;&#x61;&#109;&#112;&#x6c;&#x65;&#x2e;&#x63;&#111;&#109;">&#x79;&#x6f;&#117;&#64;&#101;&#x78;&#97;&#x6d;&#112;&#108;&#x65;&#x2e;&#x63;&#x6f;&#109;</a></p>
+Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#109;&#97;&#x69;&#x6c;&#x74;&#111;&#58;&#x79;&#x6f;&#x75;&#64;&#x65;&#x78;&#x61;&#109;&#x70;&#x6c;&#101;&#x2e;&#x63;&#x6f;&#x6d;">&#121;&#x6f;&#117;&#64;&#101;&#x78;&#97;&#x6d;&#112;&#108;&#x65;&#46;&#x63;&#x6f;&#109;</a></p>
 
 <p>Configuration Info:</p>
 
