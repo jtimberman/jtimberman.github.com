@@ -1,9 +1,9 @@
 ---
 layout: post
-title: "Chef 12 Homebrew User Mixin"
+title: "Quick Tip: Chef 12 Homebrew User Mixin"
 date: 2014-12-29 08:56:01 -0700
 comments: true
-categories: [chef, osx, workstation]
+categories: [chef, osx, workstation, quicktips]
 ---
 
 OS X is an interesting operating system. It is a Unix, but is primarily used for workstations. As such, many system settings can, and should, be done as a non-privileged user. Some tasks, however, require administrative privileges. OS X uses `sudo` to escalate privileges. This is done by a nice GUI pop-up requesting the user password when done through another GUI element. However, one must use `sudo $COMMAND` when working at the Terminal.
