@@ -9,9 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Update: This post is old and outdated. I&rsquo;ll have another post in 2015 about workstation management with Chef. I have written
-twice
-before about &hellip;">
+  <meta name="description" content="Update Chef 10.14 is released. I removed the &ldquo;--pre&rdquo; from the gem install commands but otherwise left this post, since it was written by &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +79,168 @@ before about &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/08/10/vagrant-multiple-provisioners/">Using Multiple Provisioners in Vagrant</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-08-10T11:39:00-06:00" pubdate data-updated="true">Aug 10<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><strong>Update</strong> Chef 10.14 is
+  <a href="http://www.opscode.com/blog/2012/09/07/chef-10-14-0-released/">released</a>.
+  I removed the &ldquo;<code>--pre</code>&rdquo; from the gem install commands but otherwise
+  left this post, since it was written by Past Me.</p>
+
+<p>As you may be aware, the next release of Chef, 10.14, is in
+<a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-07/msg00021.html">beta testing</a>.
+Most publicly available baseboxes for <a href="http://vagrantup.com">Vagrant</a>
+aren&rsquo;t built for the beta. But perhaps you want to try it out?</p>
+
+<p>Vagrant to the rescue! Besides the Chef solo and client provisioners,
+Vagrant has a shell provisioner, too. It allows you to pass in an
+inline command, or a shell script. This example builds on my
+<a href="/blog/2012/03/18/multivm-vagrantfile-for-chef/">MultiVM Vagrantfile for Chef post</a>.
+You may wish to refer to the full file in that post for complete
+context.</p>
+
+<p>First, the shell provisioner line looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It goes in the config block. Remember that <code>cookbook_testers</code> is a
+hash of data about the multiple VMs I&rsquo;m using, so they would all get
+launched with this provisioner.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+</span><span class='line'>      <span class="c1">### Use shell for great justice!</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc&quot;</span>
+</span><span class='line'>      <span class="c1">### chef-client (allthethings)</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:chef_client</span> <span class="k">do</span> <span class="o">|</span><span class="n">chef</span><span class="o">|</span>
+</span><span class='line'>        <span class="c1"># ... chef provisioner is the same as before</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And now, a <code>vagrant up</code> on my Ubuntu 12.04 VM, with the less
+interesting output truncated:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% vagrant </span><span class="n">up</span> <span class="n">precise</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="ss">provisioner</span><span class="p">:</span> <span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Provisioners</span><span class="o">::</span><span class="no">Shell</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="no">Successfully</span> <span class="n">installed</span> <span class="n">chef</span><span class="o">-</span><span class="mi">10</span><span class="o">.</span><span class="mi">14</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="mi">3</span>
+</span><span class='line'><span class="mi">1</span> <span class="n">gem</span> <span class="n">installed</span>
+</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="ss">provisioner</span><span class="p">:</span> <span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Provisioners</span><span class="o">::</span><span class="no">ChefClient</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="n">chef</span><span class="o">-</span><span class="n">client</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="no">Fri</span><span class="p">,</span> <span class="mi">10</span> <span class="no">Aug</span> <span class="mi">2012</span> <span class="mi">17</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">23</span> <span class="o">+</span><span class="mo">0000</span><span class="o">]</span> <span class="ss">INFO</span><span class="p">:</span> <span class="o">***</span> <span class="no">Chef</span> <span class="mi">10</span><span class="o">.</span><span class="mi">14</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="mi">3</span> <span class="o">***</span>
+</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
+</span><span class='line'><span class="o">[</span><span class="no">Fri</span><span class="p">,</span> <span class="mi">10</span> <span class="no">Aug</span> <span class="mi">2012</span> <span class="mi">17</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">37</span> <span class="o">+</span><span class="mo">0000</span><span class="o">]</span> <span class="ss">INFO</span><span class="p">:</span> <span class="no">Chef</span> <span class="no">Run</span> <span class="n">complete</span> <span class="k">in</span> <span class="mi">11</span><span class="o">.</span><span class="mi">323208919</span> <span class="n">seconds</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One of the most compelling features of Chef 10.14 is the introduction
+of
+<a href="http://tickets.opscode.com/browse/CHEF-13">&ldquo;no-op&rdquo; or &ldquo;dry-run&rdquo; mode</a>,
+also called
+&ldquo;<a href="http://lists.opscode.com/sympa/arc/chef/2012-07/msg00025.html">Why Run Mode</a>&rdquo;.
+However, at this time, neither arbitrary command-line arguments nor why-run
+mode itself are supported in Vagrant. I opened a
+<a href="https://github.com/mitchellh/vagrant/pull/1067">pull request</a> for the
+former, which will allow the latter easily. Of course, vagrant is
+highly valuable for doing testing by <em>actually running</em> your recipes,
+but I think arbitrary command-line options will be a welcome feature
+for other purposes.</p>
+
+<p>Another use case for this particular method of using Vagrant
+provisioners is to update RubyGems inside an &ldquo;Omnibus&rdquo; full stack
+install, to resolve
+<a href="http://tickets.opscode.com/browse/CHEF-3295">this bug</a>, or
+<a href="http://tickets.opscode.com/browse/CHEF-2871">this request</a>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem update --system&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These two example commands can be combined in a single <code>:inline</code>, or
+as a shell script.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s2">&quot;gem-updater.sh&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the shell script, <code>gem-updater.sh</code> in the same directory as the Vagrantfile:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'>sudo /opt/chef/embedded/bin/gem update --system
+</span><span class='line'>sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2060,95 +2220,6 @@ post haste:</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/02/25/changing-class-names/">Changing Class Names</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-02-25T09:39:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>If you change a class name in your library, <em>do a major version
-change</em>! You don&rsquo;t know who is using your library, even the
-undocumented parts.</p>
-
-<h2>Background</h2>
-
-<p>Recently, we had a post on the
-<a href="http://lists.opscode.com">Chef mailing list</a> that using bluepill for
-the Chef Server daemon process(es) was broken. Upon further
-investigation of the output from
-<a href="https://gist.github.com/1847128">Chef debug output</a>, it appeared to
-be an issue with
-<a href="https://github.com/arya/bluepill/issues/132">Bluepill itself</a>, but
-after looking into that ticket, the <a href="http://rubygems.org/gems/daemons">daemons gem</a> had made a change.</p>
-
-<p>Out of curiosity, I was compelled to find out what the source of the
-change in the daemons gem was. This lead to a yak shave, as first, I
-had to look up the <a href="http://rubygems.org/gems/daemons">daemons gem</a> on
-RubyGems.org to try and find the source. The author of the gem still
-uses RubyForge rather than GitHub. That&rsquo;s fine, but it means I have to
-do some link-spelunking to find where the <a href="http://rubyforge.org/projects/daemons">source code lives</a>.</p>
-
-<p>Now I take a look at the change log:</p>
-
-<pre><code>Release 1.1.8: February 7, 2012
-rename to daemonization.rb to daemonize.rb (and Daemonization to Daemonize) to ensure compatibility.
-
-Release 1.1.7: February 6, 2012
-start_proc: Write out the PID file in the newly created proc to avoid race conditions.
-daemonize.rb: remove to simplify licensing (replaced by daemonization.rb).
-
-Release 1.1.6: January 18, 2012
-Add the :app_name option for the "call" daemonization mode.
-
-Release 1.1.5: December 19, 2011
-Catch the case where the pidfile is empty but not deleted and restart
-the app (thanks to Rich Healey)
-</code></pre>
-
-<p>I then went to the ticket tracker to find out what the source of the
-changes might be. Fortunately, there was an open issue that I could
-<a href="http://rubyforge.org/tracker/index.php?func=detail&amp;aid=29516&amp;group_id=524&amp;atid=2084">reference</a>.</p>
-
-<p>My question (which I posted to the ticket) is why wouldn&rsquo;t renaming a
-class cause the author to do a new major version? This way other Gems
-that rely on this as a dependency could use the paranoia operator,
-<code>~&gt;</code> so the broken class name wouldn&rsquo;t break usage elsewhere.</p>
-
-<p>I&rsquo;m glad that the daemons gem author did the right thing and yanked
-the broken version. Open source worked well here. The process of
-finding this was a bit slower than it should have been, and I think
-that the bluepill maintainers moved too quickly to &ldquo;resolve&rdquo; the
-issue, rather than post their concern about the class naming. Kudos to
-thuehlinger for fixing his gem, though.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -2183,6 +2254,10 @@ thuehlinger for fixing his gem, though.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Chef 12 Homebrew User Mixin</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
       </li>
     
@@ -2196,10 +2271,6 @@ thuehlinger for fixing his gem, though.</p>
     
       <li class="post">
         <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/09/02/chef-node-dot-debug-value/">Chef::Node.debug_value</a>
       </li>
     
   </ul>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: workstation | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/workstation/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-25T14:18:11-07:00</updated>
+  <updated>2014-12-29T11:42:29-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,115 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Chef 12 Homebrew User Mixin]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/12/29/chef-12-homebrew-user-mixin/"/>
+    <updated>2014-12-29T08:56:01-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/12/29/chef-12-homebrew-user-mixin</id>
+    <content type="html"><![CDATA[<p>OS X is an interesting operating system. It is a Unix, but is primarily used for workstations. As such, many system settings can, and should, be done as a non-privileged user. Some tasks, however, require administrative privileges. OS X uses <code>sudo</code> to escalate privileges. This is done by a nice GUI pop-up requesting the user password when done through another GUI element. However, one must use <code>sudo $COMMAND</code> when working at the Terminal.</p>
+
+<p>The <a href="http://brew.sh">Homebrew</a> package manager tries to do everything as a non-privileged user. The <a href="https://raw.githubusercontent.com/Homebrew/install/master/install">installation script</a> will invoke some commands with <code>sudo</code> &ndash; namely to create and set the correct permissions on <code>/usr/local</code> (its default installation location). Once that is complete, <code>brew install</code> will not require privileged access for installing packages. In fact, the <a href="https://github.com/Homebrew/homebrew/blob/b19d3afccef0ddc31820f1cb7d1a5316017e29df/share/doc/homebrew/FAQ.md#why-does-homebrew-say-sudo-is-bad-">Homebrew project recommends</a> never using <code>sudo</code> with the <code>brew</code> commands.</p>
+
+<p>In Chef 12 the default provider for the <code>package</code> resource is <code>homebrew</code>. This originally came from the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew cookbook</a>. In order to not use <code>sudo</code> when managing packages, there&rsquo;s a helper method (mixin) that attempts to determine what non-privileged user should run the <code>brew install</code> command. This is also <a href="https://github.com/opscode/chef/blob/4cb27331d81b394b816278e2bed6b3395b54b9c9/lib/chef/mixin/homebrew_user.rb">ported to Chef 12</a>. The method can also take an argument that specifies a particular user that should run the <code>brew</code> command.</p>
+
+<p>When managing an OS X system with Chef, it is often easier to just run <code>chef-client</code> as <code>root</code>, rather than be around when <code>sudo</code> prompts for a password. This means that we need a way to execute other commands for managing OS X as a non-privileged user. We can reuse the mixin to do this. I&rsquo;ll demonstrate this using plain old Ruby with <code>pry</code>, which is installed in ChefDK, and I&rsquo;ll start it up with <code>sudo</code>. Then, I&rsquo;ll show a short recipe with <code>chef-apply</code>.</p>
+
+<p><code>
+% which pry
+/opt/chefdk/embedded/bin/pry
+% sudo pry
+</code></p>
+
+<p>Paste in the following Ruby code:</p>
+
+<p>```ruby
+require &lsquo;chef&rsquo;
+include Chef::Mixin::HomebrewUser
+include Chef::Mixin::ShellOut</p>
+
+<p>find_homebrew_uid #=> 501
+```</p>
+
+<p>The method <code>find_homebrew_uid</code> is the helper we want. As we can see, rather than returning <code>0</code> (for <code>root</code>), it returns <code>501</code>, which is the UID of the <code>jtimberman</code> user on my system. To prove that I&rsquo;m executing in a process owned by <code>root</code>:</p>
+
+<p><code>ruby
+Process.uid #=&gt; 0
+</code></p>
+
+<p>Or, I can shell out to the <code>whoami</code> command using Chef&rsquo;s <code>shell_out</code> method &ndash; which is the same method Chef would use to run <code>brew install</code>.</p>
+
+<p><code>ruby
+shell_out('whoami').stdout #=&gt; "root\n"
+</code></p>
+
+<p>The <code>shell_out</code> method can take a <code>:user</code> attribute:</p>
+
+<p><code>ruby
+shell_out('whoami', :user =&gt; find_homebrew_uid).stdout #=&gt; "jtimberman\n"
+</code></p>
+
+<p>So this can be used to install packages with <code>brew</code>, and is exactly what Chef 12 does.</p>
+
+<p><code>ruby
+shell_out('brew install coreutils', :user =&gt; find_homebrew_uid)
+</code></p>
+
+<p>Or, it can be used to run <code>defaults(1)</code> settings that require running as a specific user, rather than <code>root</code></p>
+
+<p>```ruby</p>
+
+<h1>Turn off iPhoto face detection, please</h1>
+
+<p>shell_out(&lsquo;defaults write com.apple.iPhoto PKFaceDetectionEnabled 0&rsquo;,</p>
+
+<pre><code>      :user =&gt; find_homebrew_uid)
+</code></pre>
+
+<p>```</p>
+
+<p>```sh</p>
+
+<h1>before&hellip;</h1>
+
+<p>jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
+1</p>
+
+<h1>after!</h1>
+
+<p>jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
+0
+```</p>
+
+<p>Putting this together in a Chef recipe that gets run by <code>root</code>, we can disable face detection in iPhoto like this:</p>
+
+<p>```ruby
+Chef::Resource::Execute.send(:include, Chef::Mixin::HomebrewUser)</p>
+
+<p>execute &lsquo;defaults write com.apple.iPhoto PKFaceDetectionEnabled 0&rsquo; do
+  user find_homebrew_uid
+end
+```</p>
+
+<p>The first line makes the method available on all <code>execute</code> resources. To make the method available to all resources, use <code>Chef::Resource.send</code>, and to make it available across everything in all recipes, use <code>Chef::Recipe.send</code>. Otherwise we would get a <code>NoMethodError</code> exception.</p>
+
+<p>The <code>execute</code> resource takes a <code>user</code> attribute, so we use the <code>find_homebrew_uid</code> method here to set the user. And we can observe the same results as above:</p>
+
+<p><code>
+jtimberman@localhost% defaults write com.apple.iPhoto PKFaceDetectionEnabled 1
+jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
+1
+jtimberman@localhost% sudo chef-apply nofaces.rb
+Recipe: (chef-apply cookbook)::(chef-apply recipe)
+* execute[defaults write com.apple.iPhoto PKFaceDetectionEnabled 0] action run
+- execute defaults write com.apple.iPhoto PKFaceDetectionEnabled 0
+jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
+0
+</code></p>
+
+<p>Those who have read the workstation management posts on this blog in the past may be aware that I have a <a href="https://supermarket.chef.io/cookbooks/mac_os_x">cookbook</a> that can manage OS X &ldquo;<code>defaults(1)</code>&rdquo; settings. I <a href="https://github.com/chef-osx/mac_os_x/issues/21">plan to make updates</a> to the resource in that cookbook that will leverage this method.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OS X Workstation Management with Chef]]></title>
