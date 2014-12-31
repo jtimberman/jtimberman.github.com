@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-29T11:46:12-07:00</updated>
+  <updated>2014-12-31T16:14:52-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,48 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Serverspec spec_helper in Test Kitchen]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/"/>
+    <updated>2014-12-31T16:01:23-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen</id>
+    <content type="html"><![CDATA[<p>Recently, I&rsquo;ve started refactoring some <a href="https://supermarket.chef.io/cookbooks/daemontools">old</a> <a href="https://supermarket.chef.io/cookbooks/djbdns">cookbooks</a> <a href="https://supermarket.chef.io/cookbooks/ucspi-tcp">I wrote</a> ages ago. I&rsquo;m adding Serverspec coverage that can be run with <code>kitchen verify</code>. In this <a href="/blog/categories/quicktips">quicktip</a>, I&rsquo;ll describe how to create a <code>spec_helper</code> that can be used in all the specs. This is a convention used by <a href="http://pivotallabs.com/spec-helper/">many</a> in the Ruby community to add configuration for RSpec.</p>
+
+<p>For Chef, we can run integration tests after convergence using <a href="http://kitchen.ci">Test Kitchen</a> using Serverspec. To do that, we need to require Serverspec, and then set its backend. In some cookbooks, the author/developer may have written <code>spec_helper</code> files in the various <code>test/integration/SUITE/serverspec/</code> directories, but this will use a single shared file for them all. Let&rsquo;s get started.</p>
+
+<p>In the <code>.kitchen.yml</code>, add the <code>data_path</code> configuration directive in the provisioner.</p>
+
+<p><code>yaml
+provisioner:
+  name: chef_zero
+  data_path: test/shared
+</code></p>
+
+<p>Then, create the <code>test/shared</code> directory in the cookbook, and create the <code>spec_helper.rb</code> in it.</p>
+
+<p><code>sh
+mkdir test/shared
+$EDITOR test/shared/spec_helper.rb
+</code></p>
+
+<p>Minimally, it should look like this:</p>
+
+<p>```ruby
+require &lsquo;serverspec&rsquo;</p>
+
+<p>set :backend, :exec
+```</p>
+
+<p>Then in your specs, for example <code>test/integration/default/serverspec/default_spec.rb</code>, require the <code>spec_helper</code>. On the instances under test, the file will be copied to <code>/tmp/kitchen/data/spec_helper.rb</code>.</p>
+
+<p><code>ruby
+require_relative '../../../kitchen/data/spec_helper'
+</code></p>
+
+<p>That&rsquo;s it, now when running <code>kitchen test</code>, or <code>kitchen verify</code> on a converged instance, the helper will be used.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Chef 12 Homebrew User Mixin]]></title>

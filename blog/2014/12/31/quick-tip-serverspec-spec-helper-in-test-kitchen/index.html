@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Zones - jtimberman's Code Blog</title>
+  <title>Quick Tip: Serverspec Spec_helper in Test Kitchen - jtimberman's Code Blog</title>
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Category: zones">
+  <meta name="description" content="Recently, I&rsquo;ve started refactoring some old cookbooks I wrote ages ago. I&rsquo;m adding Serverspec coverage that can be run with kitchen &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://jtimberman.housepub.orgblog/categories/zones">
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
@@ -78,36 +78,131 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Zones</h1>
+    
+      <h1 class="entry-title">Quick Tip: Serverspec Spec_helper in Test Kitchen</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-31T16:01:23-07:00" pubdate data-updated="true">Dec 31<span>st</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>Recently, I&rsquo;ve started refactoring some <a href="https://supermarket.chef.io/cookbooks/daemontools">old</a> <a href="https://supermarket.chef.io/cookbooks/djbdns">cookbooks</a> <a href="https://supermarket.chef.io/cookbooks/ucspi-tcp">I wrote</a> ages ago. I&rsquo;m adding Serverspec coverage that can be run with <code>kitchen verify</code>. In this <a href="/blog/categories/quicktips">quicktip</a>, I&rsquo;ll describe how to create a <code>spec_helper</code> that can be used in all the specs. This is a convention used by <a href="http://pivotallabs.com/spec-helper/">many</a> in the Ruby community to add configuration for RSpec.</p>
 
-  
-  <h2>2013</h2>
+<p>For Chef, we can run integration tests after convergence using <a href="http://kitchen.ci">Test Kitchen</a> using Serverspec. To do that, we need to require Serverspec, and then set its backend. In some cookbooks, the author/developer may have written <code>spec_helper</code> files in the various <code>test/integration/SUITE/serverspec/</code> directories, but this will use a single shared file for them all. Let&rsquo;s get started.</p>
 
-<article>
-  
-<h1><a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a></h1>
-<time datetime="2013-06-23T23:47:00-06:00" pubdate><span class='month'>Jun</span> <span class='day'>23</span> <span class='year'>2013</span></time>
+<p>In the <code>.kitchen.yml</code>, add the <code>data_path</code> configuration directive in the provisioner.</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/illumos/'>illumos</a>, <a class='category' href='/blog/categories/omnios/'>omnios</a>, <a class='category' href='/blog/categories/virtualization/'>virtualization</a>, <a class='category' href='/blog/categories/zones/'>zones</a></span>
-</footer>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">provisioner</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">chef_zero</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">data_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">test/shared</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
-</article>
+<p>Then, create the <code>test/shared</code> directory in the cookbook, and create the <code>spec_helper.rb</code> in it.</p>
 
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>mkdir <span class="nb">test</span>/shared
+</span><span class='line'><span class="nv">$EDITOR</span> <span class="nb">test</span>/shared/spec_helper.rb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Minimally, it should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;serverspec&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">set</span> <span class="ss">:backend</span><span class="p">,</span> <span class="ss">:exec</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then in your specs, for example <code>test/integration/default/serverspec/default_spec.rb</code>, require the <code>spec_helper</code>. On the instances under test, the file will be copied to <code>/tmp/kitchen/data/spec_helper.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">require_relative</span> <span class="s1">&#39;../../../kitchen/data/spec_helper&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&rsquo;s it, now when running <code>kitchen test</code>, or <code>kitchen verify</code> on a converged instance, the helper will be used.</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Joshua Timberman</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-31T16:01:23-07:00" pubdate data-updated="true">Dec 31<span>st</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/quicktips/'>quicktips</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/12/29/chef-12-homebrew-user-mixin/" title="Previous Post: Quick Tip: Chef 12 Homebrew User Mixin">&laquo; Quick Tip: Chef 12 Homebrew User Mixin</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -210,7 +305,10 @@
       var disqus_shortname = 'jtimberman';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

@@ -9,9 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="A few months ago, I posted briefly on
-how to install Chef 10 server on CentOS.
-This post revisits the process for Chef 11. These steps were performed &hellip;">
+  <meta name="description" content="This one liner uses the knife exec sub-command to iterate over all the
+node objects on the Chef Server, and print out their ohai_time
+attribute in a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +81,133 @@ This post revisits the process for Chef 11. These steps were performed &hellip;"
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/02/16/last-check-in-time-for-nodes/">Last Check-in Time for Nodes</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-16T20:14:00-07:00" pubdate data-updated="true">Feb 16<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This one liner uses the knife exec sub-command to iterate over all the
+node objects on the Chef Server, and print out their <code>ohai_time</code>
+attribute in a human readable format.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E 'nodes.all {|n| puts "#{n.name} #{Time.at(n[:ohai_time])}"}'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s break this up a little.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The exec plugin for knife executes a script or the given string of
+Ruby code in the same context as <code>chef-shell</code> (or <code>shef</code> in Chef 10
+and earlier) if you start it up in it&rsquo;s &ldquo;main&rdquo; context. Since it is
+knife, it will also use your <code>.chef/knife.rb</code> settings, so it knows
+about your user, key and Chef Server.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>nodes.all</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>chef-shell</code> main context has helper methods to access the
+corresponding endpoints in the Chef Server API. Clearly we&rsquo;re working
+with &ldquo;nodes&rdquo; here, and the <code>#all</code> method returns all the node objects
+from the Chef Server. This differs from search in that there&rsquo;s a
+commit delay between the time when data is saved to the server, and
+the data is indexed by Solr. This is usually a few seconds, but
+depending on various factors like the hardware you&rsquo;re using, how many
+nodes are converging, etc, it can take longer.</p>
+
+<p>Anyway, we can pass a block to nodes.all and do something with each
+node object. The example above is a oneliner, so let&rsquo;s make it more
+readable.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">nodes</span><span class="o">.</span><span class="n">all</span> <span class="k">do</span> <span class="o">|</span><span class="n">n</span><span class="o">|</span>
+</span><span class='line'>  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="no">Time</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">n</span><span class="o">[</span><span class="ss">:ohai_time</span><span class="o">]</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We&rsquo;re simply going to use <code>n</code> as the iterator for each node object,
+and we&rsquo;ll print a string about the node. The <code>#{}</code>&rsquo;s in the string to
+print with puts is Ruby string interpolation. That is, everything
+inside the braces is a Ruby expression. First, the <code>Chef::Node</code> object
+has a method, <code>#name</code>, that returns the node&rsquo;s name. This is usually
+the FQDN, but depending on your configuration (<code>node_name</code> in
+<code>/etc/chef/client.rb</code> or using the <code>-N</code> option for <code>chef-client</code>), it
+could be something else. Then, we&rsquo;re going to use the node&rsquo;s
+<code>ohai_time</code> attribute. Every time Chef runs and it gathers data about
+the node with Ohai, it generates the <code>ohai_time</code> attribute, which is
+the Unix epoch of the timestamp when Ohai ran. When Chef saves the
+node data at the end of the run, we know approximately the last time
+the node ran Chef. In this particular string, we&rsquo;re converting the
+Unix epoch, like <code>1358962351.444405</code> to a human readable timestamp
+like <code>2013-01-23 10:32:31 -0700</code>.</p>
+
+<p>Of course, you can get similar data from the Chef Server by using
+<code>knife status</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>ohai_time</code> attribute will be displayed as a relative time, e.g.,
+&ldquo;585 hours ago.&rdquo; It will include some more data about the nodes like IP&rsquo;s. This
+uses Chef&rsquo;s search feature, so you can also pass in a query:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span> <span class="s2">&quot;role:webserver&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>knife exec</code> example is simple, but you can get a lot more data
+about the nodes than what <code>knife status</code> reports.</p>
+
+<p>In either case, <code>ohai_time</code> isn&rsquo;t 100% accurate, since it is generated
+at the beginning of the run, and depending on what you&rsquo;re doing with
+Chef on your systems, it can take a long time before the node data is
+saved. However, it&rsquo;s close enough for many use cases.</p>
+
+<p>If more detailed or completely accurate information about the Chef run
+is required for your purposes, you should use a
+<a href="http://docs.opscode.com/chef/essentials_handlers.html">report handler</a>,
+which does have more data about the run available, including whether
+the run was successful or not.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2165,164 +2292,6 @@ Now the Chef Server is ready to use.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/">Install Chef 10 Server on Ubuntu With Ruby 1.9</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-11-17T11:27:00-07:00" pubdate data-updated="true">Nov 17<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I wanted to capture the minimal steps required to install a Chef
-version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
-Ubuntu 12.04.</p>
-
-<p>Similar steps are also
-<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
-too.</p>
-
-<p>This does not include any customization to the
-installation and takes everything as default. This will all change
-when
-<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
-
-<p>These steps were performed on a default server install of Ubuntu
-12.04.</p>
-
-<p>Update apt sources.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get update</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Install required packages.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get install ruby1.9.1-full build-essential wget ssl-cert curl</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Update RubyGems.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Install Chef.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo gem install chef --no-ri --no-rdoc</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Configure chef-solo.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo mkdir -p /etc/chef
-</span><span class='line'>sudo vi /etc/chef/solo.rb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The config file should look like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file_cache_path</span> <span class="s2">&quot;/tmp/chef-solo&quot;</span>
-</span><span class='line'><span class="n">cookbook_path</span> <span class="s2">&quot;/tmp/chef-solo/cookbooks&quot;</span>
-</span><span class='line'><span class="n">recipe_url</span> <span class="s2">&quot;http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">sudo</span> <span class="n">chef</span><span class="o">-</span><span class="n">solo</span> <span class="o">-</span><span class="n">o</span> <span class="n">chef</span><span class="o">-</span><span class="ss">server</span><span class="p">:</span><span class="ss">:rubygems</span><span class="o">-</span><span class="n">install</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The WebUI is not enabled by default. This can be done by setting an
-attribute, see the <code>chef-server</code> cookbook for more information.</p>
-
-<p>Next, create a new API client that will be used to upload cookbooks.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo knife configure -i
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
-Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
-file should look something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
-</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
-</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
-</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/home/jtimberman/.chef/jtimberman.pem&#39;</span>
-</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
-</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/home/jtimberman/.chef/validation.pem&#39;</span>
-</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;http://10.1.1.100:4000&#39;</span>
-</span><span class='line'><span class="n">cache_type</span>               <span class="s1">&#39;BasicFile&#39;</span>
-</span><span class='line'><span class="n">cache_options</span><span class="p">(</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s1">&#39;/home/jtimberman/.chef/checksums&#39;</span> <span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">sudo</span> <span class="n">cp</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">validation</span><span class="o">.</span><span class="n">pem</span> <span class="o">~</span><span class="sr">/.chef</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Verify that the API client and configuration file work.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">client</span> <span class="n">list</span>
-</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
-</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
-</span><span class='line'>  <span class="n">jtimberman</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
-Now the Chef Server is ready to use.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/4/">&larr; Older</a>
@@ -2357,6 +2326,10 @@ Now the Chef Server is ready to use.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a>
       </li>
     
@@ -2370,10 +2343,6 @@ Now the Chef Server is ready to use.</p>
     
       <li class="post">
         <a href="/blog/2014/10/07/reflecting-on-six-years-with-chef/">Reflecting on Six Years With Chef</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
       </li>
     
   </ul>

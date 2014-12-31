@@ -9,10 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Opscode Developer John Keiser
-mentioned
-that a feature for Chef Zero he&rsquo;s been working on, &ldquo;local mode,&rdquo; is
-now in Chef&rsquo;s &hellip;">
+  <meta name="description" content="UPDATE: All non-default profiles must have their profile name start with &ldquo;profile.&rdquo; Below, this is &ldquo;profile nondefault.&rdquo; The &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +79,185 @@ now in Chef&rsquo;s &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-10-19T17:55:00-06:00" pubdate data-updated="true">Oct 19<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><strong>UPDATE</strong>: All non-default profiles must have their profile name
+  start with &ldquo;profile.&rdquo; Below, this is &ldquo;profile nondefault.&rdquo; The ruby
+  code is updated to reflect this.</p>
+
+<p>In this post, I will describe my local setup for using the
+<a href="http://aws.amazon.com/cli/">AWS CLI</a>, the
+<a href="http://aws.amazon.com/sdkforruby/">AWS Ruby SDK</a>, and of course the
+<a href="http://rubygems.org/gems/knife-ec2">Knife EC2 plugin</a>.</p>
+
+<p>The general practice I&rsquo;ve used is to set the appropriate shell
+environment variables that are used by default by these tools (and the
+&ldquo;legacy&rdquo; ec2-api-tools, the java-based CLI). Over time and between
+tools, there have been several environment variables set:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>AWS_ACCESS_KEY_ID
+</span><span class='line'>AWS_SECRET_ACCESS_KEY
+</span><span class='line'>AWS_DEFAULT_REGION
+</span><span class='line'>AWS_SSH_KEY
+</span><span class='line'>AMAZON_ACCESS_KEY_ID
+</span><span class='line'>AMAZON_SECRET_ACCESS_KEY
+</span><span class='line'>AWS_ACCESS_KEY
+</span><span class='line'>AWS_SECRET_KEY
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There is now a config file (ini-flavored) that can be used to set
+credentials, <code>~/.aws/config</code>. Each ini section in this file is a
+different account&rsquo;s credentials. For example:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>default<span class="o">]</span>
+</span><span class='line'><span class="nv">aws_access_key_id</span><span class="o">=</span>MY_DEFAULT_KEY
+</span><span class='line'><span class="nv">aws_secret_access_key</span><span class="o">=</span>MY_DEFAULT_SECRET
+</span><span class='line'><span class="nv">region</span><span class="o">=</span>us-east-1
+</span><span class='line'><span class="o">[</span>profile nondefault<span class="o">]</span>
+</span><span class='line'><span class="nv">aws_access_key_id</span><span class="o">=</span>NOT_MY_DEFAULT_KEY
+</span><span class='line'><span class="nv">aws_secret_access_key</span><span class="o">=</span>NOT_MY_DEFAULT_SECRET
+</span><span class='line'><span class="nv">region</span><span class="o">=</span>us-east-1
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I have two accounts listed here. Obviously, the actual keys are not
+listed :). I source a shell script that sets the environment variables
+with these values. Before, I maintained a separate script for each
+account. Now, I install the <code>inifile</code>
+<a href="http://rubygems.org/gems/inifile">RubyGem</a> and use a one-liner for
+each of the keys.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;default&#39;][&#39;aws_access_key_id&#39;]&quot;</span><span class="sb">`</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;default&#39;][&#39;aws_secret_access_key&#39;]&quot;</span><span class="sb">`</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SSH_KEY</span><span class="o">=</span><span class="s1">&#39;jtimberman&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will load the specified file, <code>~/.aws/config</code> with the
+<code>IniFile.load</code> method, retrieving the <code>default</code> section&rsquo;s
+<code>aws_access_key_id</code> value. Then repeat the same for the
+<code>aws_secret_access_key</code>.</p>
+
+<p>To use the nondefault profile:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;profile nondefault&#39;][&#39;aws_access_key_id&#39;]&quot;</span><span class="sb">`</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;profile nondefault&#39;][&#39;aws_secret_access_key&#39;]&quot;</span><span class="sb">`</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that this uses <code>['profile nondefault']</code>.</p>
+
+<p>Since different tools historically have used slightly different
+environment variables, I export those too:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AMAZON_ACCESS_KEY_ID</span><span class="o">=</span><span class="nv">$AWS_ACCESS_KEY_ID</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AMAZON_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="nv">$AWS_SECRET_ACCESS_KEY</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY</span><span class="o">=</span><span class="nv">$AWS_ACCESS_KEY_ID</span>
+</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_KEY</span><span class="o">=</span><span class="nv">$AWS_SECRET_ACCESS_KEY</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I create a separate config script for each account.</p>
+
+<p>The AWS CLI tool will automatically use the <code>~/.aws/config</code>, and can
+load different profiles with the <code>--profile</code> option. The <code>aws-sdk</code>
+Ruby library will use the environment variables, however. So
+authentication in a Ruby script is automatically set up.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;aws-sdk&#39;</span>
+</span><span class='line'><span class="n">iam</span> <span class="o">=</span> <span class="ss">AWS</span><span class="p">:</span><span class="ss">:IAM</span><span class="o">.</span><span class="n">new</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Without this, it would be:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;aws-sdk&#39;</span>
+</span><span class='line'><span class="n">iam</span> <span class="o">=</span> <span class="ss">AWS</span><span class="p">:</span><span class="ss">:IAM</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:access_key_id</span> <span class="o">=&gt;</span> <span class="s1">&#39;YOUR_ACCESS_KEY_ID&#39;</span><span class="p">,</span>
+</span><span class='line'>                   <span class="ss">:secret_access_key</span> <span class="o">=&gt;</span> <span class="s1">&#39;YOUR_SECRET_ACCESS_KEY&#39;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Which is a little ornerous.</p>
+
+<p>To use this with <code>knife-ec2</code>, I have the following in my
+<code>.chef/knife.rb</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_access_key_id</span><span class="o">]</span>      <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;AWS_ACCESS_KEY_ID&#39;</span><span class="o">]</span>
+</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_secret_access_key</span><span class="o">]</span>  <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;AWS_SECRET_ACCESS_KEY&#39;</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Naturally, since <code>knife.rb</code> is Ruby, I could use <code>Inifile.load</code> there,
+but I only started using that library recently, and I have my knife
+configuration setup already.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -3005,133 +3181,6 @@ the output means.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/02/16/last-check-in-time-for-nodes/">Last Check-in Time for Nodes</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-02-16T20:14:00-07:00" pubdate data-updated="true">Feb 16<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This one liner uses the knife exec sub-command to iterate over all the
-node objects on the Chef Server, and print out their <code>ohai_time</code>
-attribute in a human readable format.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E 'nodes.all {|n| puts "#{n.name} #{Time.at(n[:ohai_time])}"}'</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s break this up a little.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The exec plugin for knife executes a script or the given string of
-Ruby code in the same context as <code>chef-shell</code> (or <code>shef</code> in Chef 10
-and earlier) if you start it up in it&rsquo;s &ldquo;main&rdquo; context. Since it is
-knife, it will also use your <code>.chef/knife.rb</code> settings, so it knows
-about your user, key and Chef Server.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>nodes.all</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>chef-shell</code> main context has helper methods to access the
-corresponding endpoints in the Chef Server API. Clearly we&rsquo;re working
-with &ldquo;nodes&rdquo; here, and the <code>#all</code> method returns all the node objects
-from the Chef Server. This differs from search in that there&rsquo;s a
-commit delay between the time when data is saved to the server, and
-the data is indexed by Solr. This is usually a few seconds, but
-depending on various factors like the hardware you&rsquo;re using, how many
-nodes are converging, etc, it can take longer.</p>
-
-<p>Anyway, we can pass a block to nodes.all and do something with each
-node object. The example above is a oneliner, so let&rsquo;s make it more
-readable.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">nodes</span><span class="o">.</span><span class="n">all</span> <span class="k">do</span> <span class="o">|</span><span class="n">n</span><span class="o">|</span>
-</span><span class='line'>  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="no">Time</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">n</span><span class="o">[</span><span class="ss">:ohai_time</span><span class="o">]</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>We&rsquo;re simply going to use <code>n</code> as the iterator for each node object,
-and we&rsquo;ll print a string about the node. The <code>#{}</code>&rsquo;s in the string to
-print with puts is Ruby string interpolation. That is, everything
-inside the braces is a Ruby expression. First, the <code>Chef::Node</code> object
-has a method, <code>#name</code>, that returns the node&rsquo;s name. This is usually
-the FQDN, but depending on your configuration (<code>node_name</code> in
-<code>/etc/chef/client.rb</code> or using the <code>-N</code> option for <code>chef-client</code>), it
-could be something else. Then, we&rsquo;re going to use the node&rsquo;s
-<code>ohai_time</code> attribute. Every time Chef runs and it gathers data about
-the node with Ohai, it generates the <code>ohai_time</code> attribute, which is
-the Unix epoch of the timestamp when Ohai ran. When Chef saves the
-node data at the end of the run, we know approximately the last time
-the node ran Chef. In this particular string, we&rsquo;re converting the
-Unix epoch, like <code>1358962351.444405</code> to a human readable timestamp
-like <code>2013-01-23 10:32:31 -0700</code>.</p>
-
-<p>Of course, you can get similar data from the Chef Server by using
-<code>knife status</code>:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>ohai_time</code> attribute will be displayed as a relative time, e.g.,
-&ldquo;585 hours ago.&rdquo; It will include some more data about the nodes like IP&rsquo;s. This
-uses Chef&rsquo;s search feature, so you can also pass in a query:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span> <span class="s2">&quot;role:webserver&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>knife exec</code> example is simple, but you can get a lot more data
-about the nodes than what <code>knife status</code> reports.</p>
-
-<p>In either case, <code>ohai_time</code> isn&rsquo;t 100% accurate, since it is generated
-at the beginning of the run, and depending on what you&rsquo;re doing with
-Chef on your systems, it can take a long time before the node data is
-saved. However, it&rsquo;s close enough for many use cases.</p>
-
-<p>If more detailed or completely accurate information about the Chef run
-is required for your purposes, you should use a
-<a href="http://docs.opscode.com/chef/essentials_handlers.html">report handler</a>,
-which does have more data about the run available, including whether
-the run was successful or not.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -3166,6 +3215,10 @@ the run was successful or not.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a>
       </li>
     
@@ -3179,10 +3232,6 @@ the run was successful or not.</p>
     
       <li class="post">
         <a href="/blog/2014/10/07/reflecting-on-six-years-with-chef/">Reflecting on Six Years With Chef</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/10/07/chef-reporting-api-and-resource-updates/">Chef Reporting API and Resource Updates</a>
       </li>
     
   </ul>
