@@ -9,9 +9,10 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Mac OS X Lion introduced a new nifty feature called AirDrop. This
-allows users on a local network to drag and drop files to each other
-with Finder. &hellip;">
+  <meta name="description" content="It is no secret that
+I use GNU Emacs
+as my default text editor. It is perhaps less evident but no less
+relevant that I use Emacs 24. I really like &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +82,132 @@ with Finder. &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/25/recipe-for-building-emacs/">Recipe for Building Emacs</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-25T23:51:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It is no secret that
+<a href="http://jtimberman.housepub.org/blog/2011/05/06/switching-to-gnu-emacs/">I use GNU Emacs</a>
+as my default text editor. It is perhaps less evident but no less
+relevant that I use Emacs 24. I really like the built-in color theme
+support and the package management system for getting the various
+modes I like to use.</p>
+
+<p>Recently, I revamped my
+<a href="https://github.com/jtimberman/.emacs.d">Emacs configuration</a>. This
+post isn&rsquo;t about that topic. Instead, this post is about how I made
+sure that all the systems I want to use Emacs on have the latest
+version available.</p>
+
+<p>Unfortunately, Emacs 24 is still unreleased, so it is not available as
+the default package on the distributions I use for my personal systems
+(Ubuntu/Debian flavors). I wrote a recipe to install Emacs
+from source. This is easy enough to do, but since I already automate
+everything on my home network with Chef, it was a natural fit for a
+new recipe. I simply added this to my local <code>emacs</code> cookbook, in
+<code>recipes/source24.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">srcdir</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:file_cache_path</span><span class="o">]</span><span class="si">}</span><span class="s2">/emacs-source&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="sx">%w{ git-core build-essential texinfo autoconf libncurses-dev }</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span><span class="o">|</span><span class="n">prereq</span><span class="o">|</span> <span class="n">package</span> <span class="n">prereq</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">git</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:file_cache_path</span><span class="o">]</span><span class="si">}</span><span class="s2">/emacs-source&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">repository</span> <span class="s2">&quot;git://git.savannah.gnu.org/emacs.git&quot;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:checkout</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">bash</span> <span class="s2">&quot;build emacs24&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">cwd</span> <span class="n">srcdir</span>
+</span><span class='line'>  <span class="n">creates</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">srcdir</span><span class="si">}</span><span class="s2">/src/emacs&quot;</span>
+</span><span class='line'>  <span class="n">code</span> <span class="o">&lt;&lt;-</span><span class="no">EOH</span>
+</span><span class='line'><span class="sh">    ./autogen.sh &amp;&amp; \</span>
+</span><span class='line'><span class="sh">    ./configure --without-x &amp;&amp; \</span>
+</span><span class='line'><span class="sh">    make bootstrap &amp;&amp; \</span>
+</span><span class='line'><span class="sh">    make 2&gt;&amp;1 &gt;| make-#{node.name}-#{node[&#39;ohai_time&#39;]}</span>
+</span><span class='line'><span class="no">  EOH</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">execute</span> <span class="s2">&quot;install emacs24&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">cwd</span> <span class="n">srcdir</span>
+</span><span class='line'>  <span class="n">command</span> <span class="s2">&quot;make install 2&gt;&amp;1 &gt;| make-</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;ohai_time&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'>  <span class="n">creates</span> <span class="s2">&quot;/usr/local/bin/emacs&quot;</span>
+</span><span class='line'>  <span class="n">only_if</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">srcdir</span><span class="si">}</span><span class="s2">/src/emacs --version&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then I updated my base role to replace <code>recipe[emacs]</code> with
+<code>recipe[emacs::source24]</code> and ran Chef. It took about 25 minutes to do
+the build, but now I have the same version of Emacs everywhere, and
+there was much rejoicing.</p>
+
+<p>And yes, you&rsquo;re absolutely right, I could just build a package and
+install that. However, I don&rsquo;t want to set up and maintain a package
+management repository for my small network, as
+<a href="http://ckbk.it/reprepro">easy</a> as <a href="http://ckbk.it/apt">that</a> may be.</p>
+
+<p>My OS X systems are a special case because I&rsquo;m using Homebrew, but the
+<a href="http://ckbk.it/homebrew">homebrew cookbook</a> does not [yet?] support
+install-time options, and I didn&rsquo;t spend the time adding support for
+building the OS X Emacs w/ cocoa support from git. When I tackle that,
+I&rsquo;ll make another post, so stay tuned!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1897,179 +2024,6 @@ I&rsquo;ll still install a <a href="http://notepad-plus-plus.org">text editor</a
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/09/29/blog-moved-to-github-pages/">Blog Moved to GitHub Pages</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-09-29T22:59:00-06:00" pubdate data-updated="true">Sep 29<span>th</span>, 2011</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I moved my blog from Posterous to GitHub Pages. Posterous isn&rsquo;t a bad
-system and service. It just didn&rsquo;t fit the way I wanted to manage my
-site and the content. It was entirely adequate to get going but I was
-dissatisfied with the web form for creating new posts. It also loaded
-pages fairly slow.</p>
-
-<h2>GitHub is awesome.</h2>
-
-<p>Many others have migrated their technical blogs from services like
-Posterous, Wordpress, Tumblr, Blogger and so on over to GitHub
-Pages. Most often, this is because these services are database backed
-systems, use a web form for creating posts, and don&rsquo;t have a revision
-control system that we all know and love under the covers.</p>
-
-<p><a href="http://pages.github.com">GitHub Pages</a> is a great service by GitHub
-that allows you to serve up static content out of a Git
-repository. You can do simple static HTML pages, or you can use a
-static page generation framework to generate the content out of
-Markdown (or Textile, or HAML) files. There&rsquo;s a number of options for
-this, such as <a href="http://nanoc.stoneship.org/">Nanoc</a> or <a href="http://jekyllrb.com/">Jekyll</a>.</p>
-
-<h2>I chose Jekyll.</h2>
-
-<p><em>&ldquo;Jekyll is a blog-aware, static site generator in Ruby&rdquo;</em> &ndash;
-<a href="http://jekyllrb.com">http://jekyllrb.com/</a></p>
-
-<p>Jekyll fits the bill for me. It supports different markup languages,
-such as Markdown or Textile, and GitHub Pages has easy instructions on
-how to get going with it. Jekyll also includes a <em>fantastic</em> Posterous
-importer, which flawlessly imported all my
-<a href="/blog/archives">old posts</a>. Now I can start creating new posts as
-Markdown in Emacs, instead of using a web form, or editing HTML
-directly. I can also save revisions using Git, instead of saving a
-draft and monkeying with an interface to recover drafts or publish
-them.</p>
-
-<p>I sat down a few days ago and imported my old posts. Then I ran
-through trying to get them to look alright with a decent CSS
-theme. However, I&rsquo;m not a front end designer/developer, and I never
-remember how do do anything useful with CSS. So I went looking for
-canned ways to build a nice interface/theme for this blog.</p>
-
-<p>I remembered
-<a href="http://github.com/twitter/bootstrap">Twitter&rsquo;s Bootstrap</a> project,
-and thought that might be interesting. After looking at it I was
-confused about what to use, since it is a very complete solution,
-including iOS mobile layouts in addition to normal web pages. After
-looking elsewhere, I saw mention of <a href="http://octopress.org">Octopress</a>,
-a framework built on top of Jekyll. I queried
-<a href="http://junglist.gen.nz">some</a> <a href="http://likens.us/">people</a> that had
-experience with it, found that it would probably meet my needs, and
-gave it a whirl.</p>
-
-<p>Naturally if you&rsquo;re familiar with Octopress, you can see the result of
-that evaluation. It is a really nice system for managing the
-site.</p>
-
-<h2>I like my blogging workflow.</h2>
-
-<p>I like my new blogging workflow. It is very natural to me as a system
-engineer, as it uses Emacs, Rake, a Web Service, and Git. I&rsquo;ll walk
-through the steps I took in creating this post. I&rsquo;m going to skip the
-setup of Octopress, as that is
-<a href="http://octopress.org/docs/setup/">documented elsewhere</a>.</p>
-
-<pre><code>% rake new_post'[Blog Moved to GitHub Pages]'
-Creating new post: source/_posts/2011-09-29-blog-moved-to-github-pages.markdown
-</code></pre>
-
-<p>Then I load up the source file created by the rake task and enter all
-this content you see, saving my work along the way. I did, but could
-choose, to commit to the git repository as well. In order to preview
-the content, I can actually run the entire blog with Octopress&rsquo;s built
-in rake task:</p>
-
-<pre><code>% rake preview
-Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
-[2011-09-29 23:06:20] INFO  WEBrick 1.3.1
-[2011-09-29 23:06:20] INFO  ruby 1.9.2 (2011-07-09) [x86_64-darwin11.1.0]
-[2011-09-29 23:06:20] INFO  WEBrick::HTTPServer#start: pid=92373 port=4000
-Configuration from /Users/jtimberman/Development/jtimberman.github.com/_config.yml
-Auto-regenerating enabled: source -&gt; public
-[2011-09-29 23:06:21] regeneration: 107 files changed
-&gt;&gt;&gt; Compass is watching for changes. Press Ctrl-C to Stop.
-127.0.0.1 - - [29/Sep/2011 23:06:24] "GET / HTTP/1.1" 200 50231 0.0181
-</code></pre>
-
-<p>Now I can browse to <a href="http://localhost:4000">http://localhost:4000</a> and see exactly what the
-blog post will look like, and it loads lightning fast. This is of
-paramount importance for me, as I travel a lot and would really like
-to develop blog entries while I&rsquo;m on airplanes with no internet
-access.</p>
-
-<p>Once I am satisfied with the content and how it looks, I commit to the
-repository and push the source branch.</p>
-
-<pre><code>% git add source/_posts
-% git commit -m 'Blog moved to github pages'
-</code></pre>
-
-<p>Then, it is time to deploy the blog to GitHub Pages. Octopress makes
-this easy with another rake task:</p>
-
-<pre><code>% rake deploy
-</code></pre>
-
-<p>This takes care of all the repository work required, and pushes to
-GitHub. Then I push the actual source branch.</p>
-
-<pre><code>% git push origin source
-</code></pre>
-
-<h2>Nice things about Octopress</h2>
-
-<p>Besides the rake tasks and that works with Jekyll, Octopress has some
-really nice features.</p>
-
-<p>First of all, the default theme is really nice. One thing I wanted out
-of CSS on top of Jekyll was something large enough that I could read
-easily. I think this theme looks pretty good and is quite readable
-with my default browser settings. It is also nice and easily readable
-on my iPhone.</p>
-
-<p>Second, Octopress is very customizable. I can easily modify the layout
-by editing the <code>_config.yml</code> file. Of course I can change the theme,
-but I can add JavaScript, layouts and more. I modified the footer to
-include my Creative Commons license for the content of this site.</p>
-
-<p>Third, I really like the default layout in this theme. The recent
-posts, GitHub repo links and my last few tweets are a nice
-touch. Plus I have integrated Disqus for comments and set up Google
-Analytics easily, thanks to the ease of customizing the configuration.</p>
-
-<h2>Conclusion</h2>
-
-<p>In closing, I&rsquo;m very happy with this solution. I now have a blogging
-workflow that I&rsquo;m comfortable with, and that will hopefully result in
-more posts.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -2104,6 +2058,10 @@ more posts.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a>
       </li>
     
@@ -2117,10 +2075,6 @@ more posts.</p>
     
       <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/10/07/reflecting-on-six-years-with-chef/">Reflecting on Six Years With Chef</a>
       </li>
     
   </ul>
@@ -2162,7 +2116,7 @@ more posts.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2011-2014 - Joshua Timberman -
+  Copyright &copy; 2011-2015 - Joshua Timberman -
   <span class="credit">Powered
   by <a href="http://octopress.org">Octopress</a></span>
   <br /><a rel="license"

@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-31T16:14:52-07:00</updated>
+  <updated>2015-01-13T12:04:19-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,138 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Testing Conditionals in ChefSpec]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/"/>
+    <updated>2015-01-12T14:07:06-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec</id>
+    <content type="html"><![CDATA[<p>This tip is brought to you by the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew</a> cookbook.</p>
+
+<p><a href="http://sethvargo.github.io/chefspec/">ChefSpec</a> is a great way to create tests for Chef recipes to catch regressions. Sometimes recipes end up having branching conditional logic that can have very different outcomes based on external factors &ndash; attributes, existing system state, or cross-platform support.</p>
+
+<p>The homebrew cookbook only supports OS X, so we don&rsquo;t have cross-platform support to test there. However, its default recipe has four conditionals to test. You can read the entire <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/spec/recipes/default_spec.rb">default_spec.rb</a> for full context, I&rsquo;m going to focus on just one aspect here:</p>
+
+<ul>
+<li>Installing homebrew should only happen if the <code>brew</code> binary does not exist.</li>
+</ul>
+
+
+<p>This is a common use case in Chef recipes. The best way to go about converging your node to the desired state involves running some arbitrary command. In this case, it&rsquo;s the installation of Homebrew itself. Normally for installations we want to use an idempotent, convergent resource like <code>package</code>. However, since homebrew is to be our package management system, we have to do something else. As it turns out the homebrew project provides an installation script and that script will install a binary, <code>/usr/local/bin/brew</code>. We will assume that if Chef converged on a node after running the script, and the <code>brew</code> binary exists, then we don&rsquo;t need to attempt reinstallation. There&rsquo;s more robust ways to go about it (e.g., running <code>brew</code> gives some desired output), but this works for example purposes today.</p>
+
+<p>From <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/recipes/default.rb">the recipe</a>, here&rsquo;s the resource:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">execute</span> <span class="s1">&#39;install homebrew&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">command</span> <span class="n">homebrew_go</span>
+</span><span class='line'>  <span class="n">user</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;homebrew&#39;</span><span class="o">][</span><span class="s1">&#39;owner&#39;</span><span class="o">]</span> <span class="o">||</span> <span class="n">homebrew_owner</span>
+</span><span class='line'>  <span class="n">not_if</span> <span class="p">{</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span> <span class="s1">&#39;/usr/local/bin/brew&#39;</span> <span class="p">}</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>command</code> is a script, called <code>homebrew_go</code>, which is a local variable set to a path in <code>Chef::Config[:file_cache_path]</code>. It is retrieved in the recipe with <code>remote_file</code>. The resource used to have <code>execute homebrew_go</code>, but when ChefSpec runs, it does so in a random temporary directory, which we cannot predict the name.</p>
+
+<p>The astute observer will note that the <code>user</code> parameter has another conditional (designated by the <code>||</code>). That&rsquo;s actually the subject of another post. In this post, I&rsquo;m concerned only with testing the guard, <code>not_if</code>.</p>
+
+<p>The <code>not_if</code> is a Ruby block, which means the Ruby code is evaluated inline during the Chef run. How we go about testing that is the subject of this post.</p>
+
+<p>First, we need to mock the return result of sending the <code>#exist?</code> method to the <code>File</code> class. There are two reasons. First, we want to control the conditional so we can write a test for each outcome. Second, someone running the test (like me) might have already installed homebrew on their local system (which I have), and so <code>/usr/local/bin/brew</code> will exist. To do this, in our context, we have a <code>before</code> block that stubs the return to false:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">before</span><span class="p">(</span><span class="ss">:each</span><span class="p">)</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">allow_any_instance_of</span><span class="p">(</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:homebrew_owner</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="s1">&#39;vagrant&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">allow_any_instance_of</span><span class="p">(</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Recipe</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:homebrew_owner</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="s1">&#39;vagrant&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">allow</span><span class="p">(</span><span class="no">File</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:exist?</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">false</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">stub_command</span><span class="p">(</span><span class="s1">&#39;which git&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There&rsquo;s some other mocked values here. I&rsquo;ll talk about the <code>vagrant</code> user for <code>homebrew_owner</code> in a moment, though again, that&rsquo;s the subject of another post.</p>
+
+<p>The actual spec will test that the installation script will actually get executed when we run chef, and as the <code>vagrant</code> user.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">it</span> <span class="s1">&#39;runs homebrew installation as the default user&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">run_execute</span><span class="p">(</span><span class="s1">&#39;install homebrew&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">with</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">:user</span> <span class="o">=&gt;</span> <span class="s1">&#39;vagrant&#39;</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When rspec runs, we see this is the case:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">homebrew</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="n">default</span> <span class="n">user</span>
+</span><span class='line'>    <span class="n">runs</span> <span class="n">homebrew</span> <span class="n">installation</span> <span class="n">as</span> <span class="n">the</span> <span class="n">default</span> <span class="n">user</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If I didn&rsquo;t mock the user, it would be <code>jtimberman</code>, as that is the user that is running Chef via rspec/ChefSpec. The test would fail. If you&rsquo;re looking at the full file, there&rsquo;s some other details we&rsquo;re going to look at shortly. If I didn&rsquo;t mock the return for <code>File.exist?</code>, the execute wouldn&rsquo;t run at all.</p>
+
+<p>To test what happens when <code>/usr/local/bin/brew</code> exists, I set up a new context in rspec, and create a new <code>before</code> block.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">context</span> <span class="s1">&#39;/usr/local/bin/brew exists&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">before</span><span class="p">(</span><span class="ss">:each</span><span class="p">)</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">allow</span><span class="p">(</span><span class="no">File</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:exist?</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">stub_command</span><span class="p">(</span><span class="s1">&#39;which git&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;does not run homebrew installation&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to_not</span> <span class="n">run_execute</span><span class="p">(</span><span class="s1">&#39;install homebrew&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We don&rsquo;t need the <code>vagrant</code> mocks earlier, but we do need to stub <code>File.exist?</code>. This test would pass on my system without it, but not on, e.g., a Linux system that doesn&rsquo;t have homebrew.</p>
+
+<p>Then running rspec, we see:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">homebrew</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="sr">/usr/</span><span class="n">local</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">brew</span> <span class="n">exists</span>
+</span><span class='line'>    <span class="n">does</span> <span class="ow">not</span> <span class="n">run</span> <span class="n">homebrew</span> <span class="n">installation</span>
+</span><span class='line'>  <span class="n">default</span> <span class="n">user</span>
+</span><span class='line'>    <span class="n">runs</span> <span class="n">homebrew</span> <span class="n">installation</span> <span class="n">as</span> <span class="n">the</span> <span class="n">default</span> <span class="n">user</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In a coming post, I will walk through the conditionals related to the <code>homebrew_owner</code>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Serverspec Spec_helper in Test Kitchen]]></title>
@@ -4881,255 +5013,6 @@ projects, or even using other kinds of tests. We&rsquo;ll have more
 documentation and guides as we get the 1.0 release out.</p>
 
 <p>Enjoy!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Anatomy of a Test Kitchen 1.0 Cookbook (Part 1)]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/"/>
-    <updated>2013-03-19T09:28:00-06:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1</id>
-    <content type="html"><![CDATA[<p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
-  this post.</p>
-
-<p><strong>Update</strong> Remove Gemfile and Vagrantfile</p>
-
-<p>Let&rsquo;s take a look at the anatomy of a cookbook set up with
-test-kitchen 1.0-alpha.</p>
-
-<p><strong>Note</strong> It is outside the scope of this post to discuss how to write
-  minitest-chef tests or &ldquo;test cookbook&rdquo; recipes. Use the cookbook
-  described below as an example to get ideas for writing your own.</p>
-
-<p>This is the full directory tree of Opscode&rsquo;s
-&ldquo;<a href="http://ckbk.it/bluepill">bluepill</a>&rdquo; cookbook:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>├── .kitchen.yml
-</span><span class='line'>├── Berksfile
-</span><span class='line'>├── CHANGELOG.md
-</span><span class='line'>├── CONTRIBUTING
-</span><span class='line'>├── LICENSE
-</span><span class='line'>├── README.md
-</span><span class='line'>├── TESTING.md
-</span><span class='line'>├── attributes
-</span><span class='line'>│   └── default.rb
-</span><span class='line'>├── metadata.rb
-</span><span class='line'>├── providers
-</span><span class='line'>│   └── service.rb
-</span><span class='line'>├── recipes
-</span><span class='line'>│   ├── default.rb
-</span><span class='line'>│   └── rsyslog.rb
-</span><span class='line'>├── resources
-</span><span class='line'>│   └── service.rb
-</span><span class='line'>├── templates
-</span><span class='line'>│   └── default
-</span><span class='line'>│       ├── bluepill_init.fedora.erb
-</span><span class='line'>│       ├── bluepill_init.freebsd.erb
-</span><span class='line'>│       ├── bluepill_init.rhel.erb
-</span><span class='line'>│       └── bluepill_rsyslog.conf.erb
-</span><span class='line'>└── test
-</span><span class='line'>    └── cookbooks
-</span><span class='line'>        └── bluepill_test
-</span><span class='line'>            ├── README.md
-</span><span class='line'>            ├── attributes
-</span><span class='line'>            │   └── default.rb
-</span><span class='line'>            ├── files
-</span><span class='line'>            │   └── default
-</span><span class='line'>            │       └── tests
-</span><span class='line'>            │           └── minitest
-</span><span class='line'>            │               ├── default_test.rb
-</span><span class='line'>            │               └── support
-</span><span class='line'>            │                   └── helpers.rb
-</span><span class='line'>            ├── metadata.rb
-</span><span class='line'>            ├── recipes
-</span><span class='line'>            │   └── default.rb
-</span><span class='line'>            └── templates
-</span><span class='line'>                └── default
-</span><span class='line'>                    └── test_app.pill.erb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I&rsquo;ll assume the reader is familiar with basic components of cookbooks
-like &ldquo;recipes,&rdquo; &ldquo;templates,&rdquo; and the top-level documentation files, so
-let&rsquo;s trim this down to just the areas of concern for Test Kitchen.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>├── .kitchen.yml
-</span><span class='line'>├── Berksfile
-</span><span class='line'>└── test
-</span><span class='line'>    └── cookbooks
-</span><span class='line'>        └── bluepill_test
-</span><span class='line'>            ├── attributes
-</span><span class='line'>            │   └── default.rb
-</span><span class='line'>            ├── files
-</span><span class='line'>            │   └── default
-</span><span class='line'>            │       └── tests
-</span><span class='line'>            │           └── minitest
-</span><span class='line'>            │               ├── default_test.rb
-</span><span class='line'>            │               └── support
-</span><span class='line'>            │                   └── helpers.rb
-</span><span class='line'>            ├── recipes
-</span><span class='line'>            │   └── default.rb
-</span><span class='line'>            └── templates
-</span><span class='line'>                └── default
-</span><span class='line'>                    └── test_app.pill.erb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note that this cookbook has a &ldquo;test&rdquo; cookbook. I&rsquo;ll get to that in a
-minute.</p>
-
-<p>First of all, we have the <code>.kitchen.yml</code>. This is the project
-definition that describes what is required to run test kitchen itself.
-This particular file tells Test Kitchen to bring up nodes of the
-platforms we&rsquo;re testing with Vagrant, and defines the boxes with their
-box names and URLs to download. You can view the full
-<a href="https://github.com/opscode-cookbooks/bluepill/blob/master/.kitchen.yml"><code>.kitchen.yml</code> in the Git repo</a>.
-For now, I&rsquo;m going to focus on the <code>suite</code> stanza in the
-<code>.kitchen.yml</code>. This defines how Chef will run when Test Kitchen
-brings up the Vagrant machine.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">default</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">run_list</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">recipe[minitest-handler]</span>
-</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">recipe[bluepill_test]</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">attributes</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span><span class="nv">bluepill</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span> <span class="nv">bin</span><span class="p-Indicator">:</span> <span class="s">&quot;/opt/chef/embedded/bin/bluepill&quot;</span> <span class="p-Indicator">}</span> <span class="p-Indicator">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Each platform has a recipe it will run with, in this case <code>apt</code> and
-<code>yum</code>. Then the suite&rsquo;s run list is appended, so for example, the final run list of
-the Ubuntu 12.04 node will be:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="p-Indicator">[</span><span class="s">&quot;recipe[apt]&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;recipe[minitest-handler]&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;recipe[bluepill_test]&quot;</span><span class="p-Indicator">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>We have apt so the apt cache on the node is updated before Chef does
-anything else. This is pretty typical so we put it in the default run
-list of each Ubuntu box.</p>
-
-<p>The <code>minitest-handler</code> recipe existing in the run list means that the
-Minitest Chef Handler will be run at the end of the Chef run. In this
-case, it will use the tests from the test cookbook, <code>bluepill_test</code>.</p>
-
-<p>The bluepill cookbook itself does not depend on any of these
-cookbooks. So how does Test Kitchen know where to get them? Enter the
-next file in the list above, <code>Berksfile</code>. This informs
-<a href="http://berkshelf.com">Berkshelf</a> which cookbooks to download. The
-relevant excerpt from the Berksfile is:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apt&quot;</span>
-</span><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;yum&quot;</span>
-</span><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;minitest-handler&quot;</span>
-</span><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;bluepill_test&quot;</span><span class="p">,</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s2">&quot;./test/cookbooks/bluepill_test&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Based on the
-<a href="https://github.com/opscode-cookbooks/bluepill/blob/master/Berksfile">Berksfile</a>,
-it will download apt, yum, and minitest-handler from the Chef
-Community site. It will also use the
-<a href="https://github.com/opscode-cookbooks/bluepill/tree/master/test/cookbooks/bluepill_test">bluepill_test</a>
-included in the bluepill cookbook. This is transparent to the user, as
-I&rsquo;ll cover in a moment.</p>
-
-<p>Test Kitchen&rsquo;s Vagrant driver plugin handles all the configuration of
-Vagrant itself based on the entries in the <code>.kitchen.yml</code>. To get the
-Berkshelf integration in the Vagrant boxes, we need to install the
-vagrant-berkshelf plugin in Vagrant. Then, we automatically get
-Berkshelf&rsquo;s Vagrant integration, meaning all the cookbooks defined in
-the Berksfile are going to be available on the box we bring up.</p>
-
-<p>Remember the test cookbook mentioned above? It&rsquo;s the next component.
-The default <code>suite</code> in <code>.kitchen.yml</code> puts <code>bluepill_test</code> in the run
-list. This particular recipe will include the <code>bluepill</code> default
-recipe, then it sets up a test service using the <code>bluepill_service</code>
-LWRP. This means that when the nodes brought up by Test Kitchen via
-Vagrant converge, they&rsquo;ll have bluepill installed and set up, and then
-a service running that we can test the final behavior. Since Chef will
-exit with a non-zero return code if it encounters an exception, we
-know that a successful run means everything is configured as defined
-in the recipes, and we can run tests against the node.</p>
-
-<p>The tests we&rsquo;ll run are written with the
-<a href="https://github.com/calavera/minitest-chef-handler/">Minitest Chef Handler</a>.
-These are defined in the test cookbook, <code>files/default/tests/minitest</code>
-directory. The <code>minitest-handler</code> cookbook (also in the default suite
-run list) will execute the
-<a href="https://github.com/opscode-cookbooks/bluepill/blob/master/test/cookbooks/bluepill_test/files/default/tests/minitest/default_test.rb">default_test</a>
-tests.</p>
-
-<p>In the next post, we&rsquo;ll look at how to run Test Kitchen, and what all
-the output means.</p>
 ]]></content>
   </entry>
   

@@ -9,9 +9,8 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I wanted to capture the minimal steps required to install a Chef
-version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
-Ubuntu 12.04. Similar &hellip;">
+  <meta name="description" content="In addition to capturing the minimal steps required to install a Chef
+10 Server on Ubuntu, I also wanted to capture the steps for CentOS. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +80,159 @@ Ubuntu 12.04. Similar &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/11/17/install-chef-10-server-on-centos/">Install Chef 10 Server on CentOS</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-17T19:49:00-07:00" pubdate data-updated="true">Nov 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>In addition to capturing the minimal steps required to <a href="/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/">install a Chef
+10 Server on Ubuntu</a>, I also wanted to capture the steps for CentOS.
+Unfortunately, Ruby 1.9 isn&rsquo;t available in the default distribution
+repositories, and almost all third party repositories are quite out of
+date. As such, I&rsquo;ll use the Ruby 1.8.7 that comes with CentOS, despite
+being an EOL version of Ruby.</p>
+
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
+
+<p>This does not include any customization to the installation and takes
+everything as default. This will all change when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
+
+<p>These steps were performed on a default server install of CentOS 6.3.</p>
+
+<p>Install required packages.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>yum install ruby ruby-devel rubygems wget gcc gcc-c++ kernel-devel make</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Update RubyGems.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>gem update --system</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Install Chef.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>gem install chef --no-ri --no-rdoc</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Configure chef-solo.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>mkdir -p /etc/chef
+</span><span class='line'>vi /etc/chef/solo.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The config file should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file_cache_path</span> <span class="s2">&quot;/tmp/chef-solo&quot;</span>
+</span><span class='line'><span class="n">cookbook_path</span> <span class="s2">&quot;/tmp/chef-solo/cookbooks&quot;</span>
+</span><span class='line'><span class="n">recipe_url</span> <span class="s2">&quot;http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef</span><span class="o">-</span><span class="n">solo</span> <span class="o">-</span><span class="n">o</span> <span class="n">chef</span><span class="o">-</span><span class="ss">server</span><span class="p">:</span><span class="ss">:rubygems</span><span class="o">-</span><span class="n">install</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife configure -i
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/root/.chef/jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/root/.chef/validation.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;http://10.1.1.100:4000&#39;</span>
+</span><span class='line'><span class="n">cache_type</span>               <span class="s1">&#39;BasicFile&#39;</span>
+</span><span class='line'><span class="n">cache_options</span><span class="p">(</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s1">&#39;/root/.chef/checksums&#39;</span> <span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cp</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">validation</span><span class="o">.</span><span class="n">pem</span> <span class="o">~</span><span class="sr">/.chef</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Verify that the API client and configuration file work.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">client</span> <span class="n">list</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
+</span><span class='line'>  <span class="n">jtimberman</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2185,132 +2337,6 @@ things that get my
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/02/25/recipe-for-building-emacs/">Recipe for Building Emacs</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-02-25T23:51:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>It is no secret that
-<a href="http://jtimberman.housepub.org/blog/2011/05/06/switching-to-gnu-emacs/">I use GNU Emacs</a>
-as my default text editor. It is perhaps less evident but no less
-relevant that I use Emacs 24. I really like the built-in color theme
-support and the package management system for getting the various
-modes I like to use.</p>
-
-<p>Recently, I revamped my
-<a href="https://github.com/jtimberman/.emacs.d">Emacs configuration</a>. This
-post isn&rsquo;t about that topic. Instead, this post is about how I made
-sure that all the systems I want to use Emacs on have the latest
-version available.</p>
-
-<p>Unfortunately, Emacs 24 is still unreleased, so it is not available as
-the default package on the distributions I use for my personal systems
-(Ubuntu/Debian flavors). I wrote a recipe to install Emacs
-from source. This is easy enough to do, but since I already automate
-everything on my home network with Chef, it was a natural fit for a
-new recipe. I simply added this to my local <code>emacs</code> cookbook, in
-<code>recipes/source24.rb</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">srcdir</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:file_cache_path</span><span class="o">]</span><span class="si">}</span><span class="s2">/emacs-source&quot;</span>
-</span><span class='line'>
-</span><span class='line'><span class="sx">%w{ git-core build-essential texinfo autoconf libncurses-dev }</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span><span class="o">|</span><span class="n">prereq</span><span class="o">|</span> <span class="n">package</span> <span class="n">prereq</span><span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">git</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:file_cache_path</span><span class="o">]</span><span class="si">}</span><span class="s2">/emacs-source&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">repository</span> <span class="s2">&quot;git://git.savannah.gnu.org/emacs.git&quot;</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:checkout</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">bash</span> <span class="s2">&quot;build emacs24&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">cwd</span> <span class="n">srcdir</span>
-</span><span class='line'>  <span class="n">creates</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">srcdir</span><span class="si">}</span><span class="s2">/src/emacs&quot;</span>
-</span><span class='line'>  <span class="n">code</span> <span class="o">&lt;&lt;-</span><span class="no">EOH</span>
-</span><span class='line'><span class="sh">    ./autogen.sh &amp;&amp; \</span>
-</span><span class='line'><span class="sh">    ./configure --without-x &amp;&amp; \</span>
-</span><span class='line'><span class="sh">    make bootstrap &amp;&amp; \</span>
-</span><span class='line'><span class="sh">    make 2&gt;&amp;1 &gt;| make-#{node.name}-#{node[&#39;ohai_time&#39;]}</span>
-</span><span class='line'><span class="no">  EOH</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">execute</span> <span class="s2">&quot;install emacs24&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">cwd</span> <span class="n">srcdir</span>
-</span><span class='line'>  <span class="n">command</span> <span class="s2">&quot;make install 2&gt;&amp;1 &gt;| make-</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;ohai_time&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'>  <span class="n">creates</span> <span class="s2">&quot;/usr/local/bin/emacs&quot;</span>
-</span><span class='line'>  <span class="n">only_if</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">srcdir</span><span class="si">}</span><span class="s2">/src/emacs --version&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then I updated my base role to replace <code>recipe[emacs]</code> with
-<code>recipe[emacs::source24]</code> and ran Chef. It took about 25 minutes to do
-the build, but now I have the same version of Emacs everywhere, and
-there was much rejoicing.</p>
-
-<p>And yes, you&rsquo;re absolutely right, I could just build a package and
-install that. However, I don&rsquo;t want to set up and maintain a package
-management repository for my small network, as
-<a href="http://ckbk.it/reprepro">easy</a> as <a href="http://ckbk.it/apt">that</a> may be.</p>
-
-<p>My OS X systems are a special case because I&rsquo;m using Homebrew, but the
-<a href="http://ckbk.it/homebrew">homebrew cookbook</a> does not [yet?] support
-install-time options, and I didn&rsquo;t spend the time adding support for
-building the OS X Emacs w/ cocoa support from git. When I tackle that,
-I&rsquo;ll make another post, so stay tuned!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -2345,6 +2371,10 @@ I&rsquo;ll make another post, so stay tuned!</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a>
       </li>
     
@@ -2358,10 +2388,6 @@ I&rsquo;ll make another post, so stay tuned!</p>
     
       <li class="post">
         <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/10/07/reflecting-on-six-years-with-chef/">Reflecting on Six Years With Chef</a>
       </li>
     
   </ul>
@@ -2403,7 +2429,7 @@ I&rsquo;ll make another post, so stay tuned!</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2011-2014 - Joshua Timberman -
+  Copyright &copy; 2011-2015 - Joshua Timberman -
   <span class="credit">Powered
   by <a href="http://octopress.org">Octopress</a></span>
   <br /><a rel="license"

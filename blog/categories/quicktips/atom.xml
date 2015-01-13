@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2014-12-31T16:14:52-07:00</updated>
+  <updated>2015-01-13T12:04:19-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,122 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Testing Conditionals in ChefSpec]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/"/>
+    <updated>2015-01-12T14:07:06-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec</id>
+    <content type="html"><![CDATA[<p>This tip is brought to you by the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew</a> cookbook.</p>
+
+<p><a href="http://sethvargo.github.io/chefspec/">ChefSpec</a> is a great way to create tests for Chef recipes to catch regressions. Sometimes recipes end up having branching conditional logic that can have very different outcomes based on external factors &ndash; attributes, existing system state, or cross-platform support.</p>
+
+<p>The homebrew cookbook only supports OS X, so we don&rsquo;t have cross-platform support to test there. However, its default recipe has four conditionals to test. You can read the entire <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/spec/recipes/default_spec.rb">default_spec.rb</a> for full context, I&rsquo;m going to focus on just one aspect here:</p>
+
+<ul>
+<li>Installing homebrew should only happen if the <code>brew</code> binary does not exist.</li>
+</ul>
+
+
+<p>This is a common use case in Chef recipes. The best way to go about converging your node to the desired state involves running some arbitrary command. In this case, it&rsquo;s the installation of Homebrew itself. Normally for installations we want to use an idempotent, convergent resource like <code>package</code>. However, since homebrew is to be our package management system, we have to do something else. As it turns out the homebrew project provides an installation script and that script will install a binary, <code>/usr/local/bin/brew</code>. We will assume that if Chef converged on a node after running the script, and the <code>brew</code> binary exists, then we don&rsquo;t need to attempt reinstallation. There&rsquo;s more robust ways to go about it (e.g., running <code>brew</code> gives some desired output), but this works for example purposes today.</p>
+
+<p>From <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/recipes/default.rb">the recipe</a>, here&rsquo;s the resource:</p>
+
+<p><code>ruby
+execute 'install homebrew' do
+  command homebrew_go
+  user node['homebrew']['owner'] || homebrew_owner
+  not_if { ::File.exist? '/usr/local/bin/brew' }
+end
+</code></p>
+
+<p><code>command</code> is a script, called <code>homebrew_go</code>, which is a local variable set to a path in <code>Chef::Config[:file_cache_path]</code>. It is retrieved in the recipe with <code>remote_file</code>. The resource used to have <code>execute homebrew_go</code>, but when ChefSpec runs, it does so in a random temporary directory, which we cannot predict the name.</p>
+
+<p>The astute observer will note that the <code>user</code> parameter has another conditional (designated by the <code>||</code>). That&rsquo;s actually the subject of another post. In this post, I&rsquo;m concerned only with testing the guard, <code>not_if</code>.</p>
+
+<p>The <code>not_if</code> is a Ruby block, which means the Ruby code is evaluated inline during the Chef run. How we go about testing that is the subject of this post.</p>
+
+<p>First, we need to mock the return result of sending the <code>#exist?</code> method to the <code>File</code> class. There are two reasons. First, we want to control the conditional so we can write a test for each outcome. Second, someone running the test (like me) might have already installed homebrew on their local system (which I have), and so <code>/usr/local/bin/brew</code> will exist. To do this, in our context, we have a <code>before</code> block that stubs the return to false:</p>
+
+<p><code>ruby
+before(:each) do
+  allow_any_instance_of(Chef::Resource).to receive(:homebrew_owner).and_return('vagrant')
+  allow_any_instance_of(Chef::Recipe).to receive(:homebrew_owner).and_return('vagrant')
+  allow(File).to receive(:exist?).and_return(false)
+  stub_command('which git').and_return(true)
+end
+</code></p>
+
+<p>There&rsquo;s some other mocked values here. I&rsquo;ll talk about the <code>vagrant</code> user for <code>homebrew_owner</code> in a moment, though again, that&rsquo;s the subject of another post.</p>
+
+<p>The actual spec will test that the installation script will actually get executed when we run chef, and as the <code>vagrant</code> user.</p>
+
+<p>```ruby
+it &lsquo;runs homebrew installation as the default user&rsquo; do
+  expect(chef_run).to run_execute(&lsquo;install homebrew&rsquo;).with(</p>
+
+<pre><code>:user =&gt; 'vagrant'
+</code></pre>
+
+<p>  )
+end
+```</p>
+
+<p>When rspec runs, we see this is the case:</p>
+
+<p>```
+homebrew::default
+  default user</p>
+
+<pre><code>runs homebrew installation as the default user
+</code></pre>
+
+<p>```</p>
+
+<p>If I didn&rsquo;t mock the user, it would be <code>jtimberman</code>, as that is the user that is running Chef via rspec/ChefSpec. The test would fail. If you&rsquo;re looking at the full file, there&rsquo;s some other details we&rsquo;re going to look at shortly. If I didn&rsquo;t mock the return for <code>File.exist?</code>, the execute wouldn&rsquo;t run at all.</p>
+
+<p>To test what happens when <code>/usr/local/bin/brew</code> exists, I set up a new context in rspec, and create a new <code>before</code> block.</p>
+
+<p>```ruby
+context &lsquo;/usr/local/bin/brew exists&rsquo; do
+  before(:each) do</p>
+
+<pre><code>allow(File).to receive(:exist?).and_return(true)
+stub_command('which git').and_return(true)
+</code></pre>
+
+<p>  end</p>
+
+<p>  it &lsquo;does not run homebrew installation&rsquo; do</p>
+
+<pre><code>expect(chef_run).to_not run_execute('install homebrew')
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>We don&rsquo;t need the <code>vagrant</code> mocks earlier, but we do need to stub <code>File.exist?</code>. This test would pass on my system without it, but not on, e.g., a Linux system that doesn&rsquo;t have homebrew.</p>
+
+<p>Then running rspec, we see:</p>
+
+<p>```
+homebrew::default
+  /usr/local/bin/brew exists</p>
+
+<pre><code>does not run homebrew installation
+</code></pre>
+
+<p>  default user</p>
+
+<pre><code>runs homebrew installation as the default user
+</code></pre>
+
+<p>```</p>
+
+<p>In a coming post, I will walk through the conditionals related to the <code>homebrew_owner</code>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Serverspec spec_helper in Test Kitchen]]></title>
