@@ -339,6 +339,8 @@
 <h2>Use inline compile mode!</h2>
 
 <p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
+
+<p>Also, define the resources that you need to notify when you&rsquo;re doing this in your provider&rsquo;s actions. A common example is within a provider that writes configuration for a service, and needs to tell that service to restart.</p>
 </div>
   
   
