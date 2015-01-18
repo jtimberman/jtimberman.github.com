@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-01-13T12:04:19-07:00</updated>
+  <updated>2015-01-17T22:59:19-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,245 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Define Resources to Notifiy in LWRPs]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/"/>
+    <updated>2015-01-17T22:37:06-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps</id>
+    <content type="html"><![CDATA[<p>In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when using <code>use_inline_resources</code> in Chef&rsquo;s <a href="http://docs.chef.io/lwrp.html">LWRP DSL</a>.</p>
+
+<p>I&rsquo;ll use an example cookbook, <code>notif</code>, to illustrate. First, I&rsquo;ve created <code>cookbooks/notif/resources/default.rb</code>, with the following content.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">actions</span> <span class="ss">:write</span>
+</span><span class='line'><span class="n">default_action</span> <span class="ss">:write</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, I have written <code>cookbooks/notif/providers/default.rb</code> like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">use_inline_resources</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">action</span> <span class="ss">:write</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">log</span> <span class="s1">&#39;notifer&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">notifies</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;file[notified]&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then the default recipe, where I&rsquo;ll use the resource automatically generated from the resource directory, <code>notif</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file</span> <span class="s1">&#39;notified&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">content</span> <span class="s1">&#39;something&#39;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:nothing</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">notif</span> <span class="s1">&#39;doer&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When I run Chef, I&rsquo;ll get an error like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'> <span class="ss">Recipe</span><span class="p">:</span> <span class="ss">notif</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>   <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">skipped</span> <span class="n">due</span> <span class="n">to</span> <span class="n">action</span> <span class="ss">:nothing</span><span class="p">)</span>
+</span><span class='line'>   <span class="o">*</span> <span class="n">notif</span><span class="o">[</span><span class="n">doer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="o">================================================================================</span>
+</span><span class='line'>     <span class="no">Error</span> <span class="n">executing</span> <span class="n">action</span> <span class="sb">`write`</span> <span class="n">on</span> <span class="n">resource</span> <span class="s1">&#39;notif[doer]&#39;</span>
+</span><span class='line'>     <span class="o">================================================================================</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Exceptions</span><span class="o">::</span><span class="no">ResourceNotFound</span>
+</span><span class='line'>     <span class="o">----------------------------------</span>
+</span><span class='line'>     <span class="n">resource</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">is</span> <span class="n">configured</span> <span class="n">to</span> <span class="n">notify</span> <span class="n">resource</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">with</span> <span class="n">action</span> <span class="n">create</span><span class="p">,</span> <span class="n">but</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">cannot</span> <span class="n">be</span> <span class="n">found</span> <span class="k">in</span> <span class="n">the</span> <span class="n">resource</span> <span class="n">collection</span><span class="o">.</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">is</span> <span class="n">defined</span> <span class="k">in</span> <span class="sr">/tmp/</span><span class="n">kitchen</span><span class="o">/</span><span class="n">cookbooks</span><span class="o">/</span><span class="n">notif</span><span class="o">/</span><span class="n">providers</span><span class="o">/</span><span class="n">default</span><span class="o">.</span><span class="n">rb</span><span class="p">:</span><span class="mi">4</span><span class="ss">:in</span> <span class="sb">`block in class_from_file&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="sb">     Resource Declaration:</span>
+</span><span class='line'><span class="sb">     ---------------------</span>
+</span><span class='line'><span class="sb">     # In /tmp/kitchen/cookbooks/notif/recipes/default.rb</span>
+</span><span class='line'>
+</span><span class='line'><span class="sb">      12: notif &#39;doer&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="sb">     Compiled Resource:</span>
+</span><span class='line'><span class="sb"> ------------------</span>
+</span><span class='line'><span class="sb">     # Declared in /tmp/kitchen/cookbooks/notif/recipes/default.rb:12:in `</span><span class="n">from_file</span><span class="err">&#39;</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="n">notif</span><span class="p">(</span><span class="s2">&quot;doer&quot;</span><span class="p">)</span> <span class="k">do</span>
+</span><span class='line'>       <span class="n">action</span> <span class="ss">:write</span>
+</span><span class='line'>       <span class="n">retries</span> <span class="mi">0</span>
+</span><span class='line'>       <span class="n">retry_delay</span> <span class="mi">2</span>
+</span><span class='line'>       <span class="n">default_guard_interpreter</span> <span class="ss">:default</span>
+</span><span class='line'>       <span class="n">declared_type</span> <span class="ss">:notif</span>
+</span><span class='line'>
+</span><span class='line'>       <span class="n">recipe_name</span> <span class="s2">&quot;default&quot;</span>
+</span><span class='line'>     <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To fix this, I define the <code>file</code> resource in the provider:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">use_inline_resources</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">action</span> <span class="ss">:write</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">log</span> <span class="s1">&#39;notifer&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">notifies</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;file[notified]&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">file</span> <span class="s1">&#39;notified&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">content</span> <span class="n">new_resource</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then when I run Chef, it will converge and notify the file resource to be configured.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="ss">notif</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">skipped</span> <span class="n">due</span> <span class="n">to</span> <span class="n">action</span> <span class="ss">:nothing</span><span class="p">)</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">notif</span><span class="o">[</span><span class="n">doer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>    <span class="o">*</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span>
+</span><span class='line'>      <span class="o">-</span> <span class="n">create</span> <span class="kp">new</span> <span class="n">file</span> <span class="n">notified</span>
+</span><span class='line'>      <span class="o">-</span> <span class="n">update</span> <span class="n">content</span> <span class="k">in</span> <span class="n">file</span> <span class="n">notified</span> <span class="n">from</span> <span class="n">none</span> <span class="n">to</span> <span class="mi">935</span><span class="n">e8e</span>
+</span><span class='line'>      <span class="o">---</span> <span class="n">notified</span>       <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">47</span><span class="p">:</span><span class="mi">49</span><span class="o">.</span><span class="mi">186399317</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>      <span class="o">+++</span> <span class="o">.</span><span class="n">/</span><span class="o">.</span><span class="n">notified20150118</span><span class="o">-</span><span class="mi">15795</span><span class="o">-</span><span class="n">om5fiw</span>       <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">47</span><span class="p">:</span><span class="mi">49</span><span class="o">.</span><span class="mi">186399317</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>      <span class="err">@@</span> <span class="o">-</span><span class="mi">1</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span> <span class="err">@@</span>
+</span><span class='line'>      <span class="o">+</span><span class="n">doer</span>
+</span><span class='line'>    <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">up</span> <span class="n">to</span> <span class="n">date</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Running</span> <span class="ss">handlers</span><span class="p">:</span>
+</span><span class='line'><span class="no">Running</span> <span class="n">handlers</span> <span class="n">complete</span>
+</span><span class='line'><span class="no">Chef</span> <span class="no">Client</span> <span class="n">finished</span><span class="p">,</span> <span class="mi">3</span><span class="o">/</span><span class="mi">4</span> <span class="n">resources</span> <span class="n">updated</span> <span class="k">in</span> <span class="mi">1</span><span class="o">.</span><span class="mi">298990565</span> <span class="n">seconds</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Why does this happen?</h2>
+
+<p>The reason for this is because <code>use_inline_resources</code> tells Chef that in this provider, we&rsquo;re using inline resources that will be added to their own run context, with their own resource collection. We don&rsquo;t have access to the resource collection from the recipe. Even though the <code>file[notified]</code> resource exists from the recipe, it doesn&rsquo;t actually get inherited in the provider&rsquo;s run context, raising the error we saw before.</p>
+
+<p>We can turn off <code>use_inline_resources</code> by removing it, and the custom resource will be configured:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">action</span> <span class="ss">:write</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">log</span> <span class="s1">&#39;notifer&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">notifies</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;file[notified]&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then run Chef:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="ss">notif</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">skipped</span> <span class="n">due</span> <span class="n">to</span> <span class="n">action</span> <span class="ss">:nothing</span><span class="p">)</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">notif</span><span class="o">[</span><span class="n">doer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span> <span class="p">(</span><span class="n">up</span> <span class="n">to</span> <span class="n">date</span><span class="p">)</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span>
+</span><span class='line'>    <span class="o">-</span> <span class="n">update</span> <span class="n">content</span> <span class="k">in</span> <span class="n">file</span> <span class="n">notified</span> <span class="n">from</span> <span class="mi">935</span><span class="n">e8e</span> <span class="n">to</span> <span class="mi">3</span><span class="n">fc9b6</span>
+</span><span class='line'>    <span class="o">---</span> <span class="n">notified</span> <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">47</span><span class="p">:</span><span class="mi">49</span><span class="o">.</span><span class="mi">186399317</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>    <span class="o">+++</span> <span class="o">.</span><span class="n">/</span><span class="o">.</span><span class="n">notified20150118</span><span class="o">-</span><span class="mi">16159</span><span class="o">-</span><span class="n">r18q7z</span> <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">57</span><span class="o">.</span><span class="mi">832140405</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>    <span class="err">@@</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span> <span class="err">@@</span>
+</span><span class='line'>    <span class="o">-</span><span class="n">doer</span>
+</span><span class='line'>    <span class="o">+</span><span class="n">something</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice that the <code>file[notified]</code> resource wasn&rsquo;t updated at the start of the run, when it was encountered in the recipe, but it was when notified by the log resource in the provider action, changing the content.</p>
+
+<h2>Use inline compile mode!</h2>
+
+<p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Testing Conditionals in ChefSpec]]></title>
@@ -4538,481 +4777,6 @@ in the &ldquo;failing&rdquo; test).</p>
 <p>If you&rsquo;re contributing to cookbooks, and they have support for
 test-kitchen, it&rsquo;s awesome if you can open a bug report with a failing
 test. In this case, it was fairly easy to reproduce the bug.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Anatomy of a Test Kitchen 1.0 Cookbook (Part 2)]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2/"/>
-    <updated>2013-03-19T09:28:00-06:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-2</id>
-    <content type="html"><![CDATA[<p><strong>DISCLAIMER</strong> Test Kitchen 1.0 is still in <em>alpha</em> at the time of
-  this post.</p>
-
-<p><strong>Update</strong> We&rsquo;re no longer required to use bundler, and in fact
-  recommend installing the required RubyGems in your globalRuby
-  environment (#3 below).</p>
-
-<p><strong>Update</strong> The log output from the various kitchen commands is not
-  updated with the latest and greatest. Play along at home, it&rsquo;ll be
-  okay :&ndash;).</p>
-
-<p>This is a continuation from <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">part 1</a></p>
-
-<p>In order to run the tests then, we need a few things on our machine:</p>
-
-<ol>
-<li>VirtualBox and Vagrant (1.1+)</li>
-<li>A compiler toolchain with XML/XSLT development headers (for building Gem dependencies)</li>
-<li>A sane, working Ruby environment (Ruby 1.9.3 or greater)</li>
-<li>Git</li>
-</ol>
-
-
-<p>It is outside the scope of this post to cover how to get all those
-installed.</p>
-
-<p>Once those are installed:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% vagrant plugin install vagrant-berkshelf
-</span><span class='line'>% gem install berkshelf
-</span><span class='line'>% gem install test-kitchen --pre
-</span><span class='line'>% gem install kitchen-vagrant</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Test Kitchen combines the suite (default) with the platform names
-(e.g., ubuntu-12.04). To run all the suites on all platforms, simply do:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% kitchen test</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will take awhile, especially if you don&rsquo;t already have the
-Vagrant boxes on your system, as it will download each one. To make
-this faster, we&rsquo;ll just run Ubuntu 12.04:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% kitchen test default.*1204</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Test Kitchen 1.0 can take a regular expression for the instances to
-test. This will match the box <code>default-ubuntu-12.04</code>. I could also
-just say <code>12</code> as that will match the single entry in my kitchen list
-(above).</p>
-
-<p>It will take a few minutes to run Test Kitchen. Those familiar with
-Chef know that if it encounters an unhandled exception, it exits with
-a non-zero return code. This is important, because we know at the end
-of a successful run, Chef did the right thing, assuming our recipe is
-the right thing :&ndash;).</p>
-
-<p>To recap the <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a>, we have a run list like this:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"]</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s break down the output of our successful run. I&rsquo;ll show the
-output first, and explain it after:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Starting Kitchen
-</span><span class='line'>Cleaning up any prior instances of &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Destroying &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Finished destroying &lt;default-ubuntu-1204&gt; (0m0.00s).
-</span><span class='line'>Testing &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Creating &lt;default-ubuntu-1204&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is basic setup to ensure that &ldquo;The Kitchen&rdquo; is clean beforehand
-and we don&rsquo;t have existing state interfering with the run.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[vagrant command] BEGIN (vagrant up default-ubuntu-1204 --no-provision)
-</span><span class='line'>[default-ubuntu-1204] Importing base box 'canonical-ubuntu-12.04'...
-</span><span class='line'>[default-ubuntu-1204] Matching MAC address for NAT networking...
-</span><span class='line'>[default-ubuntu-1204] Clearing any previously set forwarded ports...
-</span><span class='line'>[default-ubuntu-1204] Forwarding ports...
-</span><span class='line'>[default-ubuntu-1204] -- 22 =&gt; 2222 (adapter 1)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will look familiar to Vagrant users, we&rsquo;re just getting some
-basic setup from Vagrant initializing the box defined in the
-<code>.kitchen.yml</code> (passed to the Vagrantfile by the kitchen-vagrant
-plugin). This step does a <code>vagrant up --no-provision</code>.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[Berkshelf] installing cookbooks...
-</span><span class='line'>[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
-</span><span class='line'>[Berkshelf] Using apt (1.8.4)
-</span><span class='line'>[Berkshelf] Using yum (2.0.0)
-</span><span class='line'>[Berkshelf] Using minitest-handler (0.1.2)
-</span><span class='line'>[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
-</span><span class='line'>[Berkshelf] Using rsyslog (1.5.0)
-</span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Remember from the <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that we&rsquo;re using Berkshelf? This is
-the integration with Vagrant that ensures that the cookbooks are
-available. The first four, <code>apt</code>, <code>yum</code>, <code>minitest-handler</code> and
-bluepill_test are defined in the Berksfile. The next, <code>rsyslog</code> is a
-dependency of the <code>bluepill</code> cookbook (for rsyslog integration), and the
-last, <code>chef_handler</code> is a dependency of <code>minitest-handler</code>. Berkshelf
-extracts the dependencies from the cookbook metadata of each cookbook
-defined in the Berksfile.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[default-ubuntu-1204] Creating shared folders metadata...
-</span><span class='line'>[default-ubuntu-1204] Clearing any previously set network interfaces...
-</span><span class='line'>[default-ubuntu-1204] Running any VM customizations...
-</span><span class='line'>[default-ubuntu-1204] Booting VM...
-</span><span class='line'>[default-ubuntu-1204] Waiting for VM to boot. This can take a few minutes.
-</span><span class='line'>[default-ubuntu-1204] VM booted and ready for use!
-</span><span class='line'>[default-ubuntu-1204] Setting host name...
-</span><span class='line'>[default-ubuntu-1204] Mounting shared folders...
-</span><span class='line'>[default-ubuntu-1204] -- v-root: /vagrant
-</span><span class='line'>[default-ubuntu-1204] -- v-csc-1: /tmp/vagrant-chef-1/chef-solo-1/cookbooks
-</span><span class='line'>[vagrant command] END (0m48.76s)
-</span><span class='line'>Vagrant instance &lt;default-ubuntu-1204&gt; created.
-</span><span class='line'>Finished creating &lt;default-ubuntu-1204&gt; (0m53.12s).</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Again, this is familiar output to Vagrant users, where Vagrant is
-making the cookbooks available to the instance.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Converging &lt;default-ubuntu-1204&gt;
-</span><span class='line'>[vagrant command] BEGIN (vagrant ssh default-ubuntu-1204 --command 'should_update_chef() {\n...')
-</span><span class='line'>Installing Chef Omnibus (11.4.0)
-</span><span class='line'>Downloading Chef 11.4.0 for ubuntu...
-</span><span class='line'>Installing Chef 11.4.0
-</span><span class='line'>Selecting previously unselected package chef.
-</span><span class='line'>g database ...        60513 files and directories currently installed.)
-</span><span class='line'>Unpacking chef (from .../chef_11.4.0_amd64.deb) ...
-</span><span class='line'>Setting up chef (11.4.0-1.ubuntu.11.04) ...
-</span><span class='line'>Thank you for installing Chef!
-</span><span class='line'>[vagrant command] END (0m34.85s)
-</span><span class='line'>[vagrant command] BEGIN (vagrant provision default-ubuntu-1204)
-</span><span class='line'>[Berkshelf] installing cookbooks...
-</span><span class='line'>[Berkshelf] Using bluepill (2.2.2) at path: '/Users/jtimberman/Development/opscode/cookbooks/bluepill'
-</span><span class='line'>[Berkshelf] Using apt (1.8.4)
-</span><span class='line'>[Berkshelf] Using yum (2.0.0)
-</span><span class='line'>[Berkshelf] Using minitest-handler (0.1.2)
-</span><span class='line'>[Berkshelf] Using bluepill_test (0.0.1) at path: './test/cookbooks/bluepill_test'
-</span><span class='line'>[Berkshelf] Using rsyslog (1.5.0)
-</span><span class='line'>[Berkshelf] Using chef_handler (1.1.0)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This part is interesting, in that we&rsquo;re going to install the Full
-Stack Chef (Omnibus) package. This means it doesn&rsquo;t matter what the
-underlying base box has installed, we get the right version of Chef.
-This is defined in the <code>.kitchen.yml</code>. This is done through <code>vagrant
-ssh</code> (second line). Then, Test Kitchen does <code>vagrant provision</code>. The
-provisioning step is where Berkshelf happens, so we do see this happen
-again (perhaps a bug?).</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[default-ubuntu-1204] Running provisioner: Vagrant::Provisioners::ChefSolo...
-</span><span class='line'>[default-ubuntu-1204] Generating chef JSON and uploading...
-</span><span class='line'>[default-ubuntu-1204] Running chef-solo...
-</span><span class='line'>INFO: *** Chef 11.4.0 ***
-</span><span class='line'>INFO: Setting the run_list to ["recipe[apt]", "recipe[minitest-handler]", "recipe[bluepill_test]"] from JSON
-</span><span class='line'>INFO: Run List is [recipe[apt], recipe[minitest-handler], recipe[bluepill_test]]
-</span><span class='line'>INFO: Run List expands to [apt, minitest-handler, bluepill_test]
-</span><span class='line'>INFO: Starting Chef Run for default-ubuntu-1204.vagrantup.com</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is the start of the actual Chef run, using Chef Solo by Vagrant&rsquo;s
-provisioner. Note that we have our suite&rsquo;s run list. I&rsquo;m going to skip
-a lot of the Chef output because it isn&rsquo;t required. Note that a few
-resources in the minitest&mdash;handler will report as failed, but they can
-be ignored because it means that those tests were simply not implemented.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing directory[/var/chef/minitest/bluepill_test] action create (minitest-handler::default line 50)
-</span><span class='line'>INFO: directory[/var/chef/minitest/bluepill_test] created directory /var/chef/minitest/bluepill_test
-</span><span class='line'>INFO: Processing cookbook_file[tests-bluepill_test-default] action create (minitest-handler::default line 53)
-</span><span class='line'>INFO: cookbook_file[tests-bluepill_test-default] created file /var/chef/minitest/bluepill_test/default_test.rb
-</span><span class='line'>INFO: Processing remote_directory[tests-support-bluepill_test-default] action create (minitest-handler::default line 60)
-</span><span class='line'>INFO: remote_directory[tests-support-bluepill_test-default] created directory /var/chef/minitest/bluepill_test/support
-</span><span class='line'>INFO: Processing cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] action create (dynamically defined)
-</span><span class='line'>INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] mode changed to 644
-</span><span class='line'>INFO: cookbook_file[/var/chef/minitest/bluepill_test/support/helpers.rb] created file /var/chef/minitest/bluepill_test/support/helpers.rb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>These are the relevant parts of the minitest-handler recipe, where it
-has copied the tests from the <code>bluepill_test</code> cookbook into place.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing gem_package[i18n] action install (bluepill::default line 20)
-</span><span class='line'>INFO: Processing gem_package[bluepill] action install (bluepill::default line 24)
-</span><span class='line'>INFO: Processing directory[/etc/bluepill] action create (bluepill::default line 34)
-</span><span class='line'>INFO: directory[/etc/bluepill] created directory /etc/bluepill
-</span><span class='line'>INFO: directory[/etc/bluepill] owner changed to 0
-</span><span class='line'>INFO: directory[/etc/bluepill] group changed to 0
-</span><span class='line'>INFO: Processing directory[/var/run/bluepill] action create (bluepill::default line 34)
-</span><span class='line'>INFO: directory[/var/run/bluepill] created directory /var/run/bluepill
-</span><span class='line'>INFO: directory[/var/run/bluepill] owner changed to 0
-</span><span class='line'>INFO: directory[/var/run/bluepill] group changed to 0
-</span><span class='line'>INFO: Processing directory[/var/lib/bluepill] action create (bluepill::default line 34)
-</span><span class='line'>INFO: directory[/var/lib/bluepill] created directory /var/lib/bluepill
-</span><span class='line'>INFO: directory[/var/lib/bluepill] owner changed to 0
-</span><span class='line'>INFO: directory[/var/lib/bluepill] group changed to 0
-</span><span class='line'>INFO: Processing file[/var/log/bluepill.log] action create_if_missing (bluepill::default line 41)
-</span><span class='line'>INFO: entered create
-</span><span class='line'>INFO: file[/var/log/bluepill.log] owner changed to 0
-</span><span class='line'>INFO: file[/var/log/bluepill.log] group changed to 0
-</span><span class='line'>INFO: file[/var/log/bluepill.log] mode changed to 755
-</span><span class='line'>INFO: file[/var/log/bluepill.log] created file /var/log/bluepill.log</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Recall from the <a href="http://jtimberman.housepub.org/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/">previous post</a> that the <code>bluepill_test</code> recipe includes
-the <code>bluepill</code> recipe. This is the basic setup of bluepill.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Processing package[nc] action install (bluepill_test::default line 4)
-</span><span class='line'>INFO: Processing template[/etc/bluepill/test_app.pill] action create (bluepill_test::default line 16)
-</span><span class='line'>INFO: template[/etc/bluepill/test_app.pill] updated content
-</span><span class='line'>INFO: Processing bluepill_service[test_app] action enable (bluepill_test::default line 18)
-</span><span class='line'>INFO: Processing bluepill_service[test_app] action load (bluepill_test::default line 18)
-</span><span class='line'>INFO: Processing bluepill_service[test_app] action start (bluepill_test::default line 18)
-</span><span class='line'>INFO: Processing link[/etc/init.d/test_app] action create (/tmp/vagrant-chef-1/chef-solo-1/cookbooks/bluepill/providers/service.rb line 30)
-</span><span class='line'>INFO: link[/etc/init.d/test_app] created
-</span><span class='line'>INFO: Chef Run complete in 81.099185824 seconds</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And this is the rest of the <code>bluepill_test</code> recipe. It sets up a test
-service that will basically be a netcat process listening on a port.
-Let&rsquo;s take a moment here and discuss what we have.</p>
-
-<p>First, we have successfully converged the default recipe in the
-<code>bluepill</code> cookbook via its inclusion in <code>bluepill_test</code>. This is
-awesome, because we know the recipe works exactly as we defined it,
-since Chef resources are declarative, and Chef exits if there&rsquo;s a
-problem.</p>
-
-<p>Second, we have successfully setup a service managed by bluepill
-itself using the LWRP included in the <code>bluepill</code> cookbook,
-<code>bluepill_service</code>. This means we know that the underlying provider
-configured all the resources correctly.</p>
-
-<p>At this point, we could say &ldquo;Ship it!&rdquo; and release the cookbook,
-knowing it will do what we require. However, this may be disingenuous
-because we don&rsquo;t know if the behavior of the system after all this
-runs is actually correct. Therefore we look to the next segment of
-output from Chef, from minitest:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>INFO: Running report handlers
-</span><span class='line'>Run options: -v --seed 38794
-</span><span class='line'>\# Running tests:
-</span><span class='line'>recipe::bluepill_test::default#test_0001_the_default_log_file_must_exist_cook_1295_ =
-</span><span class='line'>0.00 s = .
-</span><span class='line'>recipe::bluepill_test::default::create a bluepill configuration file#test_0001_anonymous =
-</span><span class='line'>0.00 s = .
-</span><span class='line'>recipe::bluepill_test::default::create a bluepill configuration file#test_0002_must_be_valid_ruby =
-</span><span class='line'>0.06 s = .
-</span><span class='line'>recipe::bluepill_test::default::runs the application as a service#test_0001_anonymous =
-</span><span class='line'>0.72 s = .
-</span><span class='line'>recipe::bluepill_test::default::runs the application as a service#test_0002_anonymous =
-</span><span class='line'>0.71 s = .
-</span><span class='line'>recipe::bluepill_test::default::spawn a netcat tcp client repeatedly#test_0001_should_receive_a_tcp_connection_from_netcat =
-</span><span class='line'>2.24 s = .
-</span><span class='line'>Finished tests in 3.746002s, 1.6017 tests/s, 1.8687 assertions/s.
-</span><span class='line'>6 tests, 7 assertions, 0 failures, 0 errors, 0 skips</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is performed by the minitest-handler, which runs the tests copied
-from the <code>bluepill_test</code> cookbook before. It&rsquo;s outside the scope of
-this post to describe how to write minitest-chef tests, but we can
-talk about the output.</p>
-
-<p>We have 6 separate tests that perform 7 assertions, and they all
-passed. The tests are asserting:</p>
-
-<ol>
-<li>The log file is created, and by the full name of the test, this is
-to check for a regression from
-<a href="http://tickets.opscode.com/browse/COOK-1295">COOK-1295</a>.</li>
-<li>The <code>.pill</code> config file for the service must exist and be valid
-Ruby.</li>
-<li>The bluepill service must actually be enabled and running, thereby
-testing that those actions in the LWRP work.</li>
-<li>The running service, which listens on a TCP port, must be up and
-available, thereby testing that bluepill started the service
-correctly.</li>
-</ol>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[vagrant command] END (1m29.24s)
-</span><span class='line'>Finished converging &lt;default-ubuntu-1204&gt; (2m15.45s).
-</span><span class='line'>Setting up &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Finished setting up &lt;default-ubuntu-1204&gt; (0m0.00s).
-</span><span class='line'>Verifying &lt;default-ubuntu-1204&gt;
-</span><span class='line'>Finished verifying &lt;default-ubuntu-1204&gt; (0m0.00s).
-</span><span class='line'>Destroying &lt;default-ubuntu-1204&gt;
-</span><span class='line'>[vagrant command] BEGIN (vagrant destroy default-ubuntu-1204 -f)
-</span><span class='line'>[default-ubuntu-1204] Forcing shutdown of VM...
-</span><span class='line'>[Berkshelf] cleaning Vagrant's shelf
-</span><span class='line'>[default-ubuntu-1204] Destroying VM and associated drives...
-</span><span class='line'>[vagrant command] END (0m3.68s)
-</span><span class='line'>Vagrant instance &lt;default-ubuntu-1204&gt; destroyed.
-</span><span class='line'>Finished destroying &lt;default-ubuntu-1204&gt; (0m4.04s).
-</span><span class='line'>Finished testing &lt;default-ubuntu-1204&gt; (3m12.62s).
-</span><span class='line'>Kitchen is finished. (3m12.62s)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This output shows Test Kitchen cleaning up after itself. We destroy
-the Vagrant instance on a successful convergence and test run in Chef,
-because further investigation is not required. If the test failed for
-some reason, Test Kitchen leaves it running so you can log into the
-machine and poke around to find out what went wrong. Then simply
-correct the required part of the cookbook (recipes, tests, etc) and
-rerun Test Kitchen. For example:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle exec kitchen login 1204
-</span><span class='line'>vagrant@ubuntu-1204$ ... run some commands
-</span><span class='line'>vagrant@ubuntu-1204$ ^D
-</span><span class='line'>% bundle exec kitchen converge 1204</span></code></pre></td></tr></table></div></figure>
-
-
-<p>My goal with these posts is to get some information out for folks to
-consider when examining Test Kitchen 1.0 alpha for their own projects.
-There&rsquo;s a lot more to Test Kitchen, such as managing non-cookbook
-projects, or even using other kinds of tests. We&rsquo;ll have more
-documentation and guides as we get the 1.0 release out.</p>
-
-<p>Enjoy!</p>
 ]]></content>
   </entry>
   

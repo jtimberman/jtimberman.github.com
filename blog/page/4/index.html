@@ -9,8 +9,8 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="In addition to capturing the minimal steps required to install a Chef
-10 Server on Ubuntu, I also wanted to capture the steps for CentOS. &hellip;">
+  <meta name="description" content="I&rsquo;ve been managing my personal systems with Chef since Chef was
+created, though I didn&rsquo;t always use the same chef-repo for them. For &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -80,6 +80,282 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/11/19/chef-repository-berkshelf-conversion/">Chef Repository Berkshelf Conversion</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-19T22:10:00-07:00" pubdate data-updated="true">Nov 19<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I&rsquo;ve been managing my personal systems with Chef since Chef was
+created, though I didn&rsquo;t always use the same chef-repo for them. For
+about two years though, I&rsquo;ve used pretty much the same repository,
+which has grown and accumulated cruft over time. Fortunately since
+it&rsquo;s only me working on it, and I only have a few systems, it is
+really easy to make drastic changes.</p>
+
+<p>I have a number of to do items that I&rsquo;ve put off, so this weekend I
+decided to spend some time cleaning house, and convert the repository
+to have cookbooks managed by <a href="http://berkshelf.com/">Berkshelf</a>.</p>
+
+<h1>Rationale</h1>
+
+<p>There are other cookbook management tools, including the built in
+&ldquo;<code>knife cookbook site install</code>&rdquo;,
+<a href="https://github.com/applicationsonline/librarian">librarian-chef</a>, and
+<a href="https://github.com/kisoku/whisk">whisk</a>. I have used the knife
+command as long as it has existed, and it worked well for awhile. The
+buzz in the community since the
+<a href="http://wiki.opscode.com/display/chef/Opscode+Community+Summit+2">Chef Summit</a>
+has been around &ldquo;library&rdquo; vs &ldquo;application&rdquo; cookbooks, especially in
+conjunction with Berkshelf so I thought I&rsquo;d give it a go.</p>
+
+<h1>Before Berkshelf</h1>
+
+<p>Before I started on this migration, here are some numbers about
+cookbooks in my chef-repo.</p>
+
+<ul>
+<li>113 total cookbooks</li>
+<li>33 &ldquo;chef-vendor&rdquo; branches (<code>knife cookbook site install</code> creates a
+branch for each cookbook)</li>
+<li>50 &ldquo;cookbook site&rdquo; tags</li>
+</ul>
+
+
+<p>Overall, I had about a half dozen cookbooks that I actually modified
+from their &ldquo;upstream&rdquo; versions on the community site. Most of those
+customizations were adding munin plugins, changing a couple minor
+settings in a template, or long term workarounds that are actually
+fixed in the current released versions.</p>
+
+<h1>The Conversion</h1>
+
+<p>The conversion was fairly straight-forward. It required some preparation:</p>
+
+<ul>
+<li>Determine the cookbooks that would be managed by Berkshelf.</li>
+<li>Refactor customizations into &ldquo;application&rdquo; cookbooks or otherwise.</li>
+<li>Remove all those cookbooks, and the completely unused cookbooks.</li>
+</ul>
+
+
+<h2>Cookbooks in Berkshelf</h2>
+
+<p>Determining the cookbooks that would be managed by Berkshelf was
+simple. I started with all the cookbooks that had been installed via
+<code>knife cookbook site install</code>. Since the command creates a branch for
+each one, I had a nice list already. I did review that for cookbooks I
+know I wasn&rsquo;t using anymore, or didn&rsquo;t plan to use for long, to
+simplify matters.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git branch | grep 'chef-vendor' | awk -F- '{print $3}'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I also looked at the cookbooks that are applied to node&rsquo;s expanded run
+lists. This <code>knife exec</code> one-liner will return such a list.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E "nodes.find('recipes:*').map {|n| n[:recipes]}.flatten.map {|r| r.gsub(/::.*/, '')}.sort.uniq"</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Refactoring Customization</h2>
+
+<p>My repository has a fair amount of customization to the cookbooks from
+the community site. Rather than go through all the changes, I&rsquo;ll
+summarize with the more interesting parts.</p>
+
+<p>First, I use Samba for filesharing from an Ubuntu server. I originally
+changed the <code>samba::server</code> recipe so the services used upstart as the
+provider and set a <code>start_command</code> on Ubuntu, which looked like this
+(<code>s</code> is smbd or nmbd):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">service</span> <span class="n">s</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">pattern</span> <span class="s2">&quot;smbd|nmbd&quot;</span> <span class="k">if</span> <span class="n">node</span><span class="o">[</span><span class="s2">&quot;platform&quot;</span><span class="o">]</span> <span class="o">=~</span> <span class="sr">/^arch$/</span>
+</span><span class='line'>  <span class="n">provider</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Provider</span><span class="o">::</span><span class="ss">Service</span><span class="p">:</span><span class="ss">:Upstart</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">start_command</span> <span class="s2">&quot;/usr/bin/service </span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2"> start&quot;</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">action</span> <span class="o">[</span><span class="ss">:enable</span><span class="p">,</span> <span class="ss">:start</span><span class="o">]</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The upstream cookbook doesn&rsquo;t have this change, so I added an
+&ldquo;application&rdquo; cookbook, <code>housepub-samba</code>, which has this as the
+default recipe:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="o">[</span><span class="s2">&quot;smbd&quot;</span><span class="p">,</span> <span class="s2">&quot;nmbd&quot;</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">s</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">srv</span> <span class="o">=</span> <span class="n">resource</span><span class="p">(</span><span class="s2">&quot;service[</span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">srv</span><span class="o">.</span><span class="n">provider</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Provider</span><span class="o">::</span><span class="ss">Service</span><span class="p">:</span><span class="ss">:Upstart</span>
+</span><span class='line'>  <span class="n">srv</span><span class="o">.</span><span class="n">start_command</span> <span class="s2">&quot;/usr/bin/service </span><span class="si">#{</span><span class="n">s</span><span class="si">}</span><span class="s2"> start&quot;</span>
+</span><span class='line'><span class="k">end</span> <span class="k">if</span> <span class="n">platform?</span><span class="p">(</span><span class="s2">&quot;ubuntu&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>For each of the Samba services, we look up the resource in the
+resource collection, then change the provider to upstart, and set the
+<code>start_command</code> to use upstart&rsquo;s service command.</p>
+
+<p>Next, I use OpenVPN. I also want to modify the template used for the
+<code>/etc/openvpn/server.conf</code> and <code>/etc/openvpn/server.up.sh</code> resources.
+Again, I create an &ldquo;application&rdquo; cookbook, <code>housepub-openvpn</code>, and the
+default recipe looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">resources</span><span class="p">(</span><span class="s2">&quot;template[/etc/openvpn/server.conf]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cookbook</span> <span class="s2">&quot;housepub-openvpn&quot;</span>
+</span><span class='line'><span class="n">resources</span><span class="p">(</span><span class="s2">&quot;template[/etc/openvpn/server.up.sh]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cookbook</span> <span class="s2">&quot;housepub-openvpn&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is a shorter form of what was done for Samba&rsquo;s services above.
+The <code>#resources</code> method does the lookup and returns the resource, and
+any of the resource parameter attributes can be used as a method, so I
+send the <code>cookbook</code> method to both template resources, setting this
+cookbook, <code>housepub-openvpn</code> as the cookbook that contains the
+template to use. Then, I copy my customized templates into
+<code>cookbooks/housepub-openvpn/templates/default</code>, and Chef will do the
+right thing.</p>
+
+<p>Other cookbook changes I made were:</p>
+
+<ul>
+<li>Change the data bag name used in <code>djbdns::internal_server</code>, which I
+changed back so I could use the upstream recipe.</li>
+<li>Add munin plugins to various cookbooks. As I&rsquo;m planning to move
+things to Graphite, this is unnecessary and removed.</li>
+<li>A few of my OS X cookbooks have the plist file for use with
+<code>mac_os_x_plist</code> LWRP. These are simply moved to my
+<a href="https://github.com/jtimberman/workstation-chef-repo/blob/master/cookbooks/workstation/recipes/default.rb#L72-L76">workstation data bag</a>.</li>
+</ul>
+
+
+<p>Finally, one special case is
+<a href="http://fnichol.github.com/chef-rbenv/">Fletcher Nichol&rsquo;s rbenv cookbook</a>.
+The <code>rbenv::user_install</code> recipe manages <code>/etc/profile.d/rbenv.sh</code>,
+which requires root privileges. However, on my workstations where I
+use this particular cookbook, I run Chef as my user, so I had to
+comment this resource out. To allow for a non-privileged user running
+Chef, the better approach is to determine whether to manage that file
+by using an attribute, so I
+<a href="https://github.com/fnichol/chef-rbenv/pull/20">opened a pull request</a>,
+which is now merged. Now I just have the attribute set to <code>false</code> in
+my workstation role, and can use the cookbook unmodified.</p>
+
+<h2>Remove Unused and Berkshelf Cookbooks</h2>
+
+<p>Removing the unused cookbooks, and the cookbooks managed by Berkshelf
+was simple. First, each cookbook gained an entry in the Berksfile. For
+example, <code>apache2</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s2">&quot;apache2&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, the cookbook was deleted from the Chef Server. I did this,
+purging all versions, because I planned to upload all the cookbooks as
+resolved by Berkshelf.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">cookbook</span> <span class="n">delete</span> <span class="o">-</span><span class="n">yap</span> <span class="n">apache2</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, I removed the cookbook from the git repository.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">git</span> <span class="n">rm</span> <span class="o">-</span><span class="n">r</span> <span class="n">cookbooks</span><span class="o">/</span><span class="n">apache2</span>
+</span><span class='line'><span class="n">git</span> <span class="n">add</span> <span class="no">Berksfile</span>
+</span><span class='line'><span class="n">git</span> <span class="n">commit</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;apache2 is managed by Berkshelf&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The cookbooks that I didn&rsquo;t plan to use, I simply didn&rsquo;t add to
+Berkshelf, and removed them all in one commit.</p>
+
+<h1>After Berkshelf</h1>
+
+<p>The net effect of this change is a simpler, easier to manage
+repository. I now have only 23 cookbooks in my <code>cookbooks</code> directory.
+Some of those are candidates for refactoring and updating to the
+upstream ones, I just didn&rsquo;t get to that yet. Most of them are
+&ldquo;internal&rdquo; cookbooks that aren&rsquo;t published, since they&rsquo;re specific for
+my internal network, such as my housepub-samba or housepub-openvpn
+cookbooks.</p>
+
+<p>On my Chef Server, I have 90 total cookbooks, which means 67 are
+managed by Berkshelf. I have 62 entries in my Berksfile, and some of
+those are dependencies of others, which means that can be refactored
+some as well.</p>
+
+<p>The workflow is simpler, and there&rsquo;s fewer moving parts to worry about
+changing. I think this is a net positive for this since I do it in my
+free time. However, there&rsquo;s a couple of issues, which should be
+addressed in Berkshelf soon.</p>
+
+<p>First,
+<a href="https://github.com/RiotGames/berkshelf/issues/190">Berkshelf issue #190</a>,
+which would have <code>berks update</code> take a single cookbook to update.
+Currently, it has to update all the cookbooks, and this takes time for
+impatient people.</p>
+
+<p>Second,
+<a href="https://github.com/RiotGames/berkshelf/issues/191">issue #191</a>, which
+would allow <code>berks upload</code> to take a single cookbook to upload.
+Normally, one could just use <code>knife cookbook upload</code>, but the
+directory where Berkshelf stores cookbooks it is managing are not
+located in the <code>cookbook_path</code>, and the knife command uses the
+directory name a the cookbook name. Berkshelf creates directories like
+<code>~/.berkshelf/cookbooks/apache2-1.3.0</code>, so the way to upload Berkshelf
+managed cookbooks is all together with the <code>berks upload</code> command.
+This isn&rsquo;t a huge deal for me as I already uploaded all the cookbooks
+I&rsquo;ve been using once.</p>
+
+<p>All in all, I am happy with this workflow, though. It is simple and
+hassle-free for me. Plus, I have more flexibility for maintaining my
+additional non-Opscode cookbooks.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2248,95 +2524,6 @@ Don&rsquo;t be a dick on discussions about security topics.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/02/26/xcode-command-line-tools/">Xcode Command Line Tools</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-02-26T00:07:00-07:00" pubdate data-updated="true">Feb 26<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Recently, Apple did the most awesome thing for non-Xcode developers.</p>
-
-<p>They made the development tools available as a
-<a href="https://developer.apple.com/library/ios/#documentation/DeveloperTools/Conceptual/WhatsNewXcode/Articles/xcode_4_3.html">standalone package!</a></p>
-
-<p>This is awesome news for those of us who only have<sup>Whad</sup> Xcode
-installed to install RubyGems that compile native extensions, or for
-installing software with Homebrew, MacPorts or similar.. You can
-download them by logging into the
-<a href="https://developer.apple.com/downloads">Developer Download</a> site.</p>
-
-<p>This appears to be work started by
-<a href="http://kennethreitz.com/xcode-gcc-and-homebrew.html">Kenneth Reitz</a>
-with his
-<a href="https://github.com/kennethreitz/osx-gcc-installer/">OSX GCC Installer</a>
-project. I did try that project out, but ran into issues I didn&rsquo;t
-resolve right away, so I reverted to using Xcode proper. However with
-the package from Apple I don&rsquo;t seem to have any issues so far.</p>
-
-<p>If you already have Xcode installed, you may want to remove it first.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo /Developer-3.2.6/Library/uninstall-devtools
-</span><span class='line'>sudo /Developer/Library/uninstall-devtools --mode<span class="o">=</span>all /thx
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>My understanding is that you can remove the <code>/Developer*</code>
-director(y|ies) when complete. I had ollllld Xcode on the system where
-I first did this.</p>
-
-<p>Next, download and install the package from Apple. It&rsquo;s about 170M and
-takes only a couple minutes to install; sorry I don&rsquo;t have a Chef
-recipe for this ;).</p>
-
-<p>I did run into an issue with Homebrew where it wasn&rsquo;t finding the
-right gcc binary. I had to run the following commands to fix
-<a href="https://github.com/mxcl/homebrew/issues/10245">that issue</a>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo xcode-select -switch /usr/bin
-</span><span class='line'>sudo ln -sf /usr/bin/llvm-gcc-4.2 /usr/bin/gcc-4.2
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>You wouldn&rsquo;t think that something like an 8G installation would matter
-in 2012. However, disk space is a precious commodity on MacBook Airs
-and systems that have SSDs as the root volume. This is very welcome
-change for me, especially since it means that future Mac OS X
-installations do not require a large download before I can start doing
-things that get my
-<a href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef/">system ready to use</a>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -2371,6 +2558,10 @@ things that get my
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
       </li>
     
@@ -2384,10 +2575,6 @@ things that get my
     
       <li class="post">
         <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
   </ul>

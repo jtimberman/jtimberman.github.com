@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="This tip is brought to you by the homebrew cookbook. ChefSpec is a great way to create tests for Chef recipes to catch regressions. Sometimes recipes &hellip;">
+  <meta name="description" content="In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,272 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-01-17T22:37:06-07:00" pubdate data-updated="true">Jan 17<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when using <code>use_inline_resources</code> in Chef&rsquo;s <a href="http://docs.chef.io/lwrp.html">LWRP DSL</a>.</p>
+
+<p>I&rsquo;ll use an example cookbook, <code>notif</code>, to illustrate. First, I&rsquo;ve created <code>cookbooks/notif/resources/default.rb</code>, with the following content.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">actions</span> <span class="ss">:write</span>
+</span><span class='line'><span class="n">default_action</span> <span class="ss">:write</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, I have written <code>cookbooks/notif/providers/default.rb</code> like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">use_inline_resources</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">action</span> <span class="ss">:write</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">log</span> <span class="s1">&#39;notifer&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">notifies</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;file[notified]&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then the default recipe, where I&rsquo;ll use the resource automatically generated from the resource directory, <code>notif</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file</span> <span class="s1">&#39;notified&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">content</span> <span class="s1">&#39;something&#39;</span>
+</span><span class='line'>  <span class="n">action</span> <span class="ss">:nothing</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">notif</span> <span class="s1">&#39;doer&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When I run Chef, I&rsquo;ll get an error like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'> <span class="ss">Recipe</span><span class="p">:</span> <span class="ss">notif</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>   <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">skipped</span> <span class="n">due</span> <span class="n">to</span> <span class="n">action</span> <span class="ss">:nothing</span><span class="p">)</span>
+</span><span class='line'>   <span class="o">*</span> <span class="n">notif</span><span class="o">[</span><span class="n">doer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="o">================================================================================</span>
+</span><span class='line'>     <span class="no">Error</span> <span class="n">executing</span> <span class="n">action</span> <span class="sb">`write`</span> <span class="n">on</span> <span class="n">resource</span> <span class="s1">&#39;notif[doer]&#39;</span>
+</span><span class='line'>     <span class="o">================================================================================</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Exceptions</span><span class="o">::</span><span class="no">ResourceNotFound</span>
+</span><span class='line'>     <span class="o">----------------------------------</span>
+</span><span class='line'>     <span class="n">resource</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">is</span> <span class="n">configured</span> <span class="n">to</span> <span class="n">notify</span> <span class="n">resource</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">with</span> <span class="n">action</span> <span class="n">create</span><span class="p">,</span> <span class="n">but</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">cannot</span> <span class="n">be</span> <span class="n">found</span> <span class="k">in</span> <span class="n">the</span> <span class="n">resource</span> <span class="n">collection</span><span class="o">.</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">is</span> <span class="n">defined</span> <span class="k">in</span> <span class="sr">/tmp/</span><span class="n">kitchen</span><span class="o">/</span><span class="n">cookbooks</span><span class="o">/</span><span class="n">notif</span><span class="o">/</span><span class="n">providers</span><span class="o">/</span><span class="n">default</span><span class="o">.</span><span class="n">rb</span><span class="p">:</span><span class="mi">4</span><span class="ss">:in</span> <span class="sb">`block in class_from_file&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="sb">     Resource Declaration:</span>
+</span><span class='line'><span class="sb">     ---------------------</span>
+</span><span class='line'><span class="sb">     # In /tmp/kitchen/cookbooks/notif/recipes/default.rb</span>
+</span><span class='line'>
+</span><span class='line'><span class="sb">      12: notif &#39;doer&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="sb">     Compiled Resource:</span>
+</span><span class='line'><span class="sb"> ------------------</span>
+</span><span class='line'><span class="sb">     # Declared in /tmp/kitchen/cookbooks/notif/recipes/default.rb:12:in `</span><span class="n">from_file</span><span class="err">&#39;</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="n">notif</span><span class="p">(</span><span class="s2">&quot;doer&quot;</span><span class="p">)</span> <span class="k">do</span>
+</span><span class='line'>       <span class="n">action</span> <span class="ss">:write</span>
+</span><span class='line'>       <span class="n">retries</span> <span class="mi">0</span>
+</span><span class='line'>       <span class="n">retry_delay</span> <span class="mi">2</span>
+</span><span class='line'>       <span class="n">default_guard_interpreter</span> <span class="ss">:default</span>
+</span><span class='line'>       <span class="n">declared_type</span> <span class="ss">:notif</span>
+</span><span class='line'>
+</span><span class='line'>       <span class="n">recipe_name</span> <span class="s2">&quot;default&quot;</span>
+</span><span class='line'>     <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To fix this, I define the <code>file</code> resource in the provider:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">use_inline_resources</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">action</span> <span class="ss">:write</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">log</span> <span class="s1">&#39;notifer&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">notifies</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;file[notified]&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">file</span> <span class="s1">&#39;notified&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">content</span> <span class="n">new_resource</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then when I run Chef, it will converge and notify the file resource to be configured.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="ss">notif</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">skipped</span> <span class="n">due</span> <span class="n">to</span> <span class="n">action</span> <span class="ss">:nothing</span><span class="p">)</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">notif</span><span class="o">[</span><span class="n">doer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>    <span class="o">*</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span>
+</span><span class='line'>      <span class="o">-</span> <span class="n">create</span> <span class="kp">new</span> <span class="n">file</span> <span class="n">notified</span>
+</span><span class='line'>      <span class="o">-</span> <span class="n">update</span> <span class="n">content</span> <span class="k">in</span> <span class="n">file</span> <span class="n">notified</span> <span class="n">from</span> <span class="n">none</span> <span class="n">to</span> <span class="mi">935</span><span class="n">e8e</span>
+</span><span class='line'>      <span class="o">---</span> <span class="n">notified</span>       <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">47</span><span class="p">:</span><span class="mi">49</span><span class="o">.</span><span class="mi">186399317</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>      <span class="o">+++</span> <span class="o">.</span><span class="n">/</span><span class="o">.</span><span class="n">notified20150118</span><span class="o">-</span><span class="mi">15795</span><span class="o">-</span><span class="n">om5fiw</span>       <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">47</span><span class="p">:</span><span class="mi">49</span><span class="o">.</span><span class="mi">186399317</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>      <span class="err">@@</span> <span class="o">-</span><span class="mi">1</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span> <span class="err">@@</span>
+</span><span class='line'>      <span class="o">+</span><span class="n">doer</span>
+</span><span class='line'>    <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">up</span> <span class="n">to</span> <span class="n">date</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Running</span> <span class="ss">handlers</span><span class="p">:</span>
+</span><span class='line'><span class="no">Running</span> <span class="n">handlers</span> <span class="n">complete</span>
+</span><span class='line'><span class="no">Chef</span> <span class="no">Client</span> <span class="n">finished</span><span class="p">,</span> <span class="mi">3</span><span class="o">/</span><span class="mi">4</span> <span class="n">resources</span> <span class="n">updated</span> <span class="k">in</span> <span class="mi">1</span><span class="o">.</span><span class="mi">298990565</span> <span class="n">seconds</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Why does this happen?</h2>
+
+<p>The reason for this is because <code>use_inline_resources</code> tells Chef that in this provider, we&rsquo;re using inline resources that will be added to their own run context, with their own resource collection. We don&rsquo;t have access to the resource collection from the recipe. Even though the <code>file[notified]</code> resource exists from the recipe, it doesn&rsquo;t actually get inherited in the provider&rsquo;s run context, raising the error we saw before.</p>
+
+<p>We can turn off <code>use_inline_resources</code> by removing it, and the custom resource will be configured:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">action</span> <span class="ss">:write</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">log</span> <span class="s1">&#39;notifer&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">notifies</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;file[notified]&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then run Chef:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="ss">notif</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">skipped</span> <span class="n">due</span> <span class="n">to</span> <span class="n">action</span> <span class="ss">:nothing</span><span class="p">)</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">notif</span><span class="o">[</span><span class="n">doer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span> <span class="p">(</span><span class="n">up</span> <span class="n">to</span> <span class="n">date</span><span class="p">)</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">log</span><span class="o">[</span><span class="n">notifer</span><span class="o">]</span> <span class="n">action</span> <span class="n">write</span>
+</span><span class='line'>  <span class="o">*</span> <span class="n">file</span><span class="o">[</span><span class="n">notified</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span>
+</span><span class='line'>    <span class="o">-</span> <span class="n">update</span> <span class="n">content</span> <span class="k">in</span> <span class="n">file</span> <span class="n">notified</span> <span class="n">from</span> <span class="mi">935</span><span class="n">e8e</span> <span class="n">to</span> <span class="mi">3</span><span class="n">fc9b6</span>
+</span><span class='line'>    <span class="o">---</span> <span class="n">notified</span> <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">47</span><span class="p">:</span><span class="mi">49</span><span class="o">.</span><span class="mi">186399317</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>    <span class="o">+++</span> <span class="o">.</span><span class="n">/</span><span class="o">.</span><span class="n">notified20150118</span><span class="o">-</span><span class="mi">16159</span><span class="o">-</span><span class="n">r18q7z</span> <span class="mi">2015</span><span class="o">-</span><span class="mo">01</span><span class="o">-</span><span class="mi">18</span> <span class="mo">05</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">57</span><span class="o">.</span><span class="mi">832140405</span> <span class="o">+</span><span class="mo">0000</span>
+</span><span class='line'>    <span class="err">@@</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span> <span class="err">@@</span>
+</span><span class='line'>    <span class="o">-</span><span class="n">doer</span>
+</span><span class='line'>    <span class="o">+</span><span class="n">something</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice that the <code>file[notified]</code> resource wasn&rsquo;t updated at the start of the run, when it was encountered in the recipe, but it was when notified by the log resource in the provider action, changing the content.</p>
+
+<h2>Use inline compile mode!</h2>
+
+<p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1728,405 +1994,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/30/chefdk-and-ruby/">ChefDK and Ruby</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-30T22:32:18-06:00" pubdate data-updated="true">Apr 30<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Recently, Chef <a href="http://www.getchef.com/blog/2014/04/15/chef-development-kit/">released ChefDK</a>, the &ldquo;Chef Development Kit.&rdquo; This is a self-contained package of everything required to run Chef, work with Chef cookbooks, and includes the best of breed community tools, test frameworks, and other utility programs that are commonly used when working with Chef in infrastructure as code. <a href="http://www.getchef.com/blog/2014/04/29/chefdk-0-1-0-released/">ChefDK version 0.1.0 was released last week</a>. A new feature mentioned in the <a href="https://github.com/opscode/chef-dk/blob/master/README.md#using-chefdk-as-your-primary-development-environment">README.md</a> is very important, in my opinion.</p>
-
-<p><strong>Using ChefDK as your primary development environment</strong></p>
-
-<p>What does that mean?</p>
-
-<p>It means that if the only reason you have Ruby installed on your local system is to do Chef development or otherwise work with Chef, <em>you no longer have to maintain a separate Ruby installation</em>. That means you won&rsquo;t need any of these:</p>
-
-<ul>
-<li><a href="https://github.com/sstephenson/rbenv">rbenv</a></li>
-<li><a href="http://rvm.io">rvm</a></li>
-<li><a href="https://github.com/postmodern/chruby">chruby</a> (*note)</li>
-<li>&ldquo;system ruby&rdquo; (e.g., OS X&rsquo;s included /usr/bin/ruby, or the <code>ruby</code> package from your Linux distro)</li>
-<li><a href="https://github.com/poise/poise-ruby">poise ruby</a>)</li>
-</ul>
-
-
-<p>(*note: You can optionally use chruby with ChefDK if it&rsquo;s part of your workflow and you have other Rubies installed.)</p>
-
-<p>Do not misunderstand me: These are all extremely good solutions for getting and using Ruby on your system. They definitely have their place if you do other Ruby development, such as <a href="http://www.sinatrarb.com/">web applications</a>. This is especially true if you have to work with multiple versions of Ruby. However, if you&rsquo;re like me and mainly use Ruby for Chef, then ChefDK has you covered.</p>
-
-<p>In this post, I will describe how I have set up my system with ChefDK, and use its embedded Ruby by default.</p>
-
-<h2>Getting Started</h2>
-
-<p>Download ChefDK from the <a href="http://www.getchef.com/downloads/chef-dk/">downloads page</a>. At the time of this blog post, the available builds are limited to OS X and Linux (Debian/Ubuntu or RHEL), but Chef is <a href="http://www.getchef.com/blog/2014/05/06/chefdk-for-windows-progress-update/">working on Windows packages</a>.</p>
-
-<p>For example, here&rsquo;s what I did on my Ubuntu 14.04 system:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>wget https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/13.10/x86_64/chefdk_0.1.0-1_amd64.deb
-</span><span class='line'>sudo dpkg -i /tmp/chefdk_0.1.0-1_amd64.deb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>OS X users will be happy to know that the download is a .DMG, which includes a standard OS X .pkg (complete with developer signing). Simply install it like many other products on OS X.</p>
-
-<p>For either Linux or OS X, in <a href="https://github.com/opscode/omnibus-ruby/">omnibus</a> fashion, the post-installation creates several symbolic links in <code>/usr/bin</code> for tools that are included in ChefDK:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ls -l /usr/bin | grep chefdk
-</span><span class='line'>lrwxrwxrwx 1 root root 21 Apr 30 22:13 berks -&gt; /opt/chefdk/bin/berks
-</span><span class='line'>lrwxrwxrwx 1 root root 20 Apr 30 22:13 chef -&gt; /opt/chefdk/bin/chef
-</span><span class='line'>lrwxrwxrwx 1 root root 26 Apr 30 22:13 chef-apply -&gt; /opt/chefdk/bin/chef-apply
-</span><span class='line'>lrwxrwxrwx 1 root root 27 Apr 30 22:13 chef-client -&gt; /opt/chefdk/bin/chef-client
-</span><span class='line'>lrwxrwxrwx 1 root root 26 Apr 30 22:13 chef-shell -&gt; /opt/chefdk/bin/chef-shell
-</span><span class='line'>lrwxrwxrwx 1 root root 25 Apr 30 22:13 chef-solo -&gt; /opt/chefdk/bin/chef-solo
-</span><span class='line'>lrwxrwxrwx 1 root root 25 Apr 30 22:13 chef-zero -&gt; /opt/chefdk/bin/chef-zero
-</span><span class='line'>lrwxrwxrwx 1 root root 23 Apr 30 22:13 fauxhai -&gt; /opt/chefdk/bin/fauxhai
-</span><span class='line'>lrwxrwxrwx 1 root root 26 Apr 30 22:13 foodcritic -&gt; /opt/chefdk/bin/foodcritic
-</span><span class='line'>lrwxrwxrwx 1 root root 23 Apr 30 22:13 kitchen -&gt; /opt/chefdk/bin/kitchen
-</span><span class='line'>lrwxrwxrwx 1 root root 21 Apr 30 22:13 knife -&gt; /opt/chefdk/bin/knife
-</span><span class='line'>lrwxrwxrwx 1 root root 20 Apr 30 22:13 ohai -&gt; /opt/chefdk/bin/ohai
-</span><span class='line'>lrwxrwxrwx 1 root root 23 Apr 30 22:13 rubocop -&gt; /opt/chefdk/bin/rubocop
-</span><span class='line'>lrwxrwxrwx 1 root root 20 Apr 30 22:13 shef -&gt; /opt/chefdk/bin/shef
-</span><span class='line'>lrwxrwxrwx 1 root root 22 Apr 30 22:13 strain -&gt; /opt/chefdk/bin/strain
-</span><span class='line'>lrwxrwxrwx 1 root root 24 Apr 30 22:13 strainer -&gt; /opt/chefdk/bin/strainer</span></code></pre></td></tr></table></div></figure>
-
-
-<p>These should cover the 80% use case of ChefDK: using the various Chef and Chef Community tools so users can follow their favorite workflow, without shaving the yak of managing a Ruby environment.</p>
-
-<p>But, as I noted, and the thesis of this post, is that one could use this Ruby environment included in ChefDK as their own! So where is that?</p>
-
-<h2>ChefDK&rsquo;s Ruby</h2>
-
-<p>Tucked away in every &ldquo;omnibus&rdquo; package is a directory of &ldquo;embedded&rdquo; software &ndash; the things that were required to meet the end goal. In the case of Chef or ChefDK, this is Ruby, openssl, zlib, libpng, and so on. This is a fully contained directory tree, complete with lib, share, and yes indeed, bin.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ls /opt/chefdk/embedded/bin
-</span><span class='line'>(there's a bunch of commands here, trust me)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Of particular note are <code>/opt/chefdk/embedded/bin/ruby</code> and <code>/opt/chefdk/embedded/bin/gem</code>.</p>
-
-<p>To use ChefDK&rsquo;s Ruby as default, simply edit the <code>$PATH</code>.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>export PATH="/opt/chefdk/embedded/bin:${HOME}/.chefdk/gem/ruby/2.1.0/bin:$PATH"</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Add that, or its equivalent, to a login shell profile/dotrc file, and rejoice. Here&rsquo;s what I have now:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ which ruby
-</span><span class='line'>/opt/chefdk/embedded/bin/ruby
-</span><span class='line'>$ which gem
-</span><span class='line'>/opt/chefdk/embedded/bin/gem
-</span><span class='line'>$ ruby --version
-</span><span class='line'>ruby 2.1.1p76 (2014-02-24 revision 45161) [x86_64-linux]
-</span><span class='line'>$ gem --version
-</span><span class='line'>2.2.1
-</span><span class='line'>$ gem env
-</span><span class='line'>RubyGems Environment:
-</span><span class='line'>  - RUBYGEMS VERSION: 2.2.1
-</span><span class='line'>  - RUBY VERSION: 2.1.1 (2014-02-24 patchlevel 76) [x86_64-linux]
-</span><span class='line'>  - INSTALLATION DIRECTORY: /opt/chefdk/embedded/lib/ruby/gems/2.1.0
-</span><span class='line'>  - RUBY EXECUTABLE: /opt/chefdk/embedded/bin/ruby
-</span><span class='line'>  - EXECUTABLE DIRECTORY: /opt/chefdk/embedded/bin
-</span><span class='line'>  - SPEC CACHE DIRECTORY: /home/ubuntu/.gem/specs
-</span><span class='line'>  - RUBYGEMS PLATFORMS:
-</span><span class='line'>    - ruby
-</span><span class='line'>    - x86_64-linux
-</span><span class='line'>  - GEM PATHS:
-</span><span class='line'>     - /opt/chefdk/embedded/lib/ruby/gems/2.1.0
-</span><span class='line'>     - /home/ubuntu/.chefdk/gem/ruby/2.1.0
-</span><span class='line'>  - GEM CONFIGURATION:
-</span><span class='line'>     - :update_sources =&gt; true
-</span><span class='line'>     - :verbose =&gt; true
-</span><span class='line'>     - :backtrace =&gt; false
-</span><span class='line'>     - :bulk_threshold =&gt; 1000
-</span><span class='line'>     - "install" =&gt; "--user"
-</span><span class='line'>     - "update" =&gt; "--user"
-</span><span class='line'>  - REMOTE SOURCES:
-</span><span class='line'>     - https://rubygems.org/
-</span><span class='line'>  - SHELL PATH:
-</span><span class='line'>     - /opt/chefdk/embedded/bin
-</span><span class='line'>     - /home/ubuntu/.chefdk/gem/ruby/2.1.0/bin
-</span><span class='line'>     - /usr/local/sbin
-</span><span class='line'>     - /usr/local/bin
-</span><span class='line'>     - /usr/sbin
-</span><span class='line'>     - /usr/bin
-</span><span class='line'>     - /sbin
-</span><span class='line'>     - /bin
-</span><span class='line'>     - /usr/games
-</span><span class='line'>     - /usr/local/games</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note that this is the current stable release of Ruby, version 2.1.1 patchlevel 76, and the {almost} latest version of RubyGems, version 2.2.1. Also note the Gem paths &ndash; the first is the embedded gems path, which is where gems installed by <code>root</code> with the <code>chef gem</code> command will go. The other is in my home directory &ndash; ChefDK is set up so that gems can be installed as a non-root user within the <code>~/.chefdk/gems</code> directory.</p>
-
-<h2>Installing Gems</h2>
-
-<p>Let&rsquo;s see this in action. Install a gem using the <code>gem</code> command.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ gem install knife-solve
-</span><span class='line'>Fetching: knife-solve-1.0.1.gem (100%)
-</span><span class='line'>Successfully installed knife-solve-1.0.1
-</span><span class='line'>Parsing documentation for knife-solve-1.0.1
-</span><span class='line'>Installing ri documentation for knife-solve-1.0.1
-</span><span class='line'>Done installing documentation for knife-solve after 0 seconds
-</span><span class='line'>1 gem installed</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And as I said, this will be installed in the home directory:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ gem content knife-solve
-</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/LICENSE
-</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/README.md
-</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/Rakefile
-</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/chef/knife/solve.rb
-</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/knife-solve.rb
-</span><span class='line'>/home/ubuntu/.chefdk/gem/ruby/2.1.0/gems/knife-solve-1.0.1/lib/knife-solve/version.rb</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Using Bundler</h2>
-
-<p>ChefDK also includes <a href="http://bundler.io/">bundler</a>. As a &ldquo;non-Chef, Ruby use case&rdquo;, I installed octopress for this blog.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle install --path vendor --binstubs
-</span><span class='line'>Fetching gem metadata from https://rubygems.org/.......
-</span><span class='line'>Fetching additional metadata from https://rubygems.org/..
-</span><span class='line'>Installing rake (0.9.6)
-</span><span class='line'>Installing RedCloth (4.2.9)
-</span><span class='line'>Installing chunky_png (1.2.9)
-</span><span class='line'>Installing fast-stemmer (1.0.2)
-</span><span class='line'>Installing classifier (1.3.3)
-</span><span class='line'>Installing fssm (0.2.10)
-</span><span class='line'>Installing sass (3.2.12)
-</span><span class='line'>Installing compass (0.12.2)
-</span><span class='line'>Installing directory_watcher (1.4.1)
-</span><span class='line'>Installing haml (3.1.8)
-</span><span class='line'>Installing kramdown (0.14.2)
-</span><span class='line'>Installing liquid (2.3.0)
-</span><span class='line'>Installing maruku (0.7.0)
-</span><span class='line'>Installing posix-spawn (0.3.6)
-</span><span class='line'>Installing yajl-ruby (1.1.0)
-</span><span class='line'>Installing pygments.rb (0.3.7)
-</span><span class='line'>Installing jekyll (0.12.1)
-</span><span class='line'>Installing rack (1.5.2)
-</span><span class='line'>Installing rack-protection (1.5.0)
-</span><span class='line'>Installing rb-fsevent (0.9.3)
-</span><span class='line'>Installing rdiscount (2.0.7.3)
-</span><span class='line'>Installing rubypants (0.2.0)
-</span><span class='line'>Installing sass-globbing (1.0.0)
-</span><span class='line'>Installing tilt (1.4.1)
-</span><span class='line'>Installing sinatra (1.4.3)
-</span><span class='line'>Installing stringex (1.4.0)
-</span><span class='line'>Using bundler (1.5.2)
-</span><span class='line'>Updating files in vendor/cache
-</span><span class='line'>  * classifier-1.3.3.gem
-</span><span class='line'>  * fssm-0.2.10.gem
-</span><span class='line'>  * sass-3.2.12.gem
-</span><span class='line'>  * compass-0.12.2.gem
-</span><span class='line'>  * directory_watcher-1.4.1.gem
-</span><span class='line'>  * haml-3.1.8.gem
-</span><span class='line'>  * kramdown-0.14.2.gem
-</span><span class='line'>  * liquid-2.3.0.gem
-</span><span class='line'>  * maruku-0.7.0.gem
-</span><span class='line'>  * posix-spawn-0.3.6.gem
-</span><span class='line'>  * yajl-ruby-1.1.0.gem
-</span><span class='line'>  * pygments.rb-0.3.7.gem
-</span><span class='line'>  * jekyll-0.12.1.gem
-</span><span class='line'>  * rack-1.5.2.gem
-</span><span class='line'>  * rack-protection-1.5.0.gem
-</span><span class='line'>  * rb-fsevent-0.9.3.gem
-</span><span class='line'>  * rdiscount-2.0.7.3.gem
-</span><span class='line'>  * rubypants-0.2.0.gem
-</span><span class='line'>  * sass-globbing-1.0.0.gem
-</span><span class='line'>  * tilt-1.4.1.gem
-</span><span class='line'>  * sinatra-1.4.3.gem
-</span><span class='line'>  * stringex-1.4.0.gem
-</span><span class='line'>Your bundle is complete!
-</span><span class='line'>It was installed into ./vendor</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then I can use for example the rake task to preview things while writing this post.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ ./bin/rake preview
-</span><span class='line'>Starting to watch source with Jekyll and Compass. Starting Rack on port 4000
-</span><span class='line'>directory source/stylesheets/
-</span><span class='line'>   create source/stylesheets/screen.css
-</span><span class='line'>[2014-05-07 21:46:35] INFO  WEBrick 1.3.1
-</span><span class='line'>[2014-05-07 21:46:35] INFO  ruby 2.1.1 (2014-02-24) [x86_64-linux]
-</span><span class='line'>[2014-05-07 21:46:35] INFO  WEBrick::HTTPServer#start: pid=10815 port=4000</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Conclusion</h2>
-
-<p>I&rsquo;ve used Chef before it was even released. As the project has evolved, and as the Ruby community around it has established new best practices installing and maintaining Ruby development environments, I&rsquo;ve followed along. I&rsquo;ve used all the version managers listed above. I&rsquo;ve spent untold hours getting the right set of gems installed just to have to upgrade everything again and debug my workstation. I&rsquo;ve written blog posts, <a href="http://wiki.opscode.com">wiki</a> pages, and helped countless users do this on their own systems.</p>
-
-<p>Now, we have an all-in-one environment that provides a great solution. Give ChefDK a whirl on your workstation &ndash; I think you&rsquo;ll like it!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -2159,6 +2026,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
       </li>
     
@@ -2172,10 +2043,6 @@
     
       <li class="post">
         <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
   </ul>

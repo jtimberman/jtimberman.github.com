@@ -9,10 +9,8 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="It is no secret that
-I use GNU Emacs
-as my default text editor. It is perhaps less evident but no less
-relevant that I use Emacs 24. I really like &hellip;">
+  <meta name="description" content="Recently, Apple did the most awesome thing for non-Xcode developers. They made the development tools available as a
+standalone package! This is &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +80,95 @@ relevant that I use Emacs 24. I really like &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/02/26/xcode-command-line-tools/">Xcode Command Line Tools</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-26T00:07:00-07:00" pubdate data-updated="true">Feb 26<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Recently, Apple did the most awesome thing for non-Xcode developers.</p>
+
+<p>They made the development tools available as a
+<a href="https://developer.apple.com/library/ios/#documentation/DeveloperTools/Conceptual/WhatsNewXcode/Articles/xcode_4_3.html">standalone package!</a></p>
+
+<p>This is awesome news for those of us who only have<sup>Whad</sup> Xcode
+installed to install RubyGems that compile native extensions, or for
+installing software with Homebrew, MacPorts or similar.. You can
+download them by logging into the
+<a href="https://developer.apple.com/downloads">Developer Download</a> site.</p>
+
+<p>This appears to be work started by
+<a href="http://kennethreitz.com/xcode-gcc-and-homebrew.html">Kenneth Reitz</a>
+with his
+<a href="https://github.com/kennethreitz/osx-gcc-installer/">OSX GCC Installer</a>
+project. I did try that project out, but ran into issues I didn&rsquo;t
+resolve right away, so I reverted to using Xcode proper. However with
+the package from Apple I don&rsquo;t seem to have any issues so far.</p>
+
+<p>If you already have Xcode installed, you may want to remove it first.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo /Developer-3.2.6/Library/uninstall-devtools
+</span><span class='line'>sudo /Developer/Library/uninstall-devtools --mode<span class="o">=</span>all /thx
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>My understanding is that you can remove the <code>/Developer*</code>
+director(y|ies) when complete. I had ollllld Xcode on the system where
+I first did this.</p>
+
+<p>Next, download and install the package from Apple. It&rsquo;s about 170M and
+takes only a couple minutes to install; sorry I don&rsquo;t have a Chef
+recipe for this ;).</p>
+
+<p>I did run into an issue with Homebrew where it wasn&rsquo;t finding the
+right gcc binary. I had to run the following commands to fix
+<a href="https://github.com/mxcl/homebrew/issues/10245">that issue</a>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo xcode-select -switch /usr/bin
+</span><span class='line'>sudo ln -sf /usr/bin/llvm-gcc-4.2 /usr/bin/gcc-4.2
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You wouldn&rsquo;t think that something like an 8G installation would matter
+in 2012. However, disk space is a precious commodity on MacBook Airs
+and systems that have SSDs as the root volume. This is very welcome
+change for me, especially since it means that future Mac OS X
+installations do not require a large download before I can start doing
+things that get my
+<a href="http://jtimberman.housepub.org/blog/2011/04/03/managing-my-workstations-with-chef/">system ready to use</a>.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1739,291 +1826,6 @@ arguments about Debian and Ubuntu and their handling of Ruby.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/11/21/chef-on-windows-htpc/">Chef on Windows HTPC</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-11-21T07:15:00-07:00" pubdate data-updated="true">Nov 21<span>st</span>, 2011</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Over the past 20 years, I always had a Windows (or DOS!) PC as the
-main system I use at home. The primary purpose was for gaming,
-although building my own systems is also a hobby. In 2007, I wanted to
-build a new system to use as a home theater PC. Originally, I built it
-with Windows Vista &ndash; Windows Media Center <em>was</em> Vista&rsquo;s killer app! I
-painstakingly installed software, tweaked system settings and tuned
-the registry. Then Windows 7 came along with further
-improvements. After almost 20 years of reinstalling from scratch for
-new versions of Windows, I treated this upgrade as no
-different.</p>
-
-<p>Unfortunately, I didn&rsquo;t capture all the system tweaks and settings. I
-didn&rsquo;t get all the software reinstalled. I did what I remembered, and
-W7 did have some improvements that made extra software and tweaks
-unnecessary. The thing I was lacking in the rebuild, and up until
-recently, was configuration management for Windows.</p>
-
-<h2>Enter Chef</h2>
-
-<p>Recently, my employer Opscode
-<a href="http://www.opscode.com/press-releases/opscode-delivers-cloud-infrastructure-automation-to-windows-environments/">announced broader Windows support</a>
-for Chef. The awesome Chef community, and our development team have
-added some key features to Chef in the form of core libraries and
-cookbooks. While I did get Chef running on my HTPC a few months ago, I
-had only used it to test out the
-<a href="http://community.opscode.com/cookbooks/powershell">powershell cookbook</a>,
-and also wrote a
-<a href="http://community.opscode.com/cookbooks/silverlight">silverlight cookbook</a>
-as a proof of concept. In the mean time, the
-<a href="http://community.opscode.com/cookbooks/windows">windows cookbook</a>
-cookbook received some serious leveling up thanks to
-<a href="http://twitter.com/schisamo">Seth Chisamore</a>.</p>
-
-<h2>Windows Cookbook</h2>
-
-<p>The Windows cookbook has a number of excellent &ldquo;primitives&rdquo; in the
-form of libraries and resources. You can read all about that on
-<a href="http://wiki.opscode.com/display/chef/Opscode+LWRP+Resources#OpscodeLWRPResources-windows">The Chef Wiki</a>. For
-now, I&rsquo;ll talk about how I captured some of the configuration so I
-don&rsquo;t have to remember next time (Windows 8, coming soon&hellip;). Of
-interest here are the <code>windows_registry</code> and <code>windows_auto_run</code> resources.</p>
-
-<h2>My HTPC&rsquo;s cookbooks</h2>
-
-<p>I wrote two cookbooks this weekend. First, is a general &ldquo;Windows Media
-Center&rdquo; cookbook called, aptly, &ldquo;<code>wmc</code>&rdquo;. This will capture the
-specific registry and other configuration related to Windows Media
-Center itself. The idea with this one is it manages only Windows Media
-Center. It&rsquo;s not ready for release, but I&rsquo;ll post some snippets
-of code here as I go.</p>
-
-<p>The second cookbook I created is specifically for the Home Theater PC
-itself, named <code>htpc</code>. This is going to contain all my preferences and
-biases of how I want my HTPC to look like in order to provide
-entertainment in my house.</p>
-
-<h2>Windows Media Center (wmc)</h2>
-
-<p>First and foremost, I want to make sure that Windows Media Center is
-running at boot time, and the <code>windows_auto_run</code> resource fits the
-bill. This resource modifies the registry to update the key
-<code>HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</code>, using the
-<code>windows_registry</code> resource. It does operate at the <em>machine</em> level,
-not just the current user, but I only have one user on my HTPC, so
-it&rsquo;s okay. Here&rsquo;s the resource:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_auto_run</span> <span class="s2">&quot;Windows Media Center&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">program</span> <span class="s2">&quot;RunDLL32.exe C:/Windows/ehome/ehuihlp.exe,BootMediaCenter&quot;</span>
-</span><span class='line'>  <span class="n">not_if</span> <span class="p">{</span> <span class="no">Registry</span><span class="o">.</span><span class="n">value_exists?</span><span class="p">(</span><span class="no">AUTO_RUN_KEY</span><span class="p">,</span> <span class="s1">&#39;Windows Media Center&#39;</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next, I want to tweak a few other registry settings. Some of these I
-discovered through an
-<a href="http://blogs.msdn.com/b/astebner/archive/2006/04/29/586961.aspx">MSDN blog post</a>,
-others are from setting up WMC itself and observing the &ldquo;HKCU&rdquo;
-registry. Not the most sophisticated way, but I don&rsquo;t see a great
-&ldquo;diff&rdquo; tool for the registry. Because the name of the HKCU and HKLM keys for WMC are
-long, I set them to a couple local variables, via <code>cookbooks/attributes/default.rb</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">default</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hkcu&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;HKCU\Software\Microsoft\Windows\CurrentVersion\Media Center&#39;</span>
-</span><span class='line'><span class="n">default</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hklm&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Media Center&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then in the recipe, I simply assign local variables.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">hkcu</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hkcu&#39;</span><span class="o">]</span>
-</span><span class='line'><span class="n">hklm</span> <span class="o">=</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;wmc&#39;</span><span class="o">][</span><span class="s1">&#39;reg_hklm&#39;</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now, for the registry changes. I use a 30 second skip forward and back
-with my remote during recorded TV shows, so I can avoid commercials.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_registry</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">hkcu</span><span class="si">}</span><span class="se">\\</span><span class="s2">Settings</span><span class="se">\\</span><span class="s2">VideoSettings&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">values</span><span class="p">(</span>
-</span><span class='line'>    <span class="s1">&#39;SkipAheadInterval&#39;</span> <span class="o">=&gt;</span> <span class="mh">0x7148</span><span class="p">,</span>
-</span><span class='line'>    <span class="s1">&#39;InstantReplayInterval&#39;</span> <span class="o">=&gt;</span> <span class="mh">0x7148</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I also optimize the display for LCD/Plasma (I have a RP DLP, but I
-digress).</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_registry</span> <span class="n">hkcu</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">values</span> <span class="s1">&#39;TVSkin&#39;</span> <span class="o">=&gt;</span> <span class="mi">0</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>For now, that&rsquo;s all the <code>wmc</code> cookbook has going for it. I do have
-plans to enable additional features of WMC, install useful plugins,
-and improve playback quality and performance. Mainly, I need to find
-my old notes :&ndash;).</p>
-
-<h2>Home Theater PC (htpc)</h2>
-
-<p>The <code>htpc</code> cookbook will contain additional tweaks and settings for
-how I want my HTPC configured. I don&rsquo;t know if I&rsquo;ll release it
-publicly, as it is pretty specific to me, but it might be useful as
-examples for others, so stay tuned to my
-<a href="https://github.com/jtimberman">GitHub account</a> for updates.</p>
-
-<p>First up are some local performance tweaks. These are done to
-Explorer(.exe), and I don&rsquo;t remember the source.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_registry</span> <span class="s2">&quot;HKCU</span><span class="se">\\</span><span class="s2">Software</span><span class="se">\\</span><span class="s2">Microsoft</span><span class="se">\\</span><span class="s2">Windows</span><span class="se">\\</span><span class="s2">CurrentVersion</span><span class="se">\\</span><span class="s2">Policies</span><span class="se">\\</span><span class="s2">Explorer&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">values</span><span class="p">(</span>
-</span><span class='line'>    <span class="s1">&#39;NoLowDiskSpaceChecks&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span>
-</span><span class='line'>    <span class="s1">&#39;NoResolveSearch&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span>
-</span><span class='line'>    <span class="s1">&#39;NoResolveTrack&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Second, since this system is where all my music files live, I have
-iTunes installed for
-<a href="http://support.apple.com/kb/HT3819">Home Sharing</a>. It doesn&rsquo;t do much
-good if iTunes isn&rsquo;t running, however, so I use <code>windows_auto_run</code> to
-start it up.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">windows_auto_run</span> <span class="s2">&quot;iTunes&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">program</span> <span class="s2">&quot;C:/Program\ Files/iTunes/iTunes.exe&quot;</span>
-</span><span class='line'>  <span class="n">not_if</span> <span class="p">{</span> <span class="no">Registry</span><span class="o">.</span><span class="n">value_exists?</span><span class="p">(</span><span class="no">AUTO_RUN_KEY</span><span class="p">,</span> <span class="s2">&quot;iTunes&quot;</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It&rsquo;s pretty simple so far, but I have some plans in store for my HTPC cookbook.</p>
-
-<h2>HTPC Cookbook Plans</h2>
-
-<p>I do plan to add some new features to the <code>htpc</code> cookbook. First, I
-want to make sure all the software I need is installed. While the
-system mainly sits in WMC (with iTunes in the background), I do have
-some additional software and utilities that I like to have for
-managing my media library.</p>
-
-<ul>
-<li>iTunes &ndash; I already have the software installed, but it would be nice
-to not have to do that during system setup (Windows 8, I say&hellip;).</li>
-<li>Google Chrome &ndash; there&rsquo;s no abc.com, nbc.com, etc plugins for WMC
-(yet?), so I need a browser to go to the respective web sites to
-catch up on older episodes.</li>
-<li>CDBurnerXP &ndash; decent CD/DVD burning software, rarely used but useful
-for backups.</li>
-<li>Logitech Harmony Remote Software &ndash; I have a
-<a href="http://www.logitech.com/en-us/remotes/universal-remotes/devices/6063">Harmony 700 universal remote</a>
-(and it&rsquo;s awesome!). This one might be tricky, but really I just
-want to make sure the software is installed. Configuration profiles
-are stored in an online support account with Logitech as far as I&rsquo;m
-aware.</li>
-<li>Netflix plugin for WMC &ndash; This will probably go into the <code>wmc</code>
-cookbook, though.</li>
-<li>Additional performance tweaks &ndash; There are a whole slew of tweaks
-that I <em>know</em> I made, I just don&rsquo;t remember them all. These will be
-added with <code>windows_registry</code> resources.</li>
-<li>Manage services &ndash; Everyone who has a gaming PC knows about
-<a href="http://www.blackviper.com/">Black Viper&rsquo;s Windows Service Guide(s)</a>.</li>
-<li>Windows Features &ndash; With the <code>windows_feature</code> resource, Chef can
-manage core features included in Windows installations.</li>
-<li>Logging, monitoring &ndash; What kind of system administrator would I be
-if I didn&rsquo;t also monitor my system for performance? :&ndash;)</li>
-</ul>
-
-
-<p>Some of the things I want to manage on my HTPC are covered by other
-cookbooks I have, or exist on the
-<a href="http://community.opscode.com">Chef Community Site</a>.</p>
-
-<ul>
-<li>Steam &ndash; This system is still capable of running some games, like
-StarCraft II, TeamFortress 2 and Left 4 Dead (1 &amp; 2). I have a Steam
-cookbook that works on OS X, it just isn&rsquo;t released (yet).</li>
-<li>Teamspeak 3 &ndash; I already have a
-<a href="http://community.opscode.com/cookbooks/teamspeak3">teamspeak3 cookbook</a>,
-I&rsquo;ll just need to add installation of the client for Windows there.</li>
-<li><a href="http://gnu.org/s/emacs">A text editor</a> &ndash; Since I have games, and
-games have configuration files, it makes sense to &hellip; wait, I should
-put those in Chef too! Or at least, in a Version Control System and
-check out the repository&hellip;</li>
-<li><a href="http://git-scm.org">Git</a> &ndash; For the above. This will likely be a
-contribution to Opscode&rsquo;s
-<a href="http://community.opscode.com/cookbooks/git">git cookbook</a>. Though
-I&rsquo;ll still install a <a href="http://notepad-plus-plus.org">text editor</a> of
-<a href="http://www.gnome.org/projects/gedit">some kind</a>.</li>
-</ul>
-
-
-<p>These changes, updates and releases will be announced on this blog,
- mainly through my <a href="https://twitter.com/jtimberman">twitter</a> and
- <a href="https://plus.google.com/100567271038100401523/">Google+</a>
- accounts. Stay tuned!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -2058,6 +1860,10 @@ I&rsquo;ll still install a <a href="http://notepad-plus-plus.org">text editor</a
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
       </li>
     
@@ -2071,10 +1877,6 @@ I&rsquo;ll still install a <a href="http://notepad-plus-plus.org">text editor</a
     
       <li class="post">
         <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a>
       </li>
     
   </ul>

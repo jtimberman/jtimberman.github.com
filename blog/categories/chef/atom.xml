@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chef | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-01-13T12:04:19-07:00</updated>
+  <updated>2015-01-17T22:59:19-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,177 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Define Resources to Notifiy in LWRPs]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/"/>
+    <updated>2015-01-17T22:37:06-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps</id>
+    <content type="html"><![CDATA[<p>In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when using <code>use_inline_resources</code> in Chef&rsquo;s <a href="http://docs.chef.io/lwrp.html">LWRP DSL</a>.</p>
+
+<p>I&rsquo;ll use an example cookbook, <code>notif</code>, to illustrate. First, I&rsquo;ve created <code>cookbooks/notif/resources/default.rb</code>, with the following content.</p>
+
+<p><code>ruby
+actions :write
+default_action :write
+</code></p>
+
+<p>Then, I have written <code>cookbooks/notif/providers/default.rb</code> like this:</p>
+
+<p>```ruby
+use_inline_resources</p>
+
+<p>action :write do
+  log &lsquo;notifer&rsquo; do</p>
+
+<pre><code>notifies :create, 'file[notified]'
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>Then the default recipe, where I&rsquo;ll use the resource automatically generated from the resource directory, <code>notif</code>.</p>
+
+<p>```ruby
+file &lsquo;notified&rsquo; do
+  content &lsquo;something&rsquo;
+  action :nothing
+end</p>
+
+<p>notif &lsquo;doer&rsquo;
+```</p>
+
+<p>When I run Chef, I&rsquo;ll get an error like this:</p>
+
+<p>```
+ Recipe: notif::default
+   * file[notified] action nothing (skipped due to action :nothing)
+   * notif[doer] action write</p>
+
+<pre><code> ================================================================================
+ Error executing action `write` on resource 'notif[doer]'
+ ================================================================================
+
+ Chef::Exceptions::ResourceNotFound
+ ----------------------------------
+ resource log[notifer] is configured to notify resource file[notified] with action create, but file[notified] cannot be found in the resource collection. log[notifer] is defined in /tmp/kitchen/cookbooks/notif/providers/default.rb:4:in `block in class_from_file'
+
+ Resource Declaration:
+ ---------------------
+ # In /tmp/kitchen/cookbooks/notif/recipes/default.rb
+
+  12: notif 'doer'
+
+ Compiled Resource:
+</code></pre>
+
+<hr />
+
+<pre><code> # Declared in /tmp/kitchen/cookbooks/notif/recipes/default.rb:12:in `from_file'
+
+ notif("doer") do
+   action :write
+   retries 0
+   retry_delay 2
+   default_guard_interpreter :default
+   declared_type :notif
+
+   recipe_name "default"
+ end
+</code></pre>
+
+<p>```</p>
+
+<p>To fix this, I define the <code>file</code> resource in the provider:</p>
+
+<p>```ruby
+use_inline_resources</p>
+
+<p>action :write do
+  log &lsquo;notifer&rsquo; do</p>
+
+<pre><code>notifies :create, 'file[notified]'
+</code></pre>
+
+<p>  end</p>
+
+<p>  file &lsquo;notified&rsquo; do</p>
+
+<pre><code>content new_resource.name
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>Then when I run Chef, it will converge and notify the file resource to be configured.</p>
+
+<p>```
+Recipe: notif::default
+  * file[notified] action nothing (skipped due to action :nothing)
+  * notif[doer] action write</p>
+
+<pre><code>* log[notifer] action write
+
+* file[notified] action create
+  - create new file notified
+  - update content in file notified from none to 935e8e
+  --- notified       2015-01-18 05:47:49.186399317 +0000
+  +++ ./.notified20150118-15795-om5fiw       2015-01-18 05:47:49.186399317 +0000
+  @@ -1 +1,2 @@
+  +doer
+* file[notified] action create (up to date)
+</code></pre>
+
+<p>Running handlers:
+Running handlers complete
+Chef Client finished, &frac34; resources updated in 1.298990565 seconds
+```</p>
+
+<h2>Why does this happen?</h2>
+
+<p>The reason for this is because <code>use_inline_resources</code> tells Chef that in this provider, we&rsquo;re using inline resources that will be added to their own run context, with their own resource collection. We don&rsquo;t have access to the resource collection from the recipe. Even though the <code>file[notified]</code> resource exists from the recipe, it doesn&rsquo;t actually get inherited in the provider&rsquo;s run context, raising the error we saw before.</p>
+
+<p>We can turn off <code>use_inline_resources</code> by removing it, and the custom resource will be configured:</p>
+
+<p>```ruby
+action :write do
+  log &lsquo;notifer&rsquo; do</p>
+
+<pre><code>notifies :create, 'file[notified]'
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>Then run Chef:</p>
+
+<p>```
+Recipe: notif::default
+  * file[notified] action nothing (skipped due to action :nothing)
+  * notif[doer] action write (up to date)
+  * log[notifer] action write
+  * file[notified] action create</p>
+
+<pre><code>- update content in file notified from 935e8e to 3fc9b6
+--- notified 2015-01-18 05:47:49.186399317 +0000
++++ ./.notified20150118-16159-r18q7z 2015-01-18 05:50:57.832140405 +0000
+@@ -1,2 +1,2 @@
+-doer
++something
+</code></pre>
+
+<p>```</p>
+
+<p>Notice that the <code>file[notified]</code> resource wasn&rsquo;t updated at the start of the run, when it was encountered in the recipe, but it was when notified by the log resource in the provider action, changing the content.</p>
+
+<h2>Use inline compile mode!</h2>
+
+<p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Testing Conditionals in ChefSpec]]></title>
@@ -399,112 +570,6 @@ managed-node:
 <p><strong>Bonus quick tip!</strong> <code>knife node show</code> can take the <code>-a</code> option multiple times to display more attributes. I just discovered this in writing this post, and I don&rsquo;t know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).</p>
 
 <p><em>Update</em> This <a href="https://github.com/opscode/chef/commit/4133160972a9972a9a062579504faa40eaa4c8db">feature was added</a> by <a href="https://twitter.com/RanjibDey">Awesome Chef Ranjib Dey</a>.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Chef 12: Fix Untrusted Self Sign Certs]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/"/>
-    <updated>2014-12-11T13:42:41-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs</id>
-    <content type="html"><![CDATA[<p>Scenario: You&rsquo;ve started up a brand new Chef Server using version 12, and you have installed Chef 12 on your local system. You log into the Management Console to create a user and organization (or do this with the command-line <code>chef-server-ctl</code> commands), and you&rsquo;re ready to rock with this knife.rb:</p>
-
-<p><code>ruby
-node_name                'jtimberman'
-client_key               'jtimberman.pem'
-validation_client_name   'tester-validator'
-validation_key           'tester-validator.pem'
-chef_server_url          'https://chef-server.example.com/organizations/tester'
-</code></p>
-
-<p>However, when you try to check things out with knife:</p>
-
-<p><code>
-% knife client list
-ERROR: SSL Validation failure connecting to host: chef-server.example.com - SSL_connect returned=1 errno=0 state=SSLv3 read server certificate B: certificate verify failed
-ERROR: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=SSLv3 read server certificate B: certificate verify failed
-</code></p>
-
-<p>This is because Chef client 12 has SSL verification enabled by default for all requests. Since the certificate generated by the Chef Server 12 installation is self-signed, there isn&rsquo;t a signing CA that can be verified, and this fails. Never fear intrepid user, for you can get the SSL certificate from the server and store it as a &ldquo;trusted&rdquo; certificate. To find out how, use <code>knife ssl check</code>.</p>
-
-<p>```
-Connecting to host chef-server.example.com:443
-ERROR: The SSL certificate of chef-server.example.com could not be verified
-Certificate issuer data: /C=US/ST=WA/L=Seattle/O=YouCorp/OU=Operations/CN=chef-server.example.com/emailAddress=<a href="&#x6d;&#97;&#105;&#108;&#x74;&#111;&#x3a;&#121;&#111;&#x75;&#x40;&#x65;&#x78;&#97;&#109;&#x70;&#108;&#x65;&#x2e;&#x63;&#x6f;&#109;">&#121;&#111;&#x75;&#64;&#101;&#120;&#97;&#x6d;&#112;&#x6c;&#101;&#46;&#99;&#x6f;&#109;</a></p>
-
-<p>Configuration Info:</p>
-
-<p>OpenSSL Configuration:
-* Version: OpenSSL 1.0.1j 15 Oct 2014
-* Certificate file: /opt/chefdk/embedded/ssl/cert.pem
-* Certificate directory: /opt/chefdk/embedded/ssl/certs
-Chef SSL Configuration:
-* ssl_ca_path: nil
-* ssl_ca_file: nil
-* trusted_certs_dir: &ldquo;/Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs&rdquo;</p>
-
-<p>TO FIX THIS ERROR:</p>
-
-<p>If the server you are connecting to uses a self-signed certificate, you must
-configure chef to trust that server&rsquo;s certificate.</p>
-
-<p>By default, the certificate is stored in the following location on the host
-where your chef-server runs:</p>
-
-<p>  /var/opt/chef-server/nginx/ca/SERVER_HOSTNAME.crt</p>
-
-<p>Copy that file to your trusted_certs_dir (currently: /Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs)
-using SSH/SCP or some other secure method, then re-run this command to confirm
-that the server&rsquo;s certificate is now trusted.
-```</p>
-
-<p>(note, <a href="https://github.com/opscode/chef/issues/2604">this chef-server location is incorrect</a>, it&rsquo;s <code>/var/opt/opscode</code>)</p>
-
-<p>There is a <code>fetch</code> plugin for <code>knife</code> too. Let&rsquo;s download the certificate to the automatically preconfigured trusted certificate location mentioned in the output above.</p>
-
-<p>```
-% knife ssl fetch
-WARNING: Certificates from chef-server.example.com will be fetched and placed in your trusted_cert
-directory (/Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs).</p>
-
-<p>Knife has no means to verify these are the correct certificates. You should
-verify the authenticity of these certificates after downloading.</p>
-
-<p>Adding certificate for chef-server.example.com in /Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs/chef-server.example.com.crt
-```</p>
-
-<p>The certificate should be verified that what was downloaded is in fact the same as the certificate on the Chef Server. For example, I compared SHA256 checksums:</p>
-
-<p><code>
-% ssh ubuntu@chef-server.example.com sudo sha256sum /var/opt/opscode/nginx/ca/chef-server.example.com.crt
-043728b55144861ed43a426c67addca357a5889158886aee50685cf1422b5ebf  /var/opt/opscode/nginx/ca/chef-server.example.com.crt
-% gsha256sum .chef/trusted_certs/chef-server.example.com.crt
-043728b55144861ed43a426c67addca357a5889158886aee50685cf1422b5ebf  .chef/trusted_certs/chef-server.example.com.crt
-</code></p>
-
-<p>Now check knife client list again.</p>
-
-<p><code>
-% knife client list
-tester-validator
-</code></p>
-
-<p>Victory!</p>
-
-<p>Now, we need to get the ceritficate out to every node in the infrastructure in its <code>trusted_certs_dir</code> &ndash; by default this is <code>/etc/chef/trusted_certs</code>. The most simple way to do this is to use <code>knife ssh</code> to run knife on the target nodes.</p>
-
-<p><code>
-% knife ssh 'name:*' 'sudo knife ssl fetch -c /etc/chef/client.rb'
-node-output.example.com WARNING: Certificates from chef-server-example.com will be fetched and placed in your trusted_cert
-node-output.example.com directory (/etc/chef/trusted_certs).
-node-output.example.com
-node-output.example.com Knife has no means to verify these are the correct certificates. You should
-node-output.example.com verify the authenticity of these certificates after downloading.
-node-output.example.com
-node-output.example.com Adding certificate for chef-server.example.com in /etc/chef/trusted_certs/chef-server.example.com.crt
-</code></p>
-
-<p>The output will be interleaved for all the nodes returned by <code>knife ssh</code>. Of course, we should verify the SHA256 checksums like before, which can be done again with <code>knife ssh</code>.</p>
 ]]></content>
   </entry>
   
