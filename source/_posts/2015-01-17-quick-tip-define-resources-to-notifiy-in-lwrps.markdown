@@ -147,3 +147,5 @@ Notice that the `file[notified]` resource wasn't updated at the start of the run
 ## Use inline compile mode!
 
 The `use_inline_resources` method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe's resource collection. Read more about the [inline compile mode](http://docs.chef.io/lwrp.html#inline-compile-mode) in the Chef docs.
+
+Also, define the resources that you need to notify when you're doing this in your provider's actions. A common example is within a provider that writes configuration for a service, and needs to tell that service to restart.
