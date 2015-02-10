@@ -9,8 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I&rsquo;ve been managing my personal systems with Chef since Chef was
-created, though I didn&rsquo;t always use the same chef-repo for them. For &hellip;">
+  <meta name="description" content="I&rsquo;ve shared my ~/.chef/plugins/knife directory as a Git repository
+on GitHub. There&rsquo;s
+only a few, but I hope you find them useful. They &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -80,6 +81,132 @@ created, though I didn&rsquo;t always use the same chef-repo for them. For &hell
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/11/29/some-knife-plugins/">Some Knife Plugins</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-29T19:11:00-07:00" pubdate data-updated="true">Nov 29<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I&rsquo;ve shared my <code>~/.chef/plugins/knife</code> directory as a Git repository
+on <a href="https://github.com/jtimberman/chef-plugins-knife">GitHub</a>. There&rsquo;s
+only a few, but I hope you find them useful. They are licensed under
+the Apache 2.0 software license, but please only use them for awesome.</p>
+
+<h2>gem</h2>
+
+<p>This plugin will install a gem into the Ruby environment that knife is
+executing in. This is handy if you want to install knife plugins that
+are gems.</p>
+
+<p>If you have Ruby and Chef/Knife installed in an area where your user
+can write:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you&rsquo;re using an Omnibus package install of Chef, or otherwise
+require root access to install:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Note</strong> If you&rsquo;re trying to install a gem for <em>Chef</em> to use, you
+  should put it in a <code>chef_gem</code> resource in a recipe.</p>
+
+<h2>metadata</h2>
+
+<p>This plugin prints out information from a cookbook&rsquo;s metadata. It
+currently only works with <code>metadata.rb</code> files, and not <code>metadata.json</code>
+files.</p>
+
+<p>In a cookbook&rsquo;s directory, display the cookbook&rsquo;s dependencies:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Show the dependencies and supported platforms:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies platforms</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Use the <code>-P</code> option to pass a path to a cookbook.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata name dependencies -P ~/.berkshelf/cookbooks/rabbitmq-1.6.4</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>nukular</h2>
+
+<p><a href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/">I wrote on this blog about this plugin awhile ago</a>.</p>
+
+<p>This plugin cleans up after running <code>chef-client</code> on a VMware Fusion machine.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife nukular guineapig base guineapig.int.example.com</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>plugin_create</h2>
+
+<p>This creates a plugin scaffolding in <code>~/.chef/plugins/knife</code>. It will
+join underscored words as CamelCaseClasses.</p>
+
+<p>For example,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesometown</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Creates a plugin that is class <code>Awesometown</code> that can be executed with:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife awesometown</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Whereas this,</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesome_town</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Creates a plugin that is class <code>AwesomeTown</code> that can be executed
+with:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin awesome town</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2323,207 +2450,6 @@ the full thing below.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/03/04/github-is-classy/">Github Is Classy</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-03-04T18:42:00-07:00" pubdate data-updated="true">Mar 4<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Fact: GitHub is classy. This isn&rsquo;t just because
-<a href="https://github.com/schacon">Scott Chacon</a> works there, either. Their
-handling of a security issue today was very professional. That said, I
-have some words to say about the issue itself and the aftermath, and
-things you as an application developer can do to help, and to avoid
-this kind of problem.</p>
-
-<p><em>Disclaimer: I&rsquo;m not an application developer. I am a sysadmin with a
- diverse background in operating system security, including previously
- held GSEC and GCUX certifications from the SANS Institute/GIAC.</em></p>
-
-<p><em>Second disclaimer: This is not an anti-Rails post. All web frameworks
- need to be conscious of security, and take bug reports for security
- issues seriously.</em></p>
-
-<h1>Issue</h1>
-
-<p><em>Update &ndash; Preface: I am not talking about a security vulnerability (a
-la an exploit) in Rails. I am talking about a feature that allows
-automatically generated code to do things that are not secure and it
-is apparently on purpose and by design. This is the wrong thing to
-do. Deny by default with whitelisting is the right thing to do.</em></p>
-
-<p>There is a security issue in
-<a href="https://github.com/rails/rails/issues/5228">Ruby on Rails</a>. The bug
-is closed, but I haven&rsquo;t dug into find out if the actual problem is
-fixed.</p>
-
-<p>The bug itself is very serious. It allows a malicious user to send
-arbitrary parameters to a Rails application without requiring
-whitelisting up front. In fact,
-<a href="https://github.com/rails/rails/pull/4062">three months ago an issue</a>
-was opened in the Rails project to force new applications to enforce
-whitelist mode by default. That bug was subsequently closed just a few
-days ago. I&rsquo;m not going to do an analysis of the issue itself, you can go
-read the linked tickets and do further research on the issue.</p>
-
-<p><em>Update</em> I missed clarifying this. There is a second issue at hand.
- GitHub resolved the mass assignment bug by fixing their application.
- The second issue is that they had a vulnerability in their public key
- form update.</p>
-
-<h2>Resolution and Aftermath</h2>
-
-<p>You can read all about the initial resolution and retrospective on the
-<a href="https://github.com/blog/1068-public-key-security-vulnerability-and-mitigation">GitHub blog</a>.
-You can also read their
-<a href="https://github.com/blog/1069-responsible-disclosure-policy">follow-up post</a>
-on responsible disclosure.</p>
-
-<p>The manner in which they handled the situation is a class act: they
-behaved like professionals. Here&rsquo;s why:</p>
-
-<ul>
-<li>A user reported a problem with their app.</li>
-<li>They worked with the user to resolve the problem.</li>
-<li>The same user exploited another vulnerability to prove a point to
-the Rails project, which is against the GitHub terms of service.</li>
-<li>GitHub suspended the user&rsquo;s account in accordance with their terms
-of service.</li>
-</ul>
-
-
-<p>As an unauthorized breach of a computer system, what Egor Homakov did
-is illegal in the United States. It was also irresponsible and
-unprofessional. However, his intent was not malicious. I think GitHub
-did the right thing by giving him another chance in reinstating
-Mr. Homakov&rsquo;s account several hours after the incident.</p>
-
-<p>GitHub has issued two apologies about this incident. First for the
-vulnerability existing in the first place, and second for not being
-clear how customers and users can responsibly disclose security
-vulnerabilities. They also committed to doing a security audit of
-their code base.</p>
-
-<p>GitHub is classy.</p>
-
-<h1>Security</h1>
-
-<p>After the above, I feel compelled to say some more things about
-security in general. You are responsible for a lot of things regarding
-the web applications in your infrastructure. One of those is security,
-and you should do everything you can to write stable, secure code.</p>
-
-<p>In a hackernews thread about this incident, Yehuda Katz said,
-&ldquo;<a href="http://news.ycombinator.com/item?id=3664334">Not all security vulnerabilities can be protected automatically by a web framework</a>.&rdquo;</p>
-
-<p>That is a fact. However, web frameworks should provide sane, secure
-settings by default. Those settings should be modifiable by the
-end-user, the developer. If a developer wishes to disable those
-controls, they totally have that right. I think that they need to
-understand the potential risk that they are accepting, and what impact
-that might have on the business/organization implementing the
-application.</p>
-
-<p>This is <em>exactly</em> like the default setting of Red Hat Enterprise Linux
-to enable SELinux by default on new installations. Whether you love or
-hate this default, it is sane and secure. System administrators can
-then use the system as is, or disable SELinux if that is an acceptable
-level of risk.</p>
-
-<p>Clearly in this incident, it is <em>not</em> an acceptable level of risk for
-GitHub, as they have repaired their application. It would have better
-to do that long ago, but at least it&rsquo;s fixed now.</p>
-
-<p>Security and convenience are quite often polar opposites and mutually
-exclusive. This is not always the case, but it is true much of the
-time, if not most of the time. The choice for Rails to not have
-whitelisting by default is in favor of developer convenience. Yes, it
-is up to the developer to make their application secure, but that was
-already the case. This simply creates extra work for them to do so.</p>
-
-<p>Deny-all by default is the sane, correct and secure posture to take
-when building systems. This is the practice of many tools and
-operating system defaults &ndash; SELinux as mentioned, or &ldquo;no open ports&rdquo;
-per Ubuntu&rsquo;s practice. You don&rsquo;t have to agree with it, and you
-certainly can change it, but that doesn&rsquo;t change the fact that it is
-<em>correct</em> and <em>sane</em>.</p>
-
-<h2>Vulnerability Disclosure</h2>
-
-<p>There is an entire field in information technology devoted to
-vulnerability disclosure. This is typically done by people performing
-&ldquo;ethical hacking&rdquo; and is one thing done when a code base goes through
-a security audit. This is a field that has responsible professionals
-participating in a variety of companies, and if it sounds interesting
-to you, I recommend the variety of courses offered by the SANS
-Institute:</p>
-
-<ul>
-<li><a href="https://www.sans.org/security-training/web-app-penetration-testing-ethical-hacking-942-mid">Web Application Penetration Testing (SEC542)</a></li>
-<li><a href="https://www.sans.org/security-training/network-penetration-testing-ethical-hacking-937-mid">Network Penetration Testing (SEC560)</a></li>
-<li><a href="https://www.sans.org/security-training/advanced-penetration-testing-exploits-ethical-hacking-1517-mid">Advanced Penetration Testing (SEC660)</a></li>
-</ul>
-
-
-<h1>What You Can Do</h1>
-
-<p>First of all, understand the security guidelines and best practices
-for the programming language you&rsquo;re using. Doing things that are
-typesafe, or avoid buffer overflows, that kind of thing. Also
-understand and follow the security guideslines and best practices for
-the web framework you&rsquo;re using. The Ruby on Rails project has a fairly
-detailed
-<a href="http://guides.rubyonrails.org/security.html">security guide</a>. If
-you&rsquo;re taking shortcuts, understand the possible risks with that. If
-you don&rsquo;t know the risks, or understand the guidelines, please ask
-someone in the community for help.</p>
-
-<p>I strongly recommend you also learn the security guidelines and
-associated best practices for the operating system or distribution
-that your application will run on in production. If your organization
-has operations staff, I&rsquo;m sure they can help you learn and understand.
-If they don&rsquo;t, they&rsquo;re not doing their job :).</p>
-
-<p>Every organization and every application is different. The security
-implications are going to vary by industry. Talk to the business
-owners and find out what the level of security risk they are
-comfortable accepting.</p>
-
-<p>Above all, be a professional. Don&rsquo;t flippantly close security bugs.
-Don&rsquo;t be a dick on discussions about security topics.</p>
-
-<p>In other words, be classy. Like GitHub.</p>
-
-<p>Thank you.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -2558,6 +2484,10 @@ Don&rsquo;t be a dick on discussions about security topics.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
       </li>
     
@@ -2571,10 +2501,6 @@ Don&rsquo;t be a dick on discussions about security topics.</p>
     
       <li class="post">
         <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
       </li>
     
   </ul>

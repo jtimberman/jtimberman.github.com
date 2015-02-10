@@ -329,12 +329,18 @@
         <lastmod>2015-01-17T23:01:35-07:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://jtimberman.housepub.org/blog/2015/02/09/quick-tip-create-a-provisioner-node/
+        </loc>
+        <lastmod>2015-02-09T21:09:19-07:00</lastmod>
+    </url>
+    <url>
         <loc>http://jtimberman.housepub.org/blog/archives/</loc>
-        <lastmod>2015-01-17T23:01:35-07:00</lastmod>
+        <lastmod>2015-02-09T21:09:19-07:00</lastmod>
     </url>
     <url>
         <loc>http://jtimberman.housepub.org/</loc>
-        <lastmod>2015-01-17T23:01:35-07:00</lastmod>
+        <lastmod>2015-02-09T21:09:19-07:00</lastmod>
     </url>
     <url>
         <loc>http://jtimberman.housepub.org/robots.txt</loc>

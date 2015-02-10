@@ -9,8 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Recently, Apple did the most awesome thing for non-Xcode developers. They made the development tools available as a
-standalone package! This is &hellip;">
+  <meta name="description" content="Fact: GitHub is classy. This isn&rsquo;t just because
+Scott Chacon works there, either. Their
+handling of a security issue today was very &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -80,6 +81,207 @@ standalone package! This is &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/03/04/github-is-classy/">Github Is Classy</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-04T18:42:00-07:00" pubdate data-updated="true">Mar 4<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Fact: GitHub is classy. This isn&rsquo;t just because
+<a href="https://github.com/schacon">Scott Chacon</a> works there, either. Their
+handling of a security issue today was very professional. That said, I
+have some words to say about the issue itself and the aftermath, and
+things you as an application developer can do to help, and to avoid
+this kind of problem.</p>
+
+<p><em>Disclaimer: I&rsquo;m not an application developer. I am a sysadmin with a
+ diverse background in operating system security, including previously
+ held GSEC and GCUX certifications from the SANS Institute/GIAC.</em></p>
+
+<p><em>Second disclaimer: This is not an anti-Rails post. All web frameworks
+ need to be conscious of security, and take bug reports for security
+ issues seriously.</em></p>
+
+<h1>Issue</h1>
+
+<p><em>Update &ndash; Preface: I am not talking about a security vulnerability (a
+la an exploit) in Rails. I am talking about a feature that allows
+automatically generated code to do things that are not secure and it
+is apparently on purpose and by design. This is the wrong thing to
+do. Deny by default with whitelisting is the right thing to do.</em></p>
+
+<p>There is a security issue in
+<a href="https://github.com/rails/rails/issues/5228">Ruby on Rails</a>. The bug
+is closed, but I haven&rsquo;t dug into find out if the actual problem is
+fixed.</p>
+
+<p>The bug itself is very serious. It allows a malicious user to send
+arbitrary parameters to a Rails application without requiring
+whitelisting up front. In fact,
+<a href="https://github.com/rails/rails/pull/4062">three months ago an issue</a>
+was opened in the Rails project to force new applications to enforce
+whitelist mode by default. That bug was subsequently closed just a few
+days ago. I&rsquo;m not going to do an analysis of the issue itself, you can go
+read the linked tickets and do further research on the issue.</p>
+
+<p><em>Update</em> I missed clarifying this. There is a second issue at hand.
+ GitHub resolved the mass assignment bug by fixing their application.
+ The second issue is that they had a vulnerability in their public key
+ form update.</p>
+
+<h2>Resolution and Aftermath</h2>
+
+<p>You can read all about the initial resolution and retrospective on the
+<a href="https://github.com/blog/1068-public-key-security-vulnerability-and-mitigation">GitHub blog</a>.
+You can also read their
+<a href="https://github.com/blog/1069-responsible-disclosure-policy">follow-up post</a>
+on responsible disclosure.</p>
+
+<p>The manner in which they handled the situation is a class act: they
+behaved like professionals. Here&rsquo;s why:</p>
+
+<ul>
+<li>A user reported a problem with their app.</li>
+<li>They worked with the user to resolve the problem.</li>
+<li>The same user exploited another vulnerability to prove a point to
+the Rails project, which is against the GitHub terms of service.</li>
+<li>GitHub suspended the user&rsquo;s account in accordance with their terms
+of service.</li>
+</ul>
+
+
+<p>As an unauthorized breach of a computer system, what Egor Homakov did
+is illegal in the United States. It was also irresponsible and
+unprofessional. However, his intent was not malicious. I think GitHub
+did the right thing by giving him another chance in reinstating
+Mr. Homakov&rsquo;s account several hours after the incident.</p>
+
+<p>GitHub has issued two apologies about this incident. First for the
+vulnerability existing in the first place, and second for not being
+clear how customers and users can responsibly disclose security
+vulnerabilities. They also committed to doing a security audit of
+their code base.</p>
+
+<p>GitHub is classy.</p>
+
+<h1>Security</h1>
+
+<p>After the above, I feel compelled to say some more things about
+security in general. You are responsible for a lot of things regarding
+the web applications in your infrastructure. One of those is security,
+and you should do everything you can to write stable, secure code.</p>
+
+<p>In a hackernews thread about this incident, Yehuda Katz said,
+&ldquo;<a href="http://news.ycombinator.com/item?id=3664334">Not all security vulnerabilities can be protected automatically by a web framework</a>.&rdquo;</p>
+
+<p>That is a fact. However, web frameworks should provide sane, secure
+settings by default. Those settings should be modifiable by the
+end-user, the developer. If a developer wishes to disable those
+controls, they totally have that right. I think that they need to
+understand the potential risk that they are accepting, and what impact
+that might have on the business/organization implementing the
+application.</p>
+
+<p>This is <em>exactly</em> like the default setting of Red Hat Enterprise Linux
+to enable SELinux by default on new installations. Whether you love or
+hate this default, it is sane and secure. System administrators can
+then use the system as is, or disable SELinux if that is an acceptable
+level of risk.</p>
+
+<p>Clearly in this incident, it is <em>not</em> an acceptable level of risk for
+GitHub, as they have repaired their application. It would have better
+to do that long ago, but at least it&rsquo;s fixed now.</p>
+
+<p>Security and convenience are quite often polar opposites and mutually
+exclusive. This is not always the case, but it is true much of the
+time, if not most of the time. The choice for Rails to not have
+whitelisting by default is in favor of developer convenience. Yes, it
+is up to the developer to make their application secure, but that was
+already the case. This simply creates extra work for them to do so.</p>
+
+<p>Deny-all by default is the sane, correct and secure posture to take
+when building systems. This is the practice of many tools and
+operating system defaults &ndash; SELinux as mentioned, or &ldquo;no open ports&rdquo;
+per Ubuntu&rsquo;s practice. You don&rsquo;t have to agree with it, and you
+certainly can change it, but that doesn&rsquo;t change the fact that it is
+<em>correct</em> and <em>sane</em>.</p>
+
+<h2>Vulnerability Disclosure</h2>
+
+<p>There is an entire field in information technology devoted to
+vulnerability disclosure. This is typically done by people performing
+&ldquo;ethical hacking&rdquo; and is one thing done when a code base goes through
+a security audit. This is a field that has responsible professionals
+participating in a variety of companies, and if it sounds interesting
+to you, I recommend the variety of courses offered by the SANS
+Institute:</p>
+
+<ul>
+<li><a href="https://www.sans.org/security-training/web-app-penetration-testing-ethical-hacking-942-mid">Web Application Penetration Testing (SEC542)</a></li>
+<li><a href="https://www.sans.org/security-training/network-penetration-testing-ethical-hacking-937-mid">Network Penetration Testing (SEC560)</a></li>
+<li><a href="https://www.sans.org/security-training/advanced-penetration-testing-exploits-ethical-hacking-1517-mid">Advanced Penetration Testing (SEC660)</a></li>
+</ul>
+
+
+<h1>What You Can Do</h1>
+
+<p>First of all, understand the security guidelines and best practices
+for the programming language you&rsquo;re using. Doing things that are
+typesafe, or avoid buffer overflows, that kind of thing. Also
+understand and follow the security guideslines and best practices for
+the web framework you&rsquo;re using. The Ruby on Rails project has a fairly
+detailed
+<a href="http://guides.rubyonrails.org/security.html">security guide</a>. If
+you&rsquo;re taking shortcuts, understand the possible risks with that. If
+you don&rsquo;t know the risks, or understand the guidelines, please ask
+someone in the community for help.</p>
+
+<p>I strongly recommend you also learn the security guidelines and
+associated best practices for the operating system or distribution
+that your application will run on in production. If your organization
+has operations staff, I&rsquo;m sure they can help you learn and understand.
+If they don&rsquo;t, they&rsquo;re not doing their job :).</p>
+
+<p>Every organization and every application is different. The security
+implications are going to vary by industry. Talk to the business
+owners and find out what the level of security risk they are
+comfortable accepting.</p>
+
+<p>Above all, be a professional. Don&rsquo;t flippantly close security bugs.
+Don&rsquo;t be a dick on discussions about security topics.</p>
+
+<p>In other words, be classy. Like GitHub.</p>
+
+<p>Thank you.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1535,297 +1737,6 @@ really was the final motivator.</font></p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/11/24/ruby-in-ubuntu-11-dot-10/">Ruby in Ubuntu 11.10</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-11-24T00:16:00-07:00" pubdate data-updated="true">Nov 24<span>th</span>, 2011</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I was playing around with Ubuntu 11.10 the other day, to explore some of the
-changes that have happened to Ruby lately, and thought I&rsquo;d share my findings.</p>
-
-<p>First off, there are still Ruby 1.8(.7p352) packages. This is the
-default you get with the <code>ruby</code> package. However, the <code>ruby1.9.1</code> has
-Ruby 1.9.2p290 as the default version. This isn&rsquo;t the absolute latest
-released (officially, 1.9.3 is the latest stable release), but it&rsquo;s a
-widespread release that a lot of people are using in production.</p>
-
-<p>The main package for getting the Ruby executables is <code>ruby1.9.1</code>. It
-is now a &ldquo;full&rdquo; installation and includes:</p>
-
-<ul>
-<li>/usr/bin/gem1.9.1</li>
-<li>/usr/bin/rdoc1.9.1</li>
-<li>/usr/bin/rake1.9.1</li>
-<li>/usr/bin/erb1.9.1</li>
-<li>/usr/bin/ri1.9.1</li>
-<li>/usr/bin/ruby1.9.1</li>
-<li>/usr/bin/irb1.9.1</li>
-<li>/usr/bin/testrb1.9.1</li>
-</ul>
-
-
-<p>Previous versions had these as separate packages, and you had to
-remember to install everything to have a full Ruby installation
-available.</p>
-
-<p>In the package name and the above binaries, <code>1.9.1</code> indicates the Ruby
-library compatibility, <code>1.9.2</code> is compatible with <code>1.9.1</code>.</p>
-
-<p>The Debian alternatives system is used to set the default ruby, gem
-and irb binaries in the $PATH as links to the 1.9.1 versions, e.g.:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ls -l /usr/bin/ruby /etc/alternatives/ruby
-</span><span class='line'>lrwxrwxrwx 1 root root 18 2011-11-24 00:02 /etc/alternatives/ruby -&gt; /usr/bin/ruby1.9.1
-</span><span class='line'>lrwxrwxrwx 1 root root 22 2011-11-24 00:02 /usr/bin/ruby -&gt; /etc/alternatives/ruby</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Users can also update RubyGems via the <code>gem update --system</code> command,
-but a shell environment variable must be exported first.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">export </span><span class="nv">REALLY_GEM_UPDATE_SYSTEM</span><span class="o">=</span>yes
-</span><span class='line'>sudo -E gem update --system
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>-E</code> is significant so the variable is available via
-<code>sudo</code>. Without this variable set, this command will warn noisily
-that you should know what you&rsquo;re doing, and what this is up
-to. Personally, I&rsquo;m fine with RubyGems 1.3.7, as that is the version
-that the Chef <code>gem_package</code> provider uses for the API. With the
-default RubyGems, you also get binaries in <code>/usr/local/bin</code>, rather than
-the awkward <code>/var/lib/ruby</code> location in earlier versions.</p>
-
-<p>These changes are a result of work that has been going in
-<a href="http://wiki.debian.org/Teams/Ruby/Packaging">Debian Wheezy by the Ruby packaging team</a>,
-kicked off by
-<a href="http://lists.debian.org/debian-devel/2011/03/msg00210.html">Lucas Nussbaum</a>.</p>
-
-<p>That said, let&rsquo;s put this to use so we can have Chef running under the
-Ruby 1.9.2 available via APT.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo apt-get install ruby1.9.1 ruby1.9.1-dev build-essential
-</span><span class='line'>Reading package lists... Done
-</span><span class='line'>Building dependency tree
-</span><span class='line'>Reading state information... Done
-</span><span class='line'>build-essential is already the newest version.
-</span><span class='line'>Suggested packages:
-</span><span class='line'>  ruby1.9.1-examples ri1.9.1 graphviz
-</span><span class='line'>The following NEW packages will be installed:
-</span><span class='line'>  libruby1.9.1 ruby1.9.1 ruby1.9.1-dev
-</span><span class='line'>0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
-</span><span class='line'>Need to get 0 B/5,027 kB of archives.
-</span><span class='line'>After this operation, 19.5 MB of additional disk space will be used.
-</span><span class='line'>Selecting previously deselected package libruby1.9.1.
-</span><span class='line'><span class="o">(</span>Reading database ... 141637 files and directories currently installed.<span class="o">)</span>
-</span><span class='line'>Unpacking libruby1.9.1 <span class="o">(</span>from .../libruby1.9.1_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
-</span><span class='line'>Selecting previously deselected package ruby1.9.1.
-</span><span class='line'>Unpacking ruby1.9.1 <span class="o">(</span>from .../ruby1.9.1_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
-</span><span class='line'>Selecting previously deselected package ruby1.9.1-dev.
-</span><span class='line'>Unpacking ruby1.9.1-dev <span class="o">(</span>from .../ruby1.9.1-dev_1.9.2.290-2_amd64.deb<span class="o">)</span> ...
-</span><span class='line'>Processing triggers <span class="k">for </span>man-db ...
-</span><span class='line'>Setting up libruby1.9.1 <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
-</span><span class='line'>Setting up ruby1.9.1 <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
-</span><span class='line'>update-alternatives: using /usr/bin/gem1.9.1 to provide /usr/bin/gem <span class="o">(</span>gem<span class="o">)</span> in auto mode.
-</span><span class='line'>update-alternatives: using /usr/bin/ruby1.9.1 to provide /usr/bin/ruby <span class="o">(</span>ruby<span class="o">)</span> in auto mode.
-</span><span class='line'>Setting up ruby1.9.1-dev <span class="o">(</span>1.9.2.290-2<span class="o">)</span> ...
-</span><span class='line'>Processing triggers <span class="k">for </span>libc-bin ...
-</span><span class='line'>ldconfig deferred processing now taking place
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>One of Chef&rsquo;s dependency gems is <code>json</code>, which has native C
-extensions, so the development headers for Ruby, and build tools are
-required (though already installed on my system).</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ruby --version
-</span><span class='line'>ruby 1.9.2p290 <span class="o">(</span>2011-07-09 revision 32553<span class="o">)</span> <span class="o">[</span>x86_64-linux<span class="o">]</span>
-</span><span class='line'>% gem --version
-</span><span class='line'>1.3.7
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now, I can install Chef as a RubyGem.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo gem install chef
-</span><span class='line'>Building native extensions.  This could take a <span class="k">while</span>...
-</span><span class='line'><span class="o">[</span>Version 0.7.8<span class="o">]</span> <span class="nb">test </span>suite cleanup <span class="o">(</span>eliminated some race conditions related to queue.message_count<span class="o">)</span>
-</span><span class='line'>Building native extensions.  This could take a <span class="k">while</span>...
-</span><span class='line'>Successfully installed mixlib-config-1.1.2
-</span><span class='line'>Successfully installed mixlib-cli-1.2.2
-</span><span class='line'>Successfully installed mixlib-log-1.3.0
-</span><span class='line'>Successfully installed mixlib-authentication-1.1.4
-</span><span class='line'>Successfully installed yajl-ruby-1.1.0
-</span><span class='line'>Successfully installed systemu-2.2.0
-</span><span class='line'>Successfully installed ohai-0.6.10
-</span><span class='line'>Successfully installed mime-types-1.17.2
-</span><span class='line'>Successfully installed rest-client-1.6.7
-</span><span class='line'>Successfully installed bunny-0.7.8
-</span><span class='line'>Successfully installed json-1.5.2
-</span><span class='line'>Successfully installed polyglot-0.3.3
-</span><span class='line'>Successfully installed treetop-1.4.10
-</span><span class='line'>Successfully installed net-ssh-2.1.4
-</span><span class='line'>Successfully installed net-ssh-gateway-1.1.0
-</span><span class='line'>Successfully installed net-ssh-multi-1.1
-</span><span class='line'>Successfully installed erubis-2.7.0
-</span><span class='line'>Successfully installed moneta-0.6.0
-</span><span class='line'>Successfully installed highline-1.6.8
-</span><span class='line'>Successfully installed uuidtools-2.1.2
-</span><span class='line'>Successfully installed chef-0.10.4
-</span><span class='line'>21 gems installed
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And running Chef just works:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% sudo chef-client
-</span><span class='line'><span class="o">[</span>Thu, 24 Nov 2011 14:02:38 -0700<span class="o">]</span> INFO: *** Chef 0.10.4 ***
-</span><span class='line'>...
-</span><span class='line'><span class="o">[</span>Thu, 24 Nov 2011 14:02:50 -0700<span class="o">]</span> INFO: Chef Run <span class="nb">complete </span>in 9.862972181 seconds
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The results of the node object on the Chef Server:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% knife node show virt1test -a languages.ruby
-</span><span class='line'>languages.ruby:
-</span><span class='line'>  bin_dir:        /usr/bin
-</span><span class='line'>  gem_bin:        /usr/bin/gem1.9.1
-</span><span class='line'>  gems_dir:       /var/lib/gems/1.9.1
-</span><span class='line'>  host:           x86_64-pc-linux-gnu
-</span><span class='line'>  host_cpu:       x86_64
-</span><span class='line'>  host_os:        linux-gnu
-</span><span class='line'>  host_vendor:    pc
-</span><span class='line'>  platform:       x86_64-linux
-</span><span class='line'>  release_date:   2011-07-09
-</span><span class='line'>  ruby_bin:       /usr/bin/ruby1.9.1
-</span><span class='line'>  target:         x86_64-pc-linux-gnu
-</span><span class='line'>  target_cpu:     x86_64
-</span><span class='line'>  target_os:      linux
-</span><span class='line'>  target_vendor:  pc
-</span><span class='line'>  version:        1.9.2
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Overall, I&rsquo;m happy with the changes that the Debian Ruby Packaging
-Team has made, and I&rsquo;m glad to see these come to Ubuntu in
-11.10+. It&rsquo;s not the absolute latest version available, but this is
-good forward progress for binary Linux distributions. I also like that
-the alternatives system is used, so users could choose to install and
-use other Ruby interpreters. Hopefully these changes quell some of the
-arguments about Debian and Ubuntu and their handling of Ruby.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -1860,6 +1771,10 @@ arguments about Debian and Ubuntu and their handling of Ruby.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
       </li>
     
@@ -1873,10 +1788,6 @@ arguments about Debian and Ubuntu and their handling of Ruby.</p>
     
       <li class="post">
         <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
       </li>
     
   </ul>

@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when &hellip;">
+  <meta name="description" content="This quick tip is brought to you by my preparation for my ChefConf talk about using Chef Provisioning to build a Chef Server Cluster, which is based &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,178 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-02-09T20:50:12-07:00" pubdate data-updated="true">Feb 9<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This quick tip is brought to you by my preparation for my ChefConf talk about using Chef Provisioning to build a Chef Server Cluster, which is based on my blog post about the same. In the blog post I used chef-zero as my Chef Server, but for the talk I&rsquo;m using Hosted Chef.</p>
+
+<p>In order for the Chef Provisioning recipe to work the provisioning node &ndash; the node that runs chef-client &ndash; needs to have the appropriate permissions to manage objects on the Chef Server. This is easy with chef-zero &ndash; there are no ACLs at all. However in Hosted Chef, like any regular Chef Server, the ACLs don&rsquo;t allow nodes&#8217; API clients to modify other nodes, or API clients.</p>
+
+<p>Fortunately we can do all the work necessary using knife, with the <a href="https://github.com/chef/knife-acl">knife-acl</a> plugin. In this quick tip, I&rsquo;ll create a group for provisioning nodes, and give that group the proper permissions for the Chef Provisioning recipe to create the machines&#8217; nodes and clients.</p>
+
+<p>First of all, I&rsquo;m using ChefDK, and it&rsquo;s my Ruby environment too, so install the gem:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem knife-acl
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, use the <code>knife group</code> subcommand to create the new group. Groups are a number of users and/or API clients. By default, an organization on Hosted Chef will have <code>admins</code>, <code>billing-admins</code>, <code>clients</code>, and <code>users</code>. Let&rsquo;s create <code>provisioners</code> now.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife group create provisioners
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The Role-based access control (RBAC) system in the Chef Server allows us to assign read, create, update, grant, and delete permissions to various objects in the organization. Containers are a special holder of other types of objects, in this case we need to add permissions for the clients and nodes containers. This is what allows the Chef Provisioning recipe&rsquo;s <code>machine</code> resources to have their Chef objects created.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers clients <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers nodes <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, we need the API client that will be used by the Chef Provisioning node to authenticate with the Chef Server, and the node needs to be created as well. By default the client will automatically have permissions for the node object that has the same name.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife client create -d chefconf-provisioner &gt; ~/.chef/chefconf-provisioner.pem
+</span><span class='line'>knife node create -d chefconf-provisioner
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, we need to put the new API client into the provisioners group that was created earlier. First we need to get a mapping of the actors in the organization. Then we can add the client to the group.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife actor map
+</span><span class='line'>knife group add actor provisioners chefconf-provisioner
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>knife actor map</code> command will generate a YAML file like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
+</span><span class='line'><span class="l-Scalar-Plain">:user_map</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">:users</span><span class="p-Indicator">:</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">jtimberman</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">12345678901234567890123456780123</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">:usags</span><span class="p-Indicator">:</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">12345678901234567890123456780123</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jtimberman</span>
+</span><span class='line'><span class="l-Scalar-Plain">:clients</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">chefconf-provisioner</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">chefconf-provisioner</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">jtimberman-chefconf-validator</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jtimberman-chefconf-validator</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This maps users to their USAG and stores a list of clients. More information about this is in the <a href="https://github.com/chef/knife-acl/blob/master/README.md">knife-acl README</a></p>
+
+<p>At this point, we have a node, with the private key in <code>~/.chef</code> that can be used with the Chef Server to use Chef Provisioning&rsquo;s <code>machine</code> resource. We can also perform additional tasks that require having a node object, such as create secrets as Chef Vault items:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json -A jtimberman -S <span class="s1">&#39;name:chefconf-provisioner&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The entire series of commands is below.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem knife-acl
+</span><span class='line'>knife group create provisioners
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers clients <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers nodes <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'>
+</span><span class='line'>knife client create -d chefconf-provisioner &gt; ~/.chef/chefconf-provisioner.pem
+</span><span class='line'>knife node create -d chefconf-provisioner
+</span><span class='line'>knife actor map
+</span><span class='line'>knife group add actor provisioners chefconf-provisioner
+</span><span class='line'>
+</span><span class='line'>knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json -A jtimberman -S <span class="s1">&#39;name:chefconf-provisioner&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hopefully this helps you out with your use of Chef Provisioning, and a non-zero Chef server. If you have further questions, find me at ChefConf!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1694,308 +1866,6 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/07/21/load-current-resource-and-chef-shell/">Load_current_resource and Chef-shell</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-07-21T09:50:56-06:00" pubdate data-updated="true">Jul 21<span>st</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This post will illustrate <code>load_current_resource</code> and a basic use of chef-shell.</p>
-
-<p>The <code>chef-shell</code> is an <code>irb</code>-based <a href="http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">REPL (read-eval-print-loop)</a>. Everything I do is Ruby code, just like in Chef recipes or other cookbook components. I&rsquo;m going to use a <code>package</code> resource example, so need privileged access (<code>sudo</code>).</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% sudo chef-shell</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The chef-shell program loads its configuration, determines what session type, and displays a banner. In this case, we&rsquo;re taking all the defaults, which means no special configuration, and a <code>standalone</code> session.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>loading configuration: none (standalone session)
-</span><span class='line'>Session type: standalone
-</span><span class='line'>Loading...done.
-</span><span class='line'>
-</span><span class='line'>This is the chef-shell.
-</span><span class='line'> Chef Version: 11.14.0.rc.2
-</span><span class='line'> http://www.opscode.com/chef
-</span><span class='line'> http://docs.opscode.com/
-</span><span class='line'>
-</span><span class='line'>run `help' for help, `exit' or ^D to quit.
-</span><span class='line'>
-</span><span class='line'>Ohai2u jtimberman@jenkins.int.housepub.org!</span></code></pre></td></tr></table></div></figure>
-
-
-<p>To evaluate resources as we&rsquo;d write them in a recipe, we need to switch to recipe mode.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef &gt; recipe_mode</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I can do anything here that I can do in a recipe. I could paste in my own recipes. Here, I&rsquo;m just going to add a <code>package</code> resource to manage the <code>vim</code> package. Note that this works like the &ldquo;compile&rdquo; phase of a <code>chef-client</code> run. The resource will be added to the <code>Chef::ResourceCollection</code> object. We&rsquo;ll look at this in a little more detail shortly.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef:recipe &gt; package "vim"
-</span><span class='line'> =&gt; &lt;package[vim] @name: "vim" @noop: nil @before: nil @params: {} @provider: nil @allowed_actions: [:nothing, :install, :upgrade, :remove, :purge, :reconfig] @action: :install @updated: false @updated_by_last_action: false @supports: {} @ignore_failure: false @retries: 0 @retry_delay: 2 @source_line: "(irb#1):1:in `irb_binding'" @guard_interpreter: :default @elapsed_time: 0 @sensitive: false @candidate_version: nil @options: nil @package_name: "vim" @resource_name: :package @response_file: nil @response_file_variables: {} @source: nil @version: nil @timeout: 900 @cookbook_name: nil @recipe_name: nil&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I&rsquo;m done adding resources/writing code to test, so I&rsquo;ll initiate a Chef run with the <code>run_chef</code> method (this is a special method in <code>chef-shell</code>).</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef:recipe &gt; run_chef
-</span><span class='line'>[2014-07-21T09:04:51-06:00] INFO: Processing package[vim] action install ((irb#1) line 1)
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] checking package status for vim
-</span><span class='line'>vim:
-</span><span class='line'>  Installed: 2:7.4.335-1
-</span><span class='line'>  Candidate: 2:7.4.335-1
-</span><span class='line'>  Version table:
-</span><span class='line'> *** 2:7.4.335-1 0
-</span><span class='line'>        500 http://ftp.us.debian.org/debian/ testing/main amd64 Packages
-</span><span class='line'>        100 /var/lib/dpkg/status
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] current version is 2:7.4.335-1
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] is already installed - nothing to do</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s take a look at what&rsquo;s happening. Note that we have INFO and DEBUG output. By default, <code>chef-shell</code> runs with <code>Chef::Log#level</code> set to <code>:debug</code>. In a normal Chef Client run with <code>:info</code> output, we see the first line, but not the others. I&rsquo;ll show each line, and then explain what Chef did.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:04:51-06:00] INFO: Processing package[vim] action install ((irb#1) line 1)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>There is a timestamp, the resource, <code>package[vim]</code>, the action <code>install</code> Chef will take, and the location in the recipe where this was encountered. I didn&rsquo;t specify one in the resource, that&rsquo;s the default action for package resources. The <code>irb#1 line 1</code> just means that it was the first line of the <code>irb</code> in recipe mode.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: Chef::Version::Comparable does not know how to parse the platform version: jessie/sid</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Chef chooses the default provider for each resource based on a mapping of platforms and their versions. It uses an internal class, <code>Chef::Version::Comparable</code> to do this. The system I&rsquo;m using is a Debian &ldquo;testing&rdquo; system, which has the codename <code>jessie</code>, but it isn&rsquo;t a specific release number. Chef knows that for all <code>debian</code> platforms to use the <code>apt</code> package provider, and that&rsquo;ll do here.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] checking package status for vim
-</span><span class='line'>vim:
-</span><span class='line'>  Installed: 2:7.4.335-1
-</span><span class='line'>  Candidate: 2:7.4.335-1
-</span><span class='line'>  Version table:
-</span><span class='line'> *** 2:7.4.335-1 0
-</span><span class='line'>        500 http://ftp.us.debian.org/debian/ testing/main amd64 Packages
-</span><span class='line'>        100 /var/lib/dpkg/status
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] current version is 2:7.4.335-1
-</span><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This output is the <code>load_current_resource</code> method implemented in the <a href="https://github.com/opscode/chef/blob/c507822d7b3fe0b34d02719dea0ab483ec292195/lib/chef/provider/package/apt.rb#L33-L38">apt package provider</a>.</p>
-
-<p>The <code>check_package_state</code> method does all the heavy lifting. It runs <code>apt-cache policy</code> and parses the output looking for the version number. If we used the <code>:update</code> action, and the installed version wasn&rsquo;t the same as the candidate version, Chef would install the candidate version.</p>
-
-<p>Chef resources are convergent. They only get updated if they need to be. In this case, the <code>vim</code> package is installed already (our implicitly specified action), so we see the following line:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:04:51-06:00] DEBUG: package[vim] is already installed - nothing to do</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Nothing to do, Chef finishes its run.</p>
-
-<h2>Modifying Existing Resources</h2>
-
-<p>We can manipulate the state of the resources in the resource collection. This isn&rsquo;t common in most recipes. It&rsquo;s required for certain kinds of development patterns like &ldquo;wrapper&rdquo; cookbooks. As an example, I&rsquo;m going to modify the resource object so I don&rsquo;t have to log into the system again and run <code>apt-get remove vim</code>, to show the next section.</p>
-
-<p>First, I&rsquo;m going to create a local variable in the context of the recipe. This is just like any other variable in Ruby. For its value, I&rsquo;m going to use the <code>#resources()</code> <a href="http://docs.opscode.com/chef/dsl_recipe.html#resources">method to look up</a> a resource in the resource collection.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef:recipe &gt; local_package_variable = resources("package[vim]")
-</span><span class='line'> =&gt; &lt;package[vim] @name: "vim" @noop: nil @before: nil @params: {} @provider: nil @allowed_actions: [:nothing, :install, :upgrade, :remove, :purge, :reconfig] @action: :install @updated: false @updated_by_last_action: false @supports: {} @ignore_failure: false @retries: 0 @retry_delay: 2 @source_line: "(irb#1):1:in `irb_binding'" @guard_interpreter: :default @elapsed_time: 0.029617095 @sensitive: false @candidate_version: nil @options: nil @package_name: "vim" @resource_name: :package @response_file: nil @response_file_variables: {} @source: nil @version: nil @timeout: 900 @cookbook_name: nil @recipe_name: nil&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The return value is the package resource object:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef:recipe &gt; local_package_variable.class
-</span><span class='line'> =&gt; Chef::Resource::Package</span></code></pre></td></tr></table></div></figure>
-
-
-<p>(<code>#class</code> is a method on the Ruby <code>Object</code> class that returns the class of the object)</p>
-
-<p>To remove the <code>vim</code> package, I use the <code>#run_action</code> method (available to all <code>Chef::Resource</code> subclasses), specifying the <code>:remove</code> action as a symbol:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef:recipe &gt; local_package_variable.run_action(:remove)
-</span><span class='line'>[2014-07-21T09:11:50-06:00] INFO: Processing package[vim] action remove ((irb#1) line 1)
-</span><span class='line'>[2014-07-21T09:11:52-06:00] INFO: package[vim] removed</span></code></pre></td></tr></table></div></figure>
-
-
-<p>There is no additional debug to display. Chef will run <code>apt-get remove vim</code> to converge the resource with this action.</p>
-
-<h2>Load Current Resource Redux</h2>
-
-<p>Now that the package has been removed from the system, what happens if we run Chef again? Well, Chef is convergent, and it takes idempotent actions on the system to ensure that the managed resources are in the desired state. That means it will install the <code>vim</code> package.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chef:recipe &gt; run_chef
-</span><span class='line'>[2014-07-21T09:11:57-06:00] INFO: Processing package[vim] action install ((irb#1) line 1)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>We&rsquo;ll see some familiar messages here about the version, then:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:11:57-06:00] DEBUG: package[vim] checking package status for vim
-</span><span class='line'>vim:
-</span><span class='line'>  Installed: (none)
-</span><span class='line'>  Candidate: 2:7.4.335-1
-</span><span class='line'>  Version table:
-</span><span class='line'>     2:7.4.335-1 0
-</span><span class='line'>        500 http://ftp.us.debian.org/debian/ testing/main amd64 Packages
-</span><span class='line'>[2014-07-21T09:11:57-06:00] DEBUG: package[vim] current version is nil
-</span><span class='line'>[2014-07-21T09:11:57-06:00] DEBUG: package[vim] candidate version is 2:7.4.335-1</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is <code>load_current_resource</code> working as expected. As we can see from the <code>apt-cache policy</code> output, the package is not installed, and as the action to take is <code>:install</code>, Chef will do what we think:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Reading package lists...
-</span><span class='line'>Building dependency tree...
-</span><span class='line'>Reading state information...
-</span><span class='line'>The following packages were automatically installed and are no longer required:
-</span><span class='line'>  g++-4.8 geoclue geoclue-hostip geoclue-localnet geoclue-manual
-</span><span class='line'>  geoclue-nominatim gstreamer0.10-plugins-ugly libass4 libblas3gf libcolord1
-</span><span class='line'>  libcolorhug1 libgeoclue0 libgnustep-base1.22 libgnutls28 libminiupnpc8
-</span><span class='line'>  libpoppler44 libqmi-glib0 libstdc++-4.8-dev python3-ply xulrunner-29
-</span><span class='line'>Use 'apt-get autoremove' to remove them.
-</span><span class='line'>Suggested packages:
-</span><span class='line'>  vim-doc vim-scripts
-</span><span class='line'>The following NEW packages will be installed:
-</span><span class='line'>  vim
-</span><span class='line'>0 upgraded, 1 newly installed, 0 to remove and 28 not upgraded.
-</span><span class='line'>Need to get 0 B/905 kB of archives.
-</span><span class='line'>After this operation, 2,088 kB of additional disk space will be used.
-</span><span class='line'>Selecting previously unselected package vim.
-</span><span class='line'>(Reading database ... 220338 files and directories currently installed.)
-</span><span class='line'>Preparing to unpack .../vim_2%3a7.4.335-1_amd64.deb ...
-</span><span class='line'>Unpacking vim (2:7.4.335-1) ...
-</span><span class='line'>Setting up vim (2:7.4.335-1) ...
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/vim (vim) in auto mode
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/vimdiff (vimdiff) in auto mode
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/rvim (rvim) in auto mode
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/rview (rview) in auto mode
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/vi (vi) in auto mode
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/view (view) in auto mode
-</span><span class='line'>update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/ex (ex) in auto mode</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This should be familiar to anyone that uses Debian/Ubuntu, it&rsquo;s standard <code>apt-get install</code> output. Of course, this is a development system so I have some cruft, but we&rsquo;ll ignore that ;).</p>
-
-<p>If we run_chef again, we get the output we saw in the original example in this post:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[2014-07-21T09:50:06-06:00] DEBUG: package[vim] is already installed - nothing to do</span></code></pre></td></tr></table></div></figure>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -2028,6 +1898,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
       </li>
     
@@ -2041,10 +1915,6 @@
     
       <li class="post">
         <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a>
       </li>
     
   </ul>

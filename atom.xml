@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-01-17T23:01:55-07:00</updated>
+  <updated>2015-02-09T21:12:15-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,151 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Create a Provisioner Node]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/02/09/quick-tip-create-a-provisioner-node/"/>
+    <updated>2015-02-09T20:50:12-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/02/09/quick-tip-create-a-provisioner-node</id>
+    <content type="html"><![CDATA[<p>This quick tip is brought to you by my preparation for my ChefConf talk about using Chef Provisioning to build a Chef Server Cluster, which is based on my blog post about the same. In the blog post I used chef-zero as my Chef Server, but for the talk I&rsquo;m using Hosted Chef.</p>
+
+<p>In order for the Chef Provisioning recipe to work the provisioning node &ndash; the node that runs chef-client &ndash; needs to have the appropriate permissions to manage objects on the Chef Server. This is easy with chef-zero &ndash; there are no ACLs at all. However in Hosted Chef, like any regular Chef Server, the ACLs don&rsquo;t allow nodes&#8217; API clients to modify other nodes, or API clients.</p>
+
+<p>Fortunately we can do all the work necessary using knife, with the <a href="https://github.com/chef/knife-acl">knife-acl</a> plugin. In this quick tip, I&rsquo;ll create a group for provisioning nodes, and give that group the proper permissions for the Chef Provisioning recipe to create the machines&#8217; nodes and clients.</p>
+
+<p>First of all, I&rsquo;m using ChefDK, and it&rsquo;s my Ruby environment too, so install the gem:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem knife-acl
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, use the <code>knife group</code> subcommand to create the new group. Groups are a number of users and/or API clients. By default, an organization on Hosted Chef will have <code>admins</code>, <code>billing-admins</code>, <code>clients</code>, and <code>users</code>. Let&rsquo;s create <code>provisioners</code> now.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife group create provisioners
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The Role-based access control (RBAC) system in the Chef Server allows us to assign read, create, update, grant, and delete permissions to various objects in the organization. Containers are a special holder of other types of objects, in this case we need to add permissions for the clients and nodes containers. This is what allows the Chef Provisioning recipe&rsquo;s <code>machine</code> resources to have their Chef objects created.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers clients <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers nodes <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, we need the API client that will be used by the Chef Provisioning node to authenticate with the Chef Server, and the node needs to be created as well. By default the client will automatically have permissions for the node object that has the same name.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife client create -d chefconf-provisioner &gt; ~/.chef/chefconf-provisioner.pem
+</span><span class='line'>knife node create -d chefconf-provisioner
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, we need to put the new API client into the provisioners group that was created earlier. First we need to get a mapping of the actors in the organization. Then we can add the client to the group.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife actor map
+</span><span class='line'>knife group add actor provisioners chefconf-provisioner
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>knife actor map</code> command will generate a YAML file like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
+</span><span class='line'><span class="l-Scalar-Plain">:user_map</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">:users</span><span class="p-Indicator">:</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">jtimberman</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">12345678901234567890123456780123</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">:usags</span><span class="p-Indicator">:</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">12345678901234567890123456780123</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jtimberman</span>
+</span><span class='line'><span class="l-Scalar-Plain">:clients</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">chefconf-provisioner</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">chefconf-provisioner</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">jtimberman-chefconf-validator</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jtimberman-chefconf-validator</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This maps users to their USAG and stores a list of clients. More information about this is in the <a href="https://github.com/chef/knife-acl/blob/master/README.md">knife-acl README</a></p>
+
+<p>At this point, we have a node, with the private key in <code>~/.chef</code> that can be used with the Chef Server to use Chef Provisioning&rsquo;s <code>machine</code> resource. We can also perform additional tasks that require having a node object, such as create secrets as Chef Vault items:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json -A jtimberman -S <span class="s1">&#39;name:chefconf-provisioner&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The entire series of commands is below.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem knife-acl
+</span><span class='line'>knife group create provisioners
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers clients <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">  </span>knife acl add containers nodes <span class="nv">$i</span> group provisioners
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'>
+</span><span class='line'>knife client create -d chefconf-provisioner &gt; ~/.chef/chefconf-provisioner.pem
+</span><span class='line'>knife node create -d chefconf-provisioner
+</span><span class='line'>knife actor map
+</span><span class='line'>knife group add actor provisioners chefconf-provisioner
+</span><span class='line'>
+</span><span class='line'>knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json -A jtimberman -S <span class="s1">&#39;name:chefconf-provisioner&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hopefully this helps you out with your use of Chef Provisioning, and a non-zero Chef server. If you have further questions, find me at ChefConf!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Define Resources to Notifiy in LWRPs]]></title>
@@ -4656,129 +4801,6 @@ help conserve resources.</p>
 <p>Hopefully the <code>kitchen-jenkins</code> cookbook is helpful and this blog post
 will give you some ideas how to go about adding cookbook tests to your
 CI system, even if it&rsquo;s not Jenkins.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[TDD Cookbook Ticket]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket/"/>
-    <updated>2013-05-03T14:36:00-06:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/05/03/tdd-cookbook-ticket</id>
-    <content type="html"><![CDATA[<p>This post will briefly describe how I did a TDD update to Opscode&rsquo;s
-<a href="http://ckbk.it/runit">runit</a> to resolve an
-<a href="https://tickets.opscode.com/browse/COOK-2867">issue reported last night</a>.</p>
-
-<p>First, the issue manifests itself only on Debian systems. The runit
-cookbook&rsquo;s <code>runit_service</code> provider will write an
-<a href="http://tickets.opscode.com/browse/COOK-1576">LSB init.d script</a> on
-Debian, rather than symlinking to <code>/usr/bin/sv</code>. The problem raised in
-the new ticket is that the template will follow the link and write to
-<code>/usr/bin/sv</code>. This is bad, as it will end up in a forkbomb as
-runsvdir attempts to restart sv on
-<a href="http://drupal.org/files/x-all-the-things-template.png">all the things</a>.
-Oops! Sorry about that. Let&rsquo;s get it fixed, and practice some TDD.</p>
-
-<p>The runit cookbook includes support for test-kitchen, though I did
-need to
-<a href="https://github.com/opscode-cookbooks/runit/commit/8d2e0fcb9d6becf99c0d30694164e57d59fb667b">update it</a>
-for this effort. Part of this change was adding a box for Debian in
-the <code>.kitchen.yml</code>. I set about resolving this with TDD in mind.</p>
-
-<p>First, the runit cookbook includes a couple
-<a href="https://github.com/opscode-cookbooks/runit/tree/master/test/cookbooks">&ldquo;test&rdquo; cookbooks</a>
-to facilitate setting up the system with the <code>runit_service</code> resource
-so the outcome can be tested to ensure the behavior is correct. I
-started by adding a &ldquo;failing test&rdquo; in the <code>runit_test::service</code>
-recipe, meaning a link resource, and a <code>runit_service</code> resource that
-would overwrite <code>/usr/bin/sv</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">link</span> <span class="s2">&quot;/etc/init.d/cook-2867&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">to</span> <span class="s2">&quot;/usr/bin/sv&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">runit_service</span> <span class="s2">&quot;cook-2867&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">default_logger</span> <span class="kp">true</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then I ran <code>kitchen test</code> on the Debian box. As expected, the link was
-created, and then the runit service was configured. The service&rsquo;s
-provider will wait until the service is up. Since we&rsquo;ve destroyed the
-sv binary, that will never happen, so I destroyed it. I manually
-confirmed the behavior too, to make sure I wasn&rsquo;t seeing something
-weird. Due to its very nature, this is <em>really</em> hard to test for
-automatically, but it will happen consistently.</p>
-
-<p>Next, I had to write the code to implement the fix for this bug.
-Essentially, this means checking if the <code>/etc/init.d/cook-2867</code> file
-is a symbolink link, and removing it.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">initfile</span> <span class="o">=</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="s1">&#39;/etc&#39;</span><span class="p">,</span> <span class="s1">&#39;init.d&#39;</span><span class="p">,</span> <span class="n">new_resource</span><span class="o">.</span><span class="n">service_name</span><span class="p">)</span>
-</span><span class='line'><span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">initfile</span><span class="p">)</span> <span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">symlink?</span><span class="p">(</span><span class="n">initfile</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Simple enough. Next I tested again by destroying the existing
-environment and rerunning it from scratch. This takes some time, but
-it verifies that everything is working properly. Here&rsquo;s the output on
-Debian:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">link</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">runit_test</span><span class="o">::</span><span class="n">service</span> <span class="n">line</span> <span class="mi">147</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">link</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">created</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">service</span><span class="o">[</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">nothing</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">runit_service</span><span class="o">[</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">enable</span> <span class="p">(</span><span class="n">runit_test</span><span class="o">::</span><span class="n">service</span> <span class="n">line</span> <span class="mi">151</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">run</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">log</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">main</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">directory</span><span class="o">[</span><span class="sr">/var/</span><span class="n">log</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">file</span><span class="o">[</span><span class="sr">/etc/s</span><span class="n">v</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">run</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Processing</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">action</span> <span class="n">create</span> <span class="p">(</span><span class="n">dynamically</span> <span class="n">defined</span><span class="p">)</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">updated</span> <span class="n">content</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">owner</span> <span class="n">changed</span> <span class="n">to</span> <span class="mi">0</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">group</span> <span class="n">changed</span> <span class="n">to</span> <span class="mi">0</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">template</span><span class="o">[</span><span class="sr">/etc/ini</span><span class="n">t</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">mode</span> <span class="n">changed</span> <span class="n">to</span> <span class="mi">755</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="n">runit_service</span><span class="o">[</span><span class="n">cook</span><span class="o">-</span><span class="mi">2867</span><span class="o">]</span> <span class="n">configured</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Chef</span> <span class="no">Run</span> <span class="n">complete</span> <span class="k">in</span> <span class="mi">7</span><span class="o">.</span><span class="mi">267132764</span> <span class="n">seconds</span>
-</span><span class='line'><span class="ss">INFO</span><span class="p">:</span> <span class="no">Running</span> <span class="n">report</span> <span class="n">handlers</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I didn&rsquo;t feel I needed a specific test for this in minitest-chef,
-because it wouldn&rsquo;t have finished converging (earlier behavior I saw
-in the &ldquo;failing&rdquo; test).</p>
-
-<p>If you&rsquo;re contributing to cookbooks, and they have support for
-test-kitchen, it&rsquo;s awesome if you can open a bug report with a failing
-test. In this case, it was fairly easy to reproduce the bug.</p>
 ]]></content>
   </entry>
   
