@@ -9,9 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Fact: GitHub is classy. This isn&rsquo;t just because
-Scott Chacon works there, either. Their
-handling of a security issue today was very &hellip;">
+  <meta name="description" content="Most commonly, Vagrant&rsquo;s
+Vagrantfile describes only a single VM. That&rsquo;s fine, but most
+environments separate functionality to different &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +81,376 @@ handling of a security issue today was very &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/03/18/multivm-vagrantfile-for-chef/">MultiVM Vagrantfile for Chef</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-18T00:16:00-06:00" pubdate data-updated="true">Mar 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Most commonly, <a href="http://vagrantup.com">Vagrant&rsquo;s</a>
+Vagrantfile describes only a single VM. That&rsquo;s fine, but most
+environments separate functionality to different servers (e.g.,
+database and web app). For this reason, Vagrantfiles can be set up for
+<a href="http://docs.vagrantup.com/v2/multi-machine/index.html">multi-VM arrangements</a>.</p>
+
+<p>However, I&rsquo;m going to describe a different use case for multiple VMs.</p>
+
+<h2>Testing Multiple Distributions</h2>
+
+<p>As a cookbook developer for a variety of platforms and platform
+versions, I have to ensure changes do not break existing functionality
+across supported platforms &ndash; namely current releases of Ubuntu and
+CentOS (and their parents, Debian and RHEL).</p>
+
+<p>Enter Vagrant&rsquo;s Multi-VM Vagrantfile.</p>
+
+<p>While I <a href="/blog/2012/02/15/testing-with-fission/">posted recently</a>
+about testing with VMware Fusion, I am using Vagrant more. Primarily
+because Opscode uses Vagrant internally &ndash;
+<a href="http://twitter.com/schisamo">Seth Chisamore</a> built a multi-VM
+Vagrantfile for bringing up our full stack. The specifics in his
+Vagrantfile are tuned to that particular use case which is different
+than mine. However, there are similar patterns that I adapted.</p>
+
+<h2>Vagrantfile</h2>
+
+<p>The Vagrantfile configures four virtual machines:</p>
+
+<ul>
+<li>CentOS 5.7 and 6.2</li>
+<li>Ubuntu 10.04 and 11.10</li>
+</ul>
+
+
+<p>I built my VMs with <a href="https://github.com/jedi4ever/veewee">veewee</a>
+templates that install Chef via the
+<a href="http://opscode.com/chef/install">omnibus built chef-full package</a>.
+That way I have a consistent installation that reflects what Opscode
+will ship as the easiest and best supported way to install Chef.</p>
+
+<p>Part of the magic of this configuration is that I&rsquo;m going to reuse my
+knife configuration. The Vagrantfile itself goes into my cookbook
+testing Chef Repository.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>    <span class="nb">require</span> <span class="s1">&#39;chef&#39;</span>
+</span><span class='line'>    <span class="nb">require</span> <span class="s1">&#39;chef/config&#39;</span>
+</span><span class='line'>    <span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">current_dir</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">__FILE__</span><span class="p">)</span>
+</span><span class='line'>    <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s1">&#39;.chef&#39;</span><span class="p">,</span> <span class="s1">&#39;knife.rb&#39;</span><span class="p">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, I&rsquo;m going to describe data about the virtual machines that I&rsquo;m
+going to run. This is a hash of named VMs, <code>centos5</code>, <code>lucid</code>, etc. I
+assign their hostname, and give them a host only IP address. I also
+set an initial run list, since Vagrant will (noisily) complain if the
+run list is empty in a Chef provisioner.</p>
+
+<p><em>Note</em> I have a <code>base</code> role as a holder, the actual relevant things
+ are in the <code>base_redhat</code> and <code>base_debian</code> roles. The details really
+ don&rsquo;t matter, though.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook_testers</span> <span class="o">=</span> <span class="p">{</span>
+</span><span class='line'>  <span class="ss">:centos5</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos5-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.5&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:centos6</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos6-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.6&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:lucid</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;lucid-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.10&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:oneiric</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;oneiric-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.11&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, I&rsquo;m going to set up the <code>Vagrant::Config</code> object as &ldquo;global&rdquo;
+configuration for all the VMs, and then iterate over each of the VMs
+described above.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+</span><span class='line'>      <span class="n">vm_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="nb">name</span><span class="si">}</span><span class="s2">-cookbook-test&quot;</span>
+</span><span class='line'>      <span class="n">ipaddress</span> <span class="o">=</span> <span class="n">options</span><span class="o">[</span><span class="ss">:ipaddress</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I disable the shared folder, since I&rsquo;m going to use a Chef Server, and
+my recipes will download what they need from remote repositories, not
+my local system.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">share_folder</span><span class="p">(</span><span class="s2">&quot;v-root&quot;</span><span class="p">,</span> <span class="s2">&quot;/vagrant&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="ss">:disabled</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Set up some basic configuration for the box. Modify this to suit your
+environment. This section is on a per-VM basis. If particular tunables
+were required, I&rsquo;d create additional config in the <code>cookbook_testers</code>
+hash above, and use those values here.</p>
+
+<p><em>Note</em> <code>name</code> will be a symbol, but only in some contexts of
+ execution.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="nb">name</span><span class="o">.</span><span class="n">to_s</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">boot_mode</span> <span class="o">=</span> <span class="ss">:headless</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">host_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:hostonly</span><span class="p">,</span> <span class="n">ipaddress</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now I set up the Chef provisioner. Again, I&rsquo;m using Chef with a Server
+(<a href="http://opscode.com/hosted-chef">Opscode Hosted Chef</a>, of course). I
+use the <code>chef_server_url</code>, and <code>validation_client_name</code> settings from
+my <code>knife.rb</code>.</p>
+
+<p>The nodes&#8217; names will be <code>NAME-cookbook-test</code>, rather than their FQDN.
+I use this with a rake task that nukes them all from orbit
+consistently :).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">chef_server_url</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:chef_server_url</span><span class="o">]</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">validation_key_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">current_dir</span><span class="si">}</span><span class="s2">/.chef/</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span><span class="si">}</span><span class="s2">.pem&quot;</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">validation_client_name</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">node_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">provisioning_path</span> <span class="o">=</span> <span class="s2">&quot;/etc/chef&quot;</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">log_level</span> <span class="o">=</span> <span class="ss">:info</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The run list is going to be combined from the run lists defined from
+the <code>cookbook_testers</code> hash above, and a shell environment variable,
+<code>CHEF_RUN_LIST</code>, which is simply a comma-separated list of run list
+items, similar to that used by <code>knife bootstrap</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">run_list</span> <span class="o">=</span> <span class="o">[]</span>
+</span><span class='line'><span class="n">run_list</span> <span class="o">&lt;&lt;</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="no">ENV</span><span class="o">.</span><span class="n">has_key?</span><span class="p">(</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="n">chef</span><span class="o">.</span><span class="n">run_list</span> <span class="o">=</span> <span class="o">[</span><span class="n">options</span><span class="o">[</span><span class="ss">:run_list</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">),</span> <span class="n">run_list</span><span class="o">].</span><span class="n">flatten</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To use the Vagrantfile, I export the shell variable with the
+role(s)/recipe(s) I am testing, then run <code>vagrant up</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% export </span><span class="no">CHEF_RUN_LIST</span><span class="o">=</span><span class="s2">&quot;recipe[apache2],recipe[apache2::mod_ssl]&quot;</span>
+</span><span class='line'><span class="sx">% vagrant </span><span class="n">up</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Vagrant will bring up each VM one at a time, going through the full
+cycle of provisioning. If there&rsquo;s an unhandled exception that causes
+Chef to exit, then Vagrant also halts execution. If <code>vagrant up</code> is
+rerun, then Vagrant continues to the <em>next</em> VM. To reprovision a
+failed VM, it can be specified:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% vagrant </span><span class="n">provision</span> <span class="n">centos5</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Without the VM name, vagrant would reprovision all the VMs. Likewise,
+<code>vagrant ssh NAME</code> can be used to open an SSH connection to the named
+VM. This is useful to reprovision a VM that failed early, while
+Vagrant is continuing on with the others.</p>
+
+<h2>Full Vagrantfile</h2>
+
+<p>The Vagrantfile is split up in the earlier section, but you can see
+the full thing below.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef&#39;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/config&#39;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/knife&#39;</span>
+</span><span class='line'><span class="n">current_dir</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">__FILE__</span><span class="p">)</span>
+</span><span class='line'><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s1">&#39;.chef&#39;</span><span class="p">,</span> <span class="s1">&#39;knife.rb&#39;</span><span class="p">))</span>
+</span><span class='line'><span class="n">cookbook_testers</span> <span class="o">=</span> <span class="p">{</span>
+</span><span class='line'>  <span class="ss">:centos5</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos5-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.5&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:centos6</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;centos6-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.6&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_redhat]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:lucid</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;lucid-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.10&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="ss">:oneiric</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">:hostname</span> <span class="o">=&gt;</span> <span class="s2">&quot;oneiric-cookbook-test&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:ipaddress</span> <span class="o">=&gt;</span> <span class="s2">&quot;172.16.13.11&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">:run_list</span> <span class="o">=&gt;</span> <span class="s2">&quot;role[base],role[base_debian]&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
+</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+</span><span class='line'>      <span class="n">vm_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="nb">name</span><span class="si">}</span><span class="s2">-cookbook-test&quot;</span>
+</span><span class='line'>      <span class="n">ipaddress</span> <span class="o">=</span> <span class="n">options</span><span class="o">[</span><span class="ss">:ipaddress</span><span class="o">]</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">share_folder</span><span class="p">(</span><span class="s2">&quot;v-root&quot;</span><span class="p">,</span> <span class="s2">&quot;/vagrant&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="ss">:disabled</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="nb">name</span><span class="o">.</span><span class="n">to_s</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">boot_mode</span> <span class="o">=</span> <span class="ss">:headless</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">host_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:hostonly</span><span class="p">,</span> <span class="n">ipaddress</span>
+</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:chef_client</span> <span class="k">do</span> <span class="o">|</span><span class="n">chef</span><span class="o">|</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">chef_server_url</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:chef_server_url</span><span class="o">]</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">validation_key_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">current_dir</span><span class="si">}</span><span class="s2">/.chef/</span><span class="si">#{</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span><span class="si">}</span><span class="s2">.pem&quot;</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">validation_client_name</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">[</span><span class="ss">:validation_client_name</span><span class="o">]</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">node_name</span> <span class="o">=</span> <span class="n">vm_name</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">provisioning_path</span> <span class="o">=</span> <span class="s2">&quot;/etc/chef&quot;</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">log_level</span> <span class="o">=</span> <span class="ss">:info</span>
+</span><span class='line'>        <span class="n">run_list</span> <span class="o">=</span> <span class="o">[]</span>
+</span><span class='line'>        <span class="n">run_list</span> <span class="o">&lt;&lt;</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="no">ENV</span><span class="o">.</span><span class="n">has_key?</span><span class="p">(</span><span class="s1">&#39;CHEF_RUN_LIST&#39;</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">chef</span><span class="o">.</span><span class="n">run_list</span> <span class="o">=</span> <span class="o">[</span><span class="n">options</span><span class="o">[</span><span class="ss">:run_list</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">),</span> <span class="n">run_list</span><span class="o">].</span><span class="n">flatten</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1322,421 +1692,6 @@ created issues on the GitHub project for the two items on the roadmap, too.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/01/02/switching-to-dnsimple/">Switching to DNSimple</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-01-02T13:03:00-07:00" pubdate data-updated="true">Jan 2<span>nd</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><font size="-2">Reminder: this blog reflects my opinions and thoughts, and not
-those of my employer, Chef Software, Inc.</font></p>
-
-<p>Like any good sysadmin, I have my own domain for email and other
-purposes. I actually have had a couple, but this post is about my
-current one. I originally set it up through Google Apps a couple years
-ago, including registering the new domain with Google Apps&#8217; default
-registrar, GoDaddy. For the most part, it was pretty simple and
-painless to set up, including private registration via Domains by
-Proxy. Yay!</p>
-
-<p>However, as I automated more components of my home network with Chef,
-I found the lack of API driven DNS rather frustrating. At last count,
-I had 15 distinct networked devices, counting all the computers,
-consoles, mobile devices, etc. This does not count the virtual
-machines that I manage as a part of my daily job in doing Chef
-cookbook development and testing, which should all have their own DNS
-entries, since I&rsquo;ll access them over the network, and remembering IPs
-is ridiculous.</p>
-
-<h1>Internal DNS Server</h1>
-
-<p>I use <a href="http://cr.yp.to/djbdns.html">DJB&rsquo;s tinydns</a> as my DNS server,
-and it is automated with the
-<a href="http://community.opscode.com/cookbooks/djbdns">Opscode Chef Cookbook</a>.
-The first incarnation of this setup was a single monolithic template
-file containing all the entries in my local network zone, delivered by
-the <code>djbdns::tinydns-internal</code> recipe, like so:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">template</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:tinydns_internal_dir</span><span class="o">]</span><span class="si">}</span><span class="s2">/root/data&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;tinydns-internal-data.erb&quot;</span>
-</span><span class='line'>  <span class="n">mode</span> <span class="mo">0644</span>
-</span><span class='line'>  <span class="n">notifies</span> <span class="ss">:run</span><span class="p">,</span> <span class="n">resources</span><span class="p">(</span><span class="s2">&quot;execute[build-tinydns-internal-data]&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This was great, and simple to manage for this single purpose setup. At
-some point, I wrote cookbooks for
-<a href="http://community.opscode.com/cookbooks/unbound">unbound</a> and
-<a href="http://community.opscode.com/cookbooks/pdns">powerdns</a>, as I was
-evaluating whether one or the other might be easier to modularize. In
-the process, I created a data bag of all my DNS entries that I could
-step through in templates, so I could use the same data without caring
-which software was going to consume it. In the end, I extended the
-djbdns cookbook with a lightweight resource and provider, and added
-usage to the <code>djbdns::tinydns-internal</code> recipe like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dns</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;djbdns&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:domain</span><span class="o">].</span><span class="n">gsub</span><span class="p">(</span><span class="sr">/\./</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">))</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="n">file</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:tinydns_internal_dir</span><span class="o">]</span><span class="si">}</span><span class="s2">/root/data&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="sx">%w{ ns host alias }</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">type</span><span class="o">|</span>
-</span><span class='line'>  <span class="n">dns</span><span class="o">[</span><span class="n">type</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">record</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">fqdn</span><span class="p">,</span><span class="n">ip</span><span class="o">|</span>
-</span><span class='line'>      <span class="c1">#</span>
-</span><span class='line'>      <span class="n">djbdns_rr</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">fqdn</span><span class="si">}</span><span class="s2">.</span><span class="si">#{</span><span class="n">dns</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">cwd</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="ss">:djbdns</span><span class="o">][</span><span class="ss">:tinydns_internal_dir</span><span class="o">]</span><span class="si">}</span><span class="s2">/root&quot;</span>
-</span><span class='line'>        <span class="n">ip</span> <span class="n">ip</span>
-</span><span class='line'>        <span class="n">type</span> <span class="n">type</span>
-</span><span class='line'>        <span class="n">action</span> <span class="ss">:add</span>
-</span><span class='line'>        <span class="n">notifies</span> <span class="ss">:run</span><span class="p">,</span> <span class="s2">&quot;execute[build-tinydns-internal-data]&quot;</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="c1">#</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The data bag itself looks something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;int_example_com&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="s2">&quot;domain&quot;</span><span class="o">:</span> <span class="s2">&quot;example.com&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="s2">&quot;ns&quot;</span><span class="o">:</span> <span class="p">[</span>
-</span><span class='line'>    <span class="p">{</span> <span class="s2">&quot;ns: &quot;</span><span class="mf">127.0</span><span class="p">.</span><span class="mf">0.1</span><span class="s2">&quot; }</span>
-</span><span class='line'><span class="s2">  ],</span>
-</span><span class='line'><span class="s2">  &quot;</span><span class="nx">alias</span><span class="s2">&quot;: [</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">gw</span><span class="s2">&quot;:         &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.1</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">smb</span><span class="s2">&quot;:        &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.20</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">files</span><span class="s2">&quot;:      &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.20</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">apt</span><span class="s2">&quot;:        &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.120</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">yum</span><span class="s2">&quot;:        &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.120</span><span class="s2">&quot; }</span>
-</span><span class='line'><span class="s2">  ],</span>
-</span><span class='line'><span class="s2">  &quot;</span><span class="nx">host</span><span class="s2">&quot;: [</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">tavern</span><span class="s2">&quot;:          &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.1</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">cask</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.20</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">cider</span><span class="s2">&quot;:           &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.101</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">merlot</span><span class="s2">&quot;:          &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.103</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">bourbon</span><span class="s2">&quot;:         &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.104</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">iphone</span><span class="s2">&quot;:          &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.105</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">doppelbock</span><span class="s2">&quot;:      &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.106</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">ipad</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.107</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">wii</span><span class="s2">&quot;:             &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.108</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">xbox</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.109</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">htpc</span><span class="s2">&quot;:            &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.110</span><span class="s2">&quot; },</span>
-</span><span class='line'><span class="s2">    { &quot;</span><span class="nx">virt1test</span><span class="s2">&quot;:       &quot;</span><span class="mf">10.10</span><span class="p">.</span><span class="mf">20.120</span><span class="err">&quot;</span> <span class="p">}</span>
-</span><span class='line'>  <span class="p">]</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I am pretty pleased with this approach in that this data can be used
-no matter what DNS resolver software I choose. While this is great for
-the more static part of my network, as I mentioned I do have some
-dynamic usage where I create new virtual machines, and I really want
-them to register themselves in DNS automatically.</p>
-
-<h1>Enter DNSimple</h1>
-
-<p>A few months ago I decided to switch over to DNSimple. The service was
-compelling over the alternatives for a few reasons:</p>
-
-<ul>
-<li>Low cost ($3/mo) for my size of account.</li>
-<li>Very simple interface</li>
-<li>API for managing records (!)</li>
-<li>Reputation for great service</li>
-</ul>
-
-
-<p><a href="https://github.com/dje">Darrin Eden</a>
-wrote a <a href="http://community.opscode.com/cookbooks/dnsimple">cookbook</a>
-for automatically creating records through the API, too, so half my
-work for automating with Chef was already done!</p>
-
-<p>However, for various reasons I procrastinated the switchover. After
-all, my existing solution worked ok for my purposes. Then after seeing
-GoDaddy show up on the SOPA supporters list, and being one a
-contributing author to the legislation(*), I decided that was the last
-straw and I busted a move to finish the
-<a href="http://blog.dnsimple.com/godaddy-sopa-and-you/">switch</a>.</p>
-
-<p>Honestly, from the DNSimple side, it couldn&rsquo;t have been a better
-experience. They have one-click services for managing DNS records for
-a variety of common services &ndash; including Google Apps! It took some
-time and hassle to move my domain out of GoDaddy, since their
-interface is rather clunky, and I had to unprotect things through
-Domains by Proxy to make the move, but after a couple hours everything
-was fine. DNSimple has some
-<a href="http://blog.dnsimple.com/things-to-know-about-transferring-a-domain/">tips for migrating</a>,
-no matter who your current registrar is.</p>
-
-<p>Now for the truly fun part!</p>
-
-<h1>Automated DNS with Chef</h1>
-
-<p>Using the dnsimple cookbook is very straightforward. You create an &ldquo;A&rdquo;
-record like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple_record</span> <span class="s2">&quot;cask.example.com&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="nb">name</span> <span class="s2">&quot;cask&quot;</span>
-</span><span class='line'>  <span class="n">domain</span> <span class="s2">&quot;example.com&quot;</span>
-</span><span class='line'>  <span class="n">content</span> <span class="s2">&quot;10.10.20.20&quot;</span>
-</span><span class='line'>  <span class="n">type</span> <span class="s2">&quot;A&quot;</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
-</span><span class='line'>  <span class="n">username</span> <span class="n">node</span><span class="o">[</span><span class="ss">:dnsimple</span><span class="o">][</span><span class="ss">:username</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">password</span> <span class="n">node</span><span class="o">[</span><span class="ss">:dnsimple</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">domain</span> <span class="n">node</span><span class="o">[</span><span class="ss">:dnsimple</span><span class="o">][</span><span class="ss">:domain</span><span class="o">]</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Yes, that is a private network IP, and yes it is going to be
-registered in public DNS. It really doesn&rsquo;t matter that much in my
-(<a href="http://serverfault.com/questions/4458/private-ip-address-in-public-dns">and others&#8217;</a>)
-opinion. Especially given that zomg, I just created a DNS entry with
-Chef!</p>
-
-<p>By default, the cookbook does assume, and use, node attributes for
-storing the username and password. This can be set by a role, but it
-means that all nodes will have the data. For my use, I decided to put
-these values in a data bag, and because they are sensitive, I used an
-<a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags">encrypted data bag</a>.
-I also wanted to reuse the data bag from my earlier DNS example, so I
-wrote a recipe like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="n">encrypted_data_bag_item</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">dns</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;dns&quot;</span><span class="p">,</span> <span class="s2">&quot;int_example_com&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="sx">%w{ host alias }</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">type</span><span class="o">|</span>
-</span><span class='line'>  <span class="n">dns</span><span class="o">[</span><span class="n">type</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">record_type</span> <span class="o">=</span> <span class="n">type</span> <span class="o">=~</span> <span class="sr">/^host$/</span> <span class="p">?</span> <span class="s2">&quot;A&quot;</span> <span class="p">:</span> <span class="s2">&quot;CNAME&quot;</span>
-</span><span class='line'>    <span class="n">record</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">hostname</span><span class="p">,</span><span class="n">ip</span><span class="o">|</span>
-</span><span class='line'>      <span class="c1">#</span>
-</span><span class='line'>      <span class="n">dnsimple_record</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">.</span><span class="si">#{</span><span class="n">dns</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
-</span><span class='line'>        <span class="nb">name</span> <span class="n">hostname</span>
-</span><span class='line'>        <span class="n">content</span> <span class="n">ip</span>
-</span><span class='line'>        <span class="n">type</span> <span class="n">record_type</span>
-</span><span class='line'>        <span class="n">action</span> <span class="ss">:create</span>
-</span><span class='line'>        <span class="n">username</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;username&#39;</span><span class="o">]</span>
-</span><span class='line'>        <span class="n">password</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;password&#39;</span><span class="o">]</span>
-</span><span class='line'>        <span class="n">domain</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="c1">#</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I put that recipe in my &ldquo;dnsserver&rdquo; role, ran Chef, and boom, all my
-DNS entries are updated on systems I don&rsquo;t have to manage, and all
-around the world.</p>
-
-<pre><code>% host cask.int.example.com 8.8.8.8
-Using domain server:
-Name: 8.8.8.8
-Address: 8.8.8.8#53
-Aliases:
-
-cask.int.example.com has address 10.10.20.20
-</code></pre>
-
-<p>What a wonderful redundant distributed key value store :&ndash;).</p>
-
-<p>Note that the <code>encrypted_data_bag_item</code> method used in the recipe is in a cookbook
-library. I wrote about that in an
-<a href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">earlier blog post</a>.
-It is pretty simple:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Chef</span>
-</span><span class='line'>  <span class="k">class</span> <span class="nc">Recipe</span>
-</span><span class='line'>    <span class="c1">#</span>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">encrypted_data_bag_item</span><span class="p">(</span><span class="n">bag</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">secret_file</span> <span class="o">=</span>
-</span><span class='line'>        <span class="ss">Chef</span><span class="p">:</span><span class="ss">:EncryptedDataBagItem</span><span class="o">::</span><span class="no">DEFAULT_SECRET_FILE</span><span class="p">)</span>
-</span><span class='line'>      <span class="no">DataBag</span><span class="o">.</span><span class="n">validate_name!</span><span class="p">(</span><span class="n">bag</span><span class="o">.</span><span class="n">to_s</span><span class="p">)</span>
-</span><span class='line'>      <span class="no">DataBagItem</span><span class="o">.</span><span class="n">validate_id!</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">secret</span> <span class="o">=</span> <span class="no">EncryptedDataBagItem</span><span class="o">.</span><span class="n">load_secret</span><span class="p">(</span><span class="n">secret_file</span><span class="p">)</span>
-</span><span class='line'>      <span class="no">EncryptedDataBagItem</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">bag</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">rescue</span> <span class="no">Exception</span>
-</span><span class='line'>      <span class="no">Log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Failed to load data bag item: </span><span class="si">#{</span><span class="n">bag</span><span class="o">.</span><span class="n">inspect</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">item</span><span class="o">.</span><span class="n">inspect</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span class='line'>      <span class="k">raise</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>    <span class="c1">#</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Drawbacks</h2>
-
-<p>While conveniently reusing the data I already had for my DNS entries,
-the <code>dnsimple_record</code> provider does take about a second on my internet
-connection for each entry to check if it&rsquo;s there. This makes the DNS
-server&rsquo;s Chef client run take over a minute, where it used to be less
-than 12 seconds. Many of the entries that are in the DNS data bag are
-on systems that can add their own records, and will soon once I
-refactor things a bit.</p>
-
-<h1>Other Uses</h1>
-
-<p>A number of the entries in the DNS data bag are CNAMEs for services
-that run on my home LAN server. I have internal services like
-Netatalk/Time Machine, Samba, or Munin. I also have external services
-like OpenVPN, SSH and Teamspeak. I&rsquo;ll add DNSimple records for each of
-these so the recipes can automatically register new DNS entries,
-eliminating a step in bringing up a new service.</p>
-
-<h1>Open Source is Awesome</h1>
-
-<p>Chef is open source, of course, as is the
-<a href="https://github.com/heavywater/chef-dnsimple/blob/master/LICENSE">dnsimple cookbook</a>
-that I&rsquo;m using. While working with the cookbook as describe above over
-the last couple days, I made some improvements and I sent a
-<a href="https://github.com/heavywater/chef-dnsimple/pull/1">pull request</a>,
-which has been merged and released. Thanks Darrin!</p>
-
-<p>If you use Chef and are looking for an API driven way to manage DNS
-entries for your systems, I strongly recommend DNSimple as a provider,
-and the <code>dnsimple</code> cookbook to tie it all together.</p>
-
-<p><font size="-2">(*) This isn&rsquo;t a political-blog-soap-box, but this
-really was the final motivator.</font></p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -1771,6 +1726,10 @@ really was the final motivator.</font></p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/">Awesome Syntax Highlighting in Keynote</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
       </li>
     
@@ -1784,10 +1743,6 @@ really was the final motivator.</font></p>
     
       <li class="post">
         <a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a>
       </li>
     
   </ul>

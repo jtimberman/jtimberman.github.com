@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: presentations | jtimberman's Code Blog]]></title>
+  <link href="http://jtimberman.housepub.org/blog/categories/presentations/atom.xml" rel="self"/>
+  <link href="http://jtimberman.housepub.org/"/>
+  <updated>2015-02-10T21:42:39-07:00</updated>
+  <id>http://jtimberman.housepub.org/</id>
+  <author>
+    <name><![CDATA[Joshua Timberman]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Awesome Syntax Highlighting in Keynote]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/"/>
+    <updated>2015-02-10T21:31:49-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/02/10/awesome-syntax-highlighting-in-keynote</id>
+    <content type="html"><![CDATA[<p>I am working on my presentation for ChefConf. I plan to have quite a lot of code samples. I&rsquo;ve found the options for getting code samples with nice syntax highlight a lackluster endeavour, with various GUI editors like TextMate, Sublime, and Atom having &ldquo;Copy as RTF&rdquo; plugins, but none of them being easily customizable.</p>
+
+<p>So I did a quick Google search and happened on a gist I hadn&rsquo;t seen before. <a href="https://gist.github.com/jimbojsb/1630790">It</a> describes the following steps:</p>
+
+<ol>
+<li>Install Homebrew (done, I have that covered with Chef ;)).</li>
+<li>Install &ldquo;highlight&rdquo; with <code>brew install highlight</code>.</li>
+<li>Use highlight to transform the source code file to RTF and copy it to the clipboard.</li>
+<li>Paste the clipboard into Keynote.app.</li>
+</ol>
+
+
+<p>This isn&rsquo;t much different than the other solutions, except one super cool thing I learned about highlight.</p>
+
+<p>It has styles.</p>
+
+<p>```
+highlight -w</p>
+
+<p><OMG LIST OF EIGHTY TWO DIFFERENT STYLES!!!>
+```</p>
+
+<p>That&rsquo;s right, at least at the time of this writing highlight has 82 different styles available. Including my favorite(s) solarized &ndash; both light and dark. Note that the <code>--help</code> output says that this option is deprecated in the version I&rsquo;ve installed (3.18_1), but the styles are in <code>/usr/local/Cellar/highlight/VERSION/share/themes</code>.</p>
+
+<p>Highlight knows the syntax highlighting for a lot of languages, these are in <code>/usr/local/Cellar/highlight/VERSION/share/langDefs</code>. For example I can get my Ruby recipe highlighted with this:</p>
+
+<p><code>
+highlight -s solarized-light -O rtf recipes/client.rb | pbcopy
+</code></p>
+
+<p>This will use Courier New as the font, and depending on the theme/style used, some of the highlighting may be bold or italic. This is easy enough to change in Keynote though.</p>
+
+<p>For up to date documentation and information about highlight, visit the <a href="http://www.andre-simon.de/doku/highlight/en/highlight.php">author&rsquo;s page</a>.</p>
+]]></content>
+  </entry>
+  
+</feed>
