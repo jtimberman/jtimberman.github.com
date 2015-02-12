@@ -3,7 +3,7 @@ layout: post
 title: "Quick Tip: Create a Provisioner Node"
 date: 2015-02-09 20:50:12 -0700
 comments: true
-categories: [chef, quicktip, chefconf]
+categories: [chef, quicktips, chefconf]
 ---
 
 This quick tip is brought to you by my preparation for my ChefConf talk about using Chef Provisioning to build a Chef Server Cluster, which is based on my blog post about the same. In the blog post I used chef-zero as my Chef Server, but for the talk I'm using Hosted Chef.
@@ -15,7 +15,7 @@ Fortunately we can do all the work necessary using knife, with the [knife-acl](h
 First of all, I'm using ChefDK, and it's my Ruby environment too, so install the gem:
 
 ```sh
-chef gem knife-acl
+chef gem install knife-acl
 ```
 
 Next, use the `knife group` subcommand to create the new group. Groups are a number of users and/or API clients. By default, an organization on Hosted Chef will have `admins`, `billing-admins`, `clients`, and `users`. Let's create `provisioners` now.
@@ -77,7 +77,7 @@ knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json
 The entire series of commands is below.
 
 ```sh
-chef gem knife-acl
+chef gem install knife-acl
 knife group create provisioners
 
 for i in read create update grant delete
