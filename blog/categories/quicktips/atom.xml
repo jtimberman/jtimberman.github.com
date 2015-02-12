@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-02-10T21:42:39-07:00</updated>
+  <updated>2015-02-12T10:44:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,113 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Create a Provisioner Node]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/02/09/quick-tip-create-a-provisioner-node/"/>
+    <updated>2015-02-09T20:50:12-07:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/02/09/quick-tip-create-a-provisioner-node</id>
+    <content type="html"><![CDATA[<p>This quick tip is brought to you by my preparation for my ChefConf talk about using Chef Provisioning to build a Chef Server Cluster, which is based on my blog post about the same. In the blog post I used chef-zero as my Chef Server, but for the talk I&rsquo;m using Hosted Chef.</p>
+
+<p>In order for the Chef Provisioning recipe to work the provisioning node &ndash; the node that runs chef-client &ndash; needs to have the appropriate permissions to manage objects on the Chef Server. This is easy with chef-zero &ndash; there are no ACLs at all. However in Hosted Chef, like any regular Chef Server, the ACLs don&rsquo;t allow nodes' API clients to modify other nodes, or API clients.</p>
+
+<p>Fortunately we can do all the work necessary using knife, with the <a href="https://github.com/chef/knife-acl">knife-acl</a> plugin. In this quick tip, I&rsquo;ll create a group for provisioning nodes, and give that group the proper permissions for the Chef Provisioning recipe to create the machines' nodes and clients.</p>
+
+<p>First of all, I&rsquo;m using ChefDK, and it&rsquo;s my Ruby environment too, so install the gem:</p>
+
+<p><code>sh
+chef gem install knife-acl
+</code></p>
+
+<p>Next, use the <code>knife group</code> subcommand to create the new group. Groups are a number of users and/or API clients. By default, an organization on Hosted Chef will have <code>admins</code>, <code>billing-admins</code>, <code>clients</code>, and <code>users</code>. Let&rsquo;s create <code>provisioners</code> now.</p>
+
+<p><code>sh
+knife group create provisioners
+</code></p>
+
+<p>The Role-based access control (RBAC) system in the Chef Server allows us to assign read, create, update, grant, and delete permissions to various objects in the organization. Containers are a special holder of other types of objects, in this case we need to add permissions for the clients and nodes containers. This is what allows the Chef Provisioning recipe&rsquo;s <code>machine</code> resources to have their Chef objects created.</p>
+
+<p>```sh
+for i in read create update grant delete
+do
+  knife acl add containers clients $i group provisioners
+done</p>
+
+<p>for i in read create update grant delete
+do
+  knife acl add containers nodes $i group provisioners
+done
+```</p>
+
+<p>Next, we need the API client that will be used by the Chef Provisioning node to authenticate with the Chef Server, and the node needs to be created as well. By default the client will automatically have permissions for the node object that has the same name.</p>
+
+<p><code>sh
+knife client create -d chefconf-provisioner &gt; ~/.chef/chefconf-provisioner.pem
+knife node create -d chefconf-provisioner
+</code></p>
+
+<p>Finally, we need to put the new API client into the provisioners group that was created earlier. First we need to get a mapping of the actors in the organization. Then we can add the client to the group.</p>
+
+<p><code>sh
+knife actor map
+knife group add actor provisioners chefconf-provisioner
+</code></p>
+
+<p>The <code>knife actor map</code> command will generate a YAML file like this:</p>
+
+<h2>```yaml</h2>
+
+<p>:user_map:
+  :users:</p>
+
+<pre><code>jtimberman: 12345678901234567890123456780123
+</code></pre>
+
+<p>  :usags:</p>
+
+<pre><code>12345678901234567890123456780123: jtimberman
+</code></pre>
+
+<p>:clients:
+  chefconf-provisioner: chefconf-provisioner
+  jtimberman-chefconf-validator: jtimberman-chefconf-validator
+```</p>
+
+<p>This maps users to their USAG and stores a list of clients. More information about this is in the <a href="https://github.com/chef/knife-acl/blob/master/README.md">knife-acl README</a></p>
+
+<p>At this point, we have a node, with the private key in <code>~/.chef</code> that can be used with the Chef Server to use Chef Provisioning&rsquo;s <code>machine</code> resource. We can also perform additional tasks that require having a node object, such as create secrets as Chef Vault items:</p>
+
+<p><code>sh
+knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json -A jtimberman -S 'name:chefconf-provisioner'
+</code></p>
+
+<p>The entire series of commands is below.</p>
+
+<p>```sh
+chef gem install knife-acl
+knife group create provisioners</p>
+
+<p>for i in read create update grant delete
+do
+  knife acl add containers clients $i group provisioners
+done</p>
+
+<p>for i in read create update grant delete
+do
+  knife acl add containers nodes $i group provisioners
+done</p>
+
+<p>knife client create -d chefconf-provisioner > ~/.chef/chefconf-provisioner.pem
+knife node create -d chefconf-provisioner
+knife actor map
+knife group add actor provisioners chefconf-provisioner</p>
+
+<p>knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json -A jtimberman -S &lsquo;name:chefconf-provisioner&rsquo;
+```</p>
+
+<p>Hopefully this helps you out with your use of Chef Provisioning, and a non-zero Chef server. If you have further questions, find me at ChefConf!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Define Resources to Notifiy in LWRPs]]></title>
@@ -450,128 +557,6 @@ jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
 </code></p>
 
 <p>Those who have read the workstation management posts on this blog in the past may be aware that I have a <a href="https://supermarket.chef.io/cookbooks/mac_os_x">cookbook</a> that can manage OS X &ldquo;<code>defaults(1)</code>&rdquo; settings. I <a href="https://github.com/chef-osx/mac_os_x/issues/21">plan to make updates</a> to the resource in that cookbook that will leverage this method.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Deleting Attributes]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2014/12/24/quicktip-delete-attributes/"/>
-    <updated>2014-12-24T10:00:40-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2014/12/24/quicktip-delete-attributes</id>
-    <content type="html"><![CDATA[<p>I have a new goal for 2015, and that is to write at least one &ldquo;Quick Tip&rdquo; per week about Chef. I&rsquo;ve added the category &ldquo;<a href="/blog/categories/quicktips">quicktips</a>&rdquo; to make these easier to find.</p>
-
-<p>In this quick tip, I want to talk about a new feature of Chef 12. The new feature is the ability to remove an attribute from all levels (default, normal, override) on a node so it doesn&rsquo;t get saved back to the Chef Server. This was brought up in <a href="https://github.com/opscode/chef-rfc/blob/master/rfc023-chef-12-attributes-changes.md#global-level-removals">Chef RFC 23</a>. The reason I don&rsquo;t want to save the attribute in question back to the server is that it is a secret that I have in a <a href="https://github.com/Nordstrom/chef-vault">Chef Vault item</a>.</p>
-
-<p>I&rsquo;m using <a href="https://www.datadoghq.com">Datadog</a> for my home systems, and the wonderful folks at Datadog have a <a href="https://supermarket.chef.io/cookbooks/datadog">cookbook</a> to set it up. The documentation requires that you set two attributes to authenticate, the API key, and the application key:</p>
-
-<p><code>ruby
-node.default['datadog']['api_key'] = 'Secrets In Plain Text Attributes??'
-node.default['datadog']['application_key'] = 'It is probably fine.'
-</code></p>
-
-<p>I prefer to use chef-vault because <a href="http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault/">I think it&rsquo;s the best way</a> to manage shared secrets in Chef recipes. I still need to set the attributes for Datadog&rsquo;s recipe to work, however. In order to accomplish the goal here, I will use a custom cookbook, <code>housepub-datadog</code>. It has one recipe that looks like this:</p>
-
-<p>```ruby
-include_recipe &lsquo;chef-vault&rsquo;</p>
-
-<p>node.default[&lsquo;datadog&rsquo;][&lsquo;api_key&rsquo;] = chef_vault_item(:secrets, &lsquo;datadog&rsquo;)[&lsquo;data&rsquo;][&lsquo;api_key&rsquo;]
-node.default[&lsquo;datadog&rsquo;][&lsquo;application_key&rsquo;] = chef_vault_item(:secrets, &lsquo;datadog&rsquo;)[&lsquo;data&rsquo;][&lsquo;chef&rsquo;]</p>
-
-<p>include_recipe &lsquo;datadog::dd-agent&rsquo;</p>
-
-<p>ruby_block &lsquo;smash-datadog-auth-attributes&rsquo; do
-  block do</p>
-
-<pre><code>node.rm('datadog', 'api_key')
-node.rm('datadog', 'application_key')
-</code></pre>
-
-<p>  end
-  subscribes :create, &lsquo;template[/etc/dd-agent/datadog.conf]&rsquo;, :immediately
-end
-```</p>
-
-<p>Let&rsquo;s take a closer look at the recipe.</p>
-
-<p><code>ruby
-include_recipe 'chef-vault'
-</code></p>
-
-<p>Here, the <code>chef-vault</code> recipe is included to ensure everything works, and I have a dependency on <code>chef-vault</code> in my cookbook&rsquo;s metadata. Next, we see the attributes set:</p>
-
-<p><code>ruby
-node.default['datadog']['api_key'] = chef_vault_item(:secrets, 'datadog')['data']['api_key']
-node.default['datadog']['application_key'] = chef_vault_item(:secrets, 'datadog')['data']['chef']
-</code></p>
-
-<p>The <code>secrets/datadog</code> item looks like this in plaintext:</p>
-
-<p>```json
-{
-  &ldquo;id&rdquo;: &ldquo;datadog&rdquo;,
-  &ldquo;data&rdquo;: {</p>
-
-<pre><code>"api_key": "My datadog API key",
-"chef": "Application key for the 'chef' application"
-</code></pre>
-
-<p>  }
-}
-```</p>
-
-<p>When Chef runs, it will load the vault-encrypted data bag item, and populate the attributes that will be used in the template. This template comes from the <code>datadog::dd-agent</code> recipe, which is included next. The template from that recipe looks like this:</p>
-
-<p>```ruby
-template &lsquo;/etc/dd-agent/datadog.conf&rsquo; do
-  owner &lsquo;root&rsquo;
-  group &lsquo;root&rsquo;
-  mode 0644
-  variables(</p>
-
-<pre><code>:api_key =&gt; node['datadog']['api_key'],
-:dd_url =&gt; node['datadog']['url']
-</code></pre>
-
-<p>  )
-end
-```</p>
-
-<p>Now, for the grand finale of this post, I delete the attributes that were set using a <code>ruby_block</code> resource. The timing here is important, because these attributes must be deleted after Chef has converged the template. This does get updated every run, because the ruby block is not convergent, and this is okay because the attributes are updated every run, too. I could write additional logic to make this convergent, but I&rsquo;m okay with the behavior. The <code>subscribes</code> ensures that as soon as the template is written, the node object is updated to remove the attributes. Otherwise, this happens next after the <code>dd-agent</code> recipe.</p>
-
-<p>```ruby
-ruby_block &lsquo;smash-datadog-auth-attributes&rsquo; do
-  block do</p>
-
-<pre><code>node.rm('datadog', 'api_key')
-node.rm('datadog', 'application_key')
-</code></pre>
-
-<p>  end
-  subscribes :create, &lsquo;template[/etc/dd-agent/datadog.conf]&rsquo;, :immediately
-end
-```</p>
-
-<p>Let&rsquo;s see this in action:</p>
-
-<p>```
-managed-node$ chef-client
-&hellip;
-Recipe: housepub-datadog::default
-  * ruby_block[smash-datadog-auth-attributes] action run</p>
-
-<pre><code>- execute the ruby block smash-datadog-auth-attributes
-</code></pre>
-
-<p>&hellip;
-workstation% knife node show managed-node -a datadog.api_key -a datadog.application_key
-managed-node:
-  datadog.api_key:
-  datadog.application_key:
-```</p>
-
-<p><strong>Bonus quick tip!</strong> <code>knife node show</code> can take the <code>-a</code> option multiple times to display more attributes. I just discovered this in writing this post, and I don&rsquo;t know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).</p>
-
-<p><em>Update</em> This <a href="https://github.com/opscode/chef/commit/4133160972a9972a9a062579504faa40eaa4c8db">feature was added</a> by <a href="https://twitter.com/RanjibDey">Awesome Chef Ranjib Dey</a>.</p>
 ]]></content>
   </entry>
   

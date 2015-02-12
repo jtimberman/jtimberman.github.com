@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chefconf | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chefconf/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-02-10T21:42:39-07:00</updated>
+  <updated>2015-02-12T10:44:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -27,7 +27,7 @@
 <p>First of all, I&rsquo;m using ChefDK, and it&rsquo;s my Ruby environment too, so install the gem:</p>
 
 <p><code>sh
-chef gem knife-acl
+chef gem install knife-acl
 </code></p>
 
 <p>Next, use the <code>knife group</code> subcommand to create the new group. Groups are a number of users and/or API clients. By default, an organization on Hosted Chef will have <code>admins</code>, <code>billing-admins</code>, <code>clients</code>, and <code>users</code>. Let&rsquo;s create <code>provisioners</code> now.</p>
@@ -95,7 +95,7 @@ knife vault create secrets dnsimple -M client -J data_bags/secrets/dnsimple.json
 <p>The entire series of commands is below.</p>
 
 <p>```sh
-chef gem knife-acl
+chef gem install knife-acl
 knife group create provisioners</p>
 
 <p>for i in read create update grant delete

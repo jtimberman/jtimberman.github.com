@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-02-10T21:42:39-07:00</updated>
+  <updated>2015-02-12T10:44:22-07:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -70,7 +70,7 @@
 <p>First of all, I&rsquo;m using ChefDK, and it&rsquo;s my Ruby environment too, so install the gem:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem knife-acl
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem install knife-acl
 </span></code></pre></td></tr></table></div></figure>
 
 
@@ -175,7 +175,7 @@
 <span class='line-number'>17</span>
 <span class='line-number'>18</span>
 <span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem knife-acl
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef gem install knife-acl
 </span><span class='line'>knife group create provisioners
 </span><span class='line'>
 </span><span class='line'><span class="k">for </span>i in <span class="nb">read </span>create update grant delete
