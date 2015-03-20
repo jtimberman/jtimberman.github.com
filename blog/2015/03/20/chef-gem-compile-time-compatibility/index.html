@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Last Check-in Time for Nodes - jtimberman's Code Blog</title>
+  <title>Chef Gem Compile Time Compatibility - jtimberman's Code Blog</title>
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="This one liner uses the knife exec sub-command to iterate over all the
-node objects on the Chef Server, and print out their ohai_time
-attribute in a &hellip;">
+  <meta name="description" content="TL;DR, if you&rsquo;re using Chef 11 and chef-sugar, upgrade chef-sugar to version 3.0.1. If you cannot upgrade, use the following in your chef_gem &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ attribute in a &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes">
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2015/03/20/chef-gem-compile-time-compatibility">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
@@ -84,7 +82,7 @@ attribute in a &hellip;">
   
   <header>
     
-      <h1 class="entry-title">Last Check-in Time for Nodes</h1>
+      <h1 class="entry-title">Chef Gem Compile Time Compatibility</h1>
     
     
       <p class="meta">
@@ -100,105 +98,75 @@ attribute in a &hellip;">
   
 
 
-<time datetime="2013-02-16T20:14:00-07:00" pubdate data-updated="true">Feb 16<span>th</span>, 2013</time>
+<time datetime="2015-03-20T08:46:47-06:00" pubdate data-updated="true">Mar 20<span>th</span>, 2015</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>This one liner uses the knife exec sub-command to iterate over all the
-node objects on the Chef Server, and print out their <code>ohai_time</code>
-attribute in a human readable format.</p>
+<div class="entry-content"><p>TL;DR, if you&rsquo;re using Chef 11 and <code>chef-sugar</code>, upgrade <code>chef-sugar</code> to version 3.0.1. If you cannot upgrade, use the following in your <code>chef_gem</code> resources in your recipes:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E 'nodes.all {|n| puts "#{n.name} #{Time.at(n[:ohai_time])}"}'</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s break this up a little.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife exec -E</span></code></pre></td></tr></table></div></figure>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">compile_time</span> <span class="kp">true</span> <span class="k">if</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="o">::</span><span class="no">ChefGem</span><span class="o">.</span><span class="n">instance_methods</span><span class="p">(</span><span class="kp">false</span><span class="p">)</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="ss">:compile_time</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
-<p>The exec plugin for knife executes a script or the given string of
-Ruby code in the same context as <code>chef-shell</code> (or <code>shef</code> in Chef 10
-and earlier) if you start it up in it&rsquo;s &ldquo;main&rdquo; context. Since it is
-knife, it will also use your <code>.chef/knife.rb</code> settings, so it knows
-about your user, key and Chef Server.</p>
+<p>As you may be aware, <a href="https://www.chef.io/blog/2015/03/03/chef-12-1-0-released/">Chef 12.1.0</a> introduces a change to the <code>chef_gem</code> resource that prints out warning messages like this:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>nodes.all</span></code></pre></td></tr></table></div></figure>
+<pre><code>WARN: chef_gem[chef-vault] chef_gem compile_time installation is deprecated
+WARN: chef_gem[chef-vault] Please set `compile_time false` on the resource to use the new behavior.
+WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile_time behavior is required.
+</code></pre>
 
+<p>These messages are just warnings, but if you&rsquo;re installing a lot of gems in your recipes, you may be annoyed by the output. As the warning indicates, you can set <code>compile_time true</code> property. This doesn&rsquo;t work on versions of Chef before 12.1, though:</p>
 
-<p>The <code>chef-shell</code> main context has helper methods to access the
-corresponding endpoints in the Chef Server API. Clearly we&rsquo;re working
-with &ldquo;nodes&rdquo; here, and the <code>#all</code> method returns all the node objects
-from the Chef Server. This differs from search in that there&rsquo;s a
-commit delay between the time when data is saved to the server, and
-the data is indexed by Solr. This is usually a few seconds, but
-depending on various factors like the hardware you&rsquo;re using, how many
-nodes are converging, etc, it can take longer.</p>
+<pre><code>NoMethodError: undefined method `compile_time' for Chef::Resource::ChefGem
+</code></pre>
 
-<p>Anyway, we can pass a block to nodes.all and do something with each
-node object. The example above is a oneliner, so let&rsquo;s make it more
-readable.</p>
+<p>So, as a workaround, we can ask whether we respond to the <code>compile_time</code> method in the <code>chef_gem</code> resource:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">nodes</span><span class="o">.</span><span class="n">all</span> <span class="k">do</span> <span class="o">|</span><span class="n">n</span><span class="o">|</span>
-</span><span class='line'>  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="no">Time</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">n</span><span class="o">[</span><span class="ss">:ohai_time</span><span class="o">]</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef_gem</span> <span class="s1">&#39;chef-vault&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">compile_time</span> <span class="kp">false</span> <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:compile_time</span><span class="p">)</span>
 </span><span class='line'><span class="k">end</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>We&rsquo;re simply going to use <code>n</code> as the iterator for each node object,
-and we&rsquo;ll print a string about the node. The <code>#{}</code>&rsquo;s in the string to
-print with puts is Ruby string interpolation. That is, everything
-inside the braces is a Ruby expression. First, the <code>Chef::Node</code> object
-has a method, <code>#name</code>, that returns the node&rsquo;s name. This is usually
-the FQDN, but depending on your configuration (<code>node_name</code> in
-<code>/etc/chef/client.rb</code> or using the <code>-N</code> option for <code>chef-client</code>), it
-could be something else. Then, we&rsquo;re going to use the node&rsquo;s
-<code>ohai_time</code> attribute. Every time Chef runs and it gathers data about
-the node with Ohai, it generates the <code>ohai_time</code> attribute, which is
-the Unix epoch of the timestamp when Ohai ran. When Chef saves the
-node data at the end of the run, we know approximately the last time
-the node ran Chef. In this particular string, we&rsquo;re converting the
-Unix epoch, like <code>1358962351.444405</code> to a human readable timestamp
-like <code>2013-01-23 10:32:31 -0700</code>.</p>
-
-<p>Of course, you can get similar data from the Chef Server by using
-<code>knife status</code>:</p>
+<p>This appears to get around the problem for most cases. However, if you&rsquo;re using <code>chef-sugar</code>, you&rsquo;ll note that until version 3.0.0, <code>chef-sugar</code> includes a <code>compile_time</code> DSL method that gets injected into <code>Chef::Resource</code> (and <code>Chef::Recipe</code>). This has been modified to <code>at_compile_time</code> in <code>chef-sugar</code> version 3.0.0 to work around Chef&rsquo;s introduction of a <code>compile_time</code> method in the <code>chef_gem</code> resource. The simple thing to do is make sure that your <code>chef-sugar</code> gem/cookbook are updated to v3.0.1. However if that isn&rsquo;t an option for some reason, you can use this conditional check:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef_gem</span> <span class="s1">&#39;chef-vault&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">compile_time</span> <span class="kp">true</span> <span class="k">if</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="o">::</span><span class="no">ChefGem</span><span class="o">.</span><span class="n">instance_methods</span><span class="p">(</span><span class="kp">false</span><span class="p">)</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="ss">:compile_time</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>The <code>ohai_time</code> attribute will be displayed as a relative time, e.g.,
-&ldquo;585 hours ago.&rdquo; It will include some more data about the nodes like IP&rsquo;s. This
-uses Chef&rsquo;s search feature, so you can also pass in a query:</p>
+<p>Hat tip to Anthony Scalisi, who added this in <a href="https://github.com/opscode-cookbooks/aws/pull/110">a pull request for the aws cookbook</a>. The <code>instance_methods</code> method comes from Ruby&rsquo;s <a href="http://ruby-doc.org/core-2.2.1/Module.html#method-i-instance_methods">Module class</a>. Per the documentation:</p>
+
+<blockquote><p>Returns an array containing the names of the public and protected instance methods in the receiver. For a module, these are the public and protected methods; for a class, they are the instance (not singleton) methods. If the optional parameter is false, the methods of any ancestors are not included.</p></blockquote>
+
+<p>If we look at this in, e.g., <code>chef-shell</code> under Chef 12.1.0:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">status</span> <span class="s2">&quot;role:webserver&quot;</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">chef</span><span class="p">:</span><span class="n">recipe</span> <span class="o">&gt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="o">::</span><span class="no">ChefGem</span><span class="o">.</span><span class="n">instance_methods</span><span class="p">(</span><span class="kp">false</span><span class="p">)</span>
+</span><span class='line'> <span class="o">=&gt;</span> <span class="o">[</span><span class="ss">:gem_binary</span><span class="p">,</span> <span class="ss">:compile_time</span><span class="p">,</span> <span class="ss">:after_created</span><span class="o">]</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>The <code>knife exec</code> example is simple, but you can get a lot more data
-about the nodes than what <code>knife status</code> reports.</p>
+<p>And in Chef 12.0.3 or 11.18.6:</p>
 
-<p>In either case, <code>ohai_time</code> isn&rsquo;t 100% accurate, since it is generated
-at the beginning of the run, and depending on what you&rsquo;re doing with
-Chef on your systems, it can take a long time before the node data is
-saved. However, it&rsquo;s close enough for many use cases.</p>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef</span> <span class="o">&gt;</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="o">::</span><span class="no">ChefGem</span><span class="o">.</span><span class="n">instance_methods</span><span class="p">(</span><span class="kp">false</span><span class="p">)</span>
+</span><span class='line'> <span class="o">=&gt;</span> <span class="o">[</span><span class="ss">:gem_binary</span><span class="p">,</span> <span class="ss">:after_created</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
 
-<p>If more detailed or completely accurate information about the Chef run
-is required for your purposes, you should use a
-<a href="http://docs.opscode.com/chef/essentials_handlers.html">report handler</a>,
-which does have more data about the run available, including whether
-the run was successful or not.</p>
 </div>
 
 
@@ -221,12 +189,12 @@ the run was successful or not.</p>
   
 
 
-<time datetime="2013-02-16T20:14:00-07:00" pubdate data-updated="true">Feb 16<span>th</span>, 2013</time>
+<time datetime="2015-03-20T08:46:47-06:00" pubdate data-updated="true">Mar 20<span>th</span>, 2015</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/plugins/'>plugins</a>
+    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -242,10 +210,8 @@ the run was successful or not.</p>
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013/02/10/install-chef-11-server-on-centos-6/" title="Previous Post: Install Chef 11 Server on CentOS 6">&laquo; Install Chef 11 Server on CentOS 6</a>
+        <a class="basic-alignment left" href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/" title="Previous Post: Awesome Syntax Highlighting in Keynote">&laquo; Awesome Syntax Highlighting in Keynote</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013/03/19/anatomy-of-a-test-kitchen-1-dot-0-cookbook-part-1/" title="Next Post: Anatomy of a Test Kitchen 1.0 Cookbook (Part 1)">Anatomy of a Test Kitchen 1.0 Cookbook (Part 1) &raquo;</a>
       
     </p>
   </footer>
@@ -359,8 +325,8 @@ the run was successful or not.</p>
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes/';
-        var disqus_url = 'http://jtimberman.housepub.org/blog/2013/02/16/last-check-in-time-for-nodes/';
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2015/03/20/chef-gem-compile-time-compatibility/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2015/03/20/chef-gem-compile-time-compatibility/';
         var disqus_script = 'embed.js';
       
     (function () {
