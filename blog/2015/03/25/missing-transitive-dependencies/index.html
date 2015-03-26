@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Some Knife Plugins - jtimberman's Code Blog</title>
+  <title>Missing Transitive Dependencies - jtimberman's Code Blog</title>
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I&rsquo;ve shared my ~/.chef/plugins/knife directory as a Git repository
-on GitHub. There&rsquo;s
-only a few, but I hope you find them useful. They &hellip;">
+  <meta name="description" content="One of my home projects while I&rsquo;m on vacation this week is rebuilding my server with Fedora 21 (Server). In order to do this, I needed to add &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ only a few, but I hope you find them useful. They &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins">
+  <link rel="canonical" href="http://jtimberman.housepub.org/blog/2015/03/25/missing-transitive-dependencies">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="jtimberman's Code Blog" type="application/atom+xml">
@@ -84,7 +82,7 @@ only a few, but I hope you find them useful. They &hellip;">
   
   <header>
     
-      <h1 class="entry-title">Some Knife Plugins</h1>
+      <h1 class="entry-title">Missing Transitive Dependencies</h1>
     
     
       <p class="meta">
@@ -100,104 +98,48 @@ only a few, but I hope you find them useful. They &hellip;">
   
 
 
-<time datetime="2012-11-29T19:11:00-07:00" pubdate data-updated="true">Nov 29<span>th</span>, 2012</time>
+<time datetime="2015-03-25T12:54:08-06:00" pubdate data-updated="true">Mar 25<span>th</span>, 2015</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>I&rsquo;ve shared my <code>~/.chef/plugins/knife</code> directory as a Git repository
-on <a href="https://github.com/jtimberman/chef-plugins-knife">GitHub</a>. There&rsquo;s
-only a few, but I hope you find them useful. They are licensed under
-the Apache 2.0 software license, but please only use them for awesome.</p>
+<div class="entry-content"><p>One of my home projects while I&rsquo;m on vacation this week is rebuilding my server with Fedora 21 (<a href="https://getfedora.org/en/server/">Server</a>). In order to do this, I needed to <a href="https://github.com/hw-cookbooks/runit/commit/c3d46bcf2c330e90aff8f1bb1e1701d57078cca8">add Fedora support</a> to the <a href="https://supermarket.chef.io/cookbooks/runit">runit</a> cookbook, since I use runit for a number of services on my system. That&rsquo;s really neither here nor there, as the topic of this blog post isn&rsquo;t specific to Fedora, nor runit.</p>
 
-<h2>gem</h2>
+<p>The topic is actually about an issue with transitive dependencies and how Chef dependency resolution works.</p>
 
-<p>This plugin will install a gem into the Ruby environment that knife is
-executing in. This is handy if you want to install knife plugins that
-are gems.</p>
+<p>Here&rsquo;s the scenario:</p>
 
-<p>If you have Ruby and Chef/Knife installed in an area where your user
-can write:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
+<ol>
+<li>I run chef on my node</li>
+<li>The runit cookbook is synchronized</li>
+<li>An older version of the runit cookbook is downloaded</li>
+<li>The new changes I expected were not made</li>
+<li>WTFs ensue</li>
+</ol>
 
 
-<p>If you&rsquo;re using an Omnibus package install of Chef, or otherwise
-require root access to install:</p>
+<p>So what happened?</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife gem install knife-config</span></code></pre></td></tr></table></div></figure>
+<p>The runit cookbook itself is updated to use Ian Meyer&rsquo;s Package Cloud repository &ndash; at least, the version I want to use is, which is on GitHub. When I submitted the PR for adding this repository for RHEL platforms, Ian had not yet added Fedora packages. That&rsquo;s okay because Fedora is not listed as supported in the cookbook. However, I wanted to use it, and figured folks in the community using Fedora Server might benefit too.</p>
 
+<p>I digress. Ian pushed a Fedora package earlier today, so I added &ldquo;fedora&rdquo; to the various platform family conditionals, in the cookbook and opened the PR linked earlier. All was well in test kitchen. So I change my local repository&rsquo;s Berksfile:</p>
 
-<p><strong>Note</strong> If you&rsquo;re trying to install a gem for <em>Chef</em> to use, you
-  should put it in a <code>chef_gem</code> resource in a recipe.</p>
-
-<h2>metadata</h2>
-
-<p>This plugin prints out information from a cookbook&rsquo;s metadata. It
-currently only works with <code>metadata.rb</code> files, and not <code>metadata.json</code>
-files.</p>
-
-<p>In a cookbook&rsquo;s directory, display the cookbook&rsquo;s dependencies:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies</span></code></pre></td></tr></table></div></figure>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;runit&#39;</span><span class="p">,</span> <span class="ss">github</span><span class="p">:</span> <span class="s1">&#39;hw-cookbooks/runit&#39;</span><span class="p">,</span> <span class="ss">ref</span><span class="p">:</span> <span class="s1">&#39;jtimberman/fedora-21&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
-<p>Show the dependencies and supported platforms:</p>
+<p>Then a quick <code>berks update runit</code> and <code>berks upload runit</code>, and I was in business.</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata dependencies platforms</span></code></pre></td></tr></table></div></figure>
+<p>Or so I thought. Enter scenario listed above. The problem is, that when I did the <code>berks upload</code>, it only uploaded <code>runit</code>. However in the latest <code>runit</code> cookbook from that branch, it also adds a dependency on Computology&rsquo;s <a href="https://supermarket.chef.io/cookbooks/packagecloud">packagecloud</a> cookbook, since it uses that to add the repository. When the <code>runit</code> cookbook is specified on the <code>berks upload</code> command, it doesn&rsquo;t upload the transitive dependencies when the location is a git URI. This appears to be by design.</p>
 
+<p>What happens in Chef is that the server solves the graph, seeing that the node needs the runit cookbook. But the latest version of the runit cookbook depends on packagecloud, which hasn&rsquo;t yet been uploaded. So the dependency solver looks for the latest version of the runit cookbook that meets the constraint (none), and doesn&rsquo;t have the packagecloud cookbook. Thus, I end up with runit version 1.5.18 on my node, but it fails to converge because it doesn&rsquo;t have the changes required for Fedora, which are in 1.5.20.</p>
 
-<p>Use the <code>-P</code> option to pass a path to a cookbook.</p>
+<p>The simple solution here is to upload the packagecloud cookbook. This can be done with <code>berks upload packagecloud</code>, as it does exist in the Berksfile.lock and has been cached in the berkshelf. Alternatively, <code>berks upload</code> will also upload the cookbook, as that operates on all cookbooks in  the Berksfile.lock.</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife metadata name dependencies -P ~/.berkshelf/cookbooks/rabbitmq-1.6.4</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>nukular</h2>
-
-<p><a href="http://jtimberman.housepub.org/blog/2012/02/15/testing-with-fission/">I wrote on this blog about this plugin awhile ago</a>.</p>
-
-<p>This plugin cleans up after running <code>chef-client</code> on a VMware Fusion machine.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife nukular guineapig base guineapig.int.example.com</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>plugin_create</h2>
-
-<p>This creates a plugin scaffolding in <code>~/.chef/plugins/knife</code>. It will
-join underscored words as CamelCaseClasses.</p>
-
-<p>For example,</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesometown</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Creates a plugin that is class <code>Awesometown</code> that can be executed with:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife awesometown</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Whereas this,</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin create awesome_town</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Creates a plugin that is class <code>AwesomeTown</code> that can be executed
-with:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>knife plugin awesome town</span></code></pre></td></tr></table></div></figure>
-
+<p>I hope this helps anyone who&rsquo;s faced this issue with transitive dependencies when working on a cookbook &ldquo;in development.&rdquo;</p>
 </div>
 
 
@@ -220,12 +162,12 @@ with:</p>
   
 
 
-<time datetime="2012-11-29T19:11:00-07:00" pubdate data-updated="true">Nov 29<span>th</span>, 2012</time>
+<time datetime="2015-03-25T12:54:08-06:00" pubdate data-updated="true">Mar 25<span>th</span>, 2015</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/chef/'>chef</a>, <a class='category' href='/blog/categories/plugins/'>plugins</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/chef/'>chef</a>
   
 </span>
 
@@ -241,10 +183,8 @@ with:</p>
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2012/11/19/chef-repository-berkshelf-conversion/" title="Previous Post: Chef Repository Berkshelf Conversion">&laquo; Chef Repository Berkshelf Conversion</a>
+        <a class="basic-alignment left" href="/blog/2015/03/20/chef-gem-compile-time-compatibility/" title="Previous Post: Chef Gem Compile Time Compatibility">&laquo; Chef Gem Compile Time Compatibility</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2012/12/13/cookbook-integration-testing-with-real-examples/" title="Next Post: Cookbook Integration Testing With Real Examples">Cookbook Integration Testing With Real Examples &raquo;</a>
       
     </p>
   </footer>
@@ -358,8 +298,8 @@ with:</p>
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins/';
-        var disqus_url = 'http://jtimberman.housepub.org/blog/2012/11/29/some-knife-plugins/';
+        var disqus_identifier = 'http://jtimberman.housepub.org/blog/2015/03/25/missing-transitive-dependencies/';
+        var disqus_url = 'http://jtimberman.housepub.org/blog/2015/03/25/missing-transitive-dependencies/';
         var disqus_script = 'embed.js';
       
     (function () {

@@ -9,10 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="A few weeks ago, I listened to the
-Changelog Podcast
-episode featuring Chris Forsythe, lead of the Growl project. I
-actually don&rsquo;tWdidn&rsquo;t &hellip;">
+  <meta name="description" content="A new &ldquo;which tool is best&rdquo; battle is raging in the internets amongst
+developers and system administrators. The contestants are screen
+and &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +81,145 @@ actually don&rsquo;tWdidn&rsquo;t &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/28/iterm2-with-tmux/">iTerm2 With Tmux</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-28T15:03:00-07:00" pubdate data-updated="true">Jan 28<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A new &ldquo;which tool is best&rdquo; battle is raging in the internets amongst
+developers and system administrators. The contestants are <a href="http://www.gnu.org/software/screen/">screen</a>
+and <a href="http://tmux.sourceforge.net/">tmux</a>, and the
+<a href="https://www.google.com/search?q=tmux+vs+screen">jury is still out</a>.
+This is very much an argument over what color to paint the bikeshed,
+but with the latest version of
+<a href="http://www.iterm2.com/">iTerm2</a>, I think tmux is even more
+compelling. Personally, I chose tmux awhile ago.</p>
+
+<p>At my <a href="http://opscode.com">day job</a>, I worked with a customer that
+uses tmux for remote pairing between developers. At the time, tmux had
+better customizability, and better split-pane support (screen didn&rsquo;t
+yet have vertical split). I stuck with tmux ever since, and was very
+pleased when an iTerm2 update announced integration with tmux.</p>
+
+<h1>iTerm2</h1>
+
+<p>For those who aren&rsquo;t aware, iTerm2 is an alternate terminal program
+for Mac OS X. It is actually an updated codebase from the original,
+<a href="http://iterm.sourceforge.net/">iTerm</a>, which is effectively
+<a href="http://iterm.sourceforge.net/news.shtml">unmaintained</a>. iTerm2 offers
+a lot of excellent features like split panes, Growl support, and
+<a href="http://www.iterm2.com/#/section/features">many more</a>.</p>
+
+<p>One of the excellent new features is integration with tmux.</p>
+
+<h1>iTerm2&rsquo;s tmux integration</h1>
+
+<p>If you already have iTerm2 installed, you may have seen the update
+check prompt you to update. You also need to install a special version
+of tmux that has the integration patched. The iTerm2 author is working
+with the tmux author to get this into the latest tmux codebase, so
+hopefully the custom compiled version won&rsquo;t be necessary soon.</p>
+
+<p>Using the new feature is relatively straightforward. Start up iTerm2
+like normal. Then run <code>tmux -C</code> to open a new iTerm2 window that works
+like tmux.</p>
+
+<p><img src="http://img.skitch.com/20120128-cxjbh9hf9feagn5p5ieg574uce.png" alt="Launch tmux in iTerm2" /></p>
+
+<p>Use the tmux menu in iTerm2 to open new windows in tmux. Note that there
+are keyboard shortcuts for each of these, and they are not the same as
+the tmux window commands.</p>
+
+<p><img src="http://img.skitch.com/20120128-diexhy69d8t3b9da6g65yjmsum.png" alt="Use tmux menu to open buffers" /></p>
+
+<p>You can also attach to a tmux session running in iTerm2. In the
+screenshot, this is running on the same system, for example purposes.
+However, since OS X has SSH, this can be useful if you want to SSH to
+another system in the local network and connect to the running
+session. For example, the system shown below is my wife&rsquo;s iMac over
+screensharing, but I wouldn&rsquo;t need to use screenshare (or participate
+in its lag) to connect to this anymore. The same holds true for
+connecting to my work laptop if necessary.</p>
+
+<p><img src="http://img.skitch.com/20120128-txr67q3jftmcw26n84jm5hpgm.png" alt="Attach to tmux session in iTerm2" /></p>
+
+<p>In this final example screenshot, you can see that I have multiple
+panes split in one iTerm2 tab. These correspond to the split windows
+in the attached tmux in the other window. Also, the two tabs in the
+iTerm2 window are separate tmux windows (<code>0:zsh</code> and <code>1:zsh</code>).</p>
+
+<p><img src="http://img.skitch.com/20120128-miaa1dkeatt2hebxcxst8sydy1.png" alt="iTerm2 panes are panes in tmux" /></p>
+
+<p>And now, I can SSH to that system and attach to the tmux session
+started by iTerm2.</p>
+
+<p><img src="http://img.skitch.com/20120129-gjgajqnekq93da59m4r86ewh2k.png" alt="SSH to remote and run tmux attach" /></p>
+
+<p><img src="http://img.skitch.com/20120129-j2x4iir5557nt68n5jmr64f8dp.png" alt="tmux is attached to iTerm2 session" /></p>
+
+<h1>Automating Installation with Chef</h1>
+
+<p>Installing OS X apps is quite easy, but I automate them
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">with Chef</a>
+anyway. While it is a simple &ldquo;install update and restart&rdquo;, with a
+couple commands to install the update, I do have three systems I want
+this on. I updated my
+<a href="http://community.opscode.com/cookbooks/iterm2">iterm2 cookbook</a> to
+support installing the tmux integration for iTerm2. This is disabled
+by default, so it needs to be enabled via a node attribute. For
+example, I have this in my <code>workstation</code> role applied to my OS X
+workstations.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s2">&quot;workstation&quot;</span>
+</span><span class='line'><span class="n">description</span> <span class="s2">&quot;Mac OS X workstations&quot;</span>
+</span><span class='line'><span class="n">run_list</span><span class="p">(</span><span class="s2">&quot;recipe[tmux]&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="n">default_attributes</span><span class="p">(</span>
+</span><span class='line'>  <span class="s2">&quot;iterm2&quot;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="s2">&quot;tmux_enabled&quot;</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Check out the iterm2 cookbook&rsquo;s README for more information.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1787,51 +1925,6 @@ end</pre></div>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/06/22/github-for-mac-cookbook/">Github for Mac Cookbook</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-06-22T00:00:00-06:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Earlier today, GitHub <a href="https://github.com/blog/878-announcing-github-for-mac" title="GitHub for Mac Announcement" target="_blank">released</a> their native <a href="http://mac.github.com" title="GitHub for Mac" target="_blank">OS X client application</a>. As I automate <a href="https://twitter.com/#!/jtimberman/status/73450718429847552" target="_blank">everything</a> on my <a href="http://jtimberman.posterous.com/managing-my-workstations-with-chef">Macs with Chef</a>, I wrote a <a href="http://ckbk.it/ghmac">cookbook for Github for Mac</a>.</p>
-<p>In my chef-repo I did:</p>
-<div class="CodeRay">
-  <div class="code"><pre>knife cookbook site install ghmac
-knife cookbook upload ghmac
-#... add 'recipe[ghmac]' to my workstation role ...
-knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre></div>
-</div>
-
-<p>Since my Mac OS X workstations all have role[workstation], they all got GitHub for Mac installed automatically. I did have to do the configuration steps through the UI, and that made me cry a little, but I got over it. The application itself is quite nice.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/7/">&larr; Older</a>
@@ -1866,6 +1959,10 @@ knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
       </li>
     
@@ -1879,10 +1976,6 @@ knife ssh role:workstation 'source .rvm/scripts/rvm &amp;&amp; chef-client'</pre
     
       <li class="post">
         <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
       </li>
     
   </ul>

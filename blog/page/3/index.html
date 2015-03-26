@@ -9,9 +9,10 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="This is a quick post to introduce what I&rsquo;m starting on testing with
-ChefSpec. This is from Opscode&rsquo;s
-Java cookbook. While the recipe &hellip;">
+  <meta name="description" content="I&rsquo;ve become enamored with
+IllumOS
+recently. Years ago, I used Solaris (2.5.1 through 8) at IBM.
+Unfortunately (for me), I stopped using it &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +82,293 @@ Java cookbook. While the recipe &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/06/23/getting-started-with-zones-on-omnios/">Getting Started With Zones on OmniOS</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-23T23:47:00-06:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I&rsquo;ve become enamored with
+<a href="http://wiki.illumos.org/display/illumos/illumos+Home">IllumOS</a>
+recently. Years ago, I used Solaris (2.5.1 through 8) at IBM.
+Unfortunately (for me), I stopped using it before Solaris 10 brought
+all the cool toys to the yard &ndash; zones, zfs, dtrace, SMF. Thanks to
+OmniTI&rsquo;s excellent IllumOS distribution,
+<a href="http://omnios.omniti.com">OmniOS</a>, I&rsquo;m getting acclimated with the
+awesomeness. I plan to write more about my experiences here.</p>
+
+<p>First up, I spent today playing with zones. Zones are a kernel-level
+container technology similar to Linux containers/cgroups, or BSD
+jails. They&rsquo;re fast and lightweight. At least two of the plans I have
+for them:</p>
+
+<ol>
+<li>Segregating the services on my home-server.</li>
+<li>Adding support to various tools in Chef&rsquo;s ecosystem.</li>
+</ol>
+
+
+<p>The following is basically a compilation of several different blog
+posts and documentation collections I&rsquo;ve been poring over. Like most
+technical blog writers, I&rsquo;m posting this so I can find it later :&ndash;).</p>
+
+<h2>Hardware</h2>
+
+<p>I have a number of options for learning OmniOS. I have spare hardware,
+or VMware, or
+<a href="http://omnios.omniti.com/wiki.php/Installation#UsingVagrant">OmniTI&rsquo;s Vagrant box</a>.
+I&rsquo;m doing all three of these, but the main use will be on physical
+hardware, as I&rsquo;m planning to port the aforementioned server to OmniOS
+(#1, above).</p>
+
+<p>The details of the hardware are not important, except that I have a
+hard disk device <code>c3t1d0</code>, and a physical NIC device <code>nge1</code> that are
+devoted to zones. To adapt these instructions for your own
+installation, change those device names where appropriate.</p>
+
+<p>You can find the name of the disk device to use in your system with
+the <code>format</code> command.</p>
+
+<pre><code>root@menthe:~# format
+Searching for disks...done
+
+
+AVAILABLE DISK SELECTIONS:
+       0. c3t0d0 &lt;ATA-WDCWD1500AHFD-0-7QR5 cyl 18238 alt 2 hd 255 sec 63&gt;
+          /pci@0,0/pci1043,cb84@d/disk@0,0
+       1. c3t1d0 &lt;ATA-SAMSUNG HD501LJ-0-12-465.76GB&gt;
+          /pci@0,0/pci1043,cb84@d/disk@1,0
+Specify disk (enter its number): ^D
+</code></pre>
+
+<p>Here I wanted to use the Samsung disk.</p>
+
+<p>Use <code>dladm</code> to find the network devices:</p>
+
+<pre><code>root@menthe:~# dladm show-phys
+LINK         MEDIA                STATE      SPEED  DUPLEX    DEVICE
+nge0         Ethernet             up         1000   full      nge0
+nge1         Ethernet             up         1000   full      nge1
+</code></pre>
+
+<h2>Setup</h2>
+
+<p>The example zone here is named <code>base</code>. Replace <code>base</code> with any zone
+name you wish, e.g. <code>webserver37</code> or <code>noodlebarn</code>. It&rsquo;s also worth
+noting that I&rsquo;m going to use DHCP, rather than static networking here.
+There are plenty of guides out there for static networking, and I had
+to hunt around for DHCP. Also worth noting is that this was all
+performed right after installing the OS.</p>
+
+<p>First, create a zpool to use for zones. This is a 500G disk, so I have
+plenty of space.</p>
+
+<pre><code>zpool create zones c3t1d0
+</code></pre>
+
+<p>Next, create a VNIC on the interface which is devoted to zones
+(<code>nge1</code>). It can be named anything, but must end with a number.</p>
+
+<pre><code>dladm create-vnic -l nge1 vnicbase0
+</code></pre>
+
+<p>Rather than use the <code>zonecfg</code> REPL, I used the following configuration
+file, for repeatability.</p>
+
+<pre><code>create -b
+set zonepath=/zones/base
+set ip-type=exclusive
+set autoboot=false
+add net
+set physical=vnicbase0
+end
+commit
+</code></pre>
+
+<p>Use this config file to configure the zone with <code>zonecfg</code>.</p>
+
+<pre><code>zonecfg -z base -f base.conf
+</code></pre>
+
+<p>Now we&rsquo;re ready to install the OS in the new zone. This may take
+awhile as all the packages need to be downloaded.</p>
+
+<pre><code>zoneadm -z base install
+</code></pre>
+
+<p>The default <code>nsswitch.conf(4)</code> does not use DNS for hosts. This is
+fairly standard for Solaris/IllumOS. Also, the <code>resolv.conf(4)</code> is not
+configured automatically, which is a departure from automagic Linux
+distributions (and a thing I agree with).</p>
+
+<pre><code>cp /etc/nsswitch.dns /etc/resolv.conf /zones/base/root/etc
+</code></pre>
+
+<p>OmniOS does not use
+<a href="http://lists.omniti.com/pipermail/omnios-discuss/2012-December/000323.html"><code>sysidcfg</code></a>,
+so the way to make the new zone boot up with an interface configured
+for DHCP is to write out the <code>ipadm.conf</code> configuration for <code>ipadm</code>.
+The following is <code>base.ipadm.conf</code> that I used, with the <code>vnicbase0</code>
+VNIC created with <code>dladm</code> earlier.</p>
+
+<pre><code>_ifname=vnicbase0;_family=2;
+_ifname=vnicbase0;_family=26;
+_ifname=vnicbase0;_aobjname=vnicbase0/v4;_dhcp=-1,no;
+</code></pre>
+
+<p>Copy this file to the zone.</p>
+
+<pre><code>cp base.ipadm.conf /zones/base/root/etc/ipadm/ipadm.conf
+</code></pre>
+
+<p>Now, boot the zone.</p>
+
+<pre><code>zoneadm -z base boot
+</code></pre>
+
+<p>Now you can log into the newly created zone and verify that things are
+working, and do any further configuration required.</p>
+
+<pre><code>zlogin -e ! base
+</code></pre>
+
+<p>I use <code>!</code> as the escape character because I&rsquo;m logging into my global
+zone over SSH. This means you disconnect with <code>!.</code> instead of <code>~.</code>.</p>
+
+<p>Once complete, the zone can be cloned.</p>
+
+<h2>Clone a Zone</h2>
+
+<p>I&rsquo;m going to clone the <code>base</code> zone to <code>clonebase</code>. Again, rename this
+to whatever you like.</p>
+
+<p>First, a zone must be halted before it can be cloned.</p>
+
+<pre><code>zoneadm -z base halt
+</code></pre>
+
+<p>Now, create a new VNIC for the zone.</p>
+
+<pre><code>dladm create-vnic -l nge1 clonebase
+</code></pre>
+
+<p>Read the <code>base</code> zone&rsquo;s configuration, and replace <code>base</code> with
+<code>clonebase</code>.</p>
+
+<pre><code>zonecfg -z base export | sed 's/base/clonebase/g' | tee clonebase.conf
+</code></pre>
+
+<p>Then, create the new zone configuration, and clone the base zone.</p>
+
+<pre><code>zonecfg -z clonebase -f clonebase.conf
+zoneadm -z clonebase clone base
+</code></pre>
+
+<p>Again, ensure that the network configuration to use DNS is available.</p>
+
+<pre><code>cp /etc/nsswitch.dns /etc/resolv.conf /zones/clonebase/root/etc
+</code></pre>
+
+<p>Create the <code>ipadm.conf</code> config for the new zone. I named it <code>clonebase.ipadm.conf</code></p>
+
+<pre><code>sed 's/base/clonebase/g' base.ipadm.conf &gt; clonebase.ipadm.conf
+</code></pre>
+
+<p>Now copy this to the zone.</p>
+
+<pre><code>cp clonebase.ipadm.conf /zones/clonebase/root/etc/ipadm/ipadm.conf
+</code></pre>
+
+<p>Finally, boot the new zone.</p>
+
+<pre><code>zoneadm -z clonebase boot
+</code></pre>
+
+<p>Login and verify the new zone.</p>
+
+<pre><code>zlogin -e ! clonebase
+</code></pre>
+
+<h2>Cleaning Up</h2>
+
+<p>Use the following to clean up the zone when it&rsquo;s not needed anymore.</p>
+
+<pre><code>zone=clonebase
+zoneadm -z $zone halt
+zoneadm -z $zone uninstall -F
+zonecfg -z $zone delete -F
+</code></pre>
+
+<h2>Sans Prose</h2>
+
+<p><a href="https://gist.github.com/jtimberman/5848129">This gist</a> contains all
+the things I did above minus the prose.</p>
+
+<h2>What&rsquo;s Next?</h2>
+
+<p>I have a few goals in mind for this system. First of all, I want to
+manage the zones with Chef, of course. Some of the functions of the
+zones may be:</p>
+
+<ul>
+<li>IPS package repository</li>
+<li>Omnibus build system for OmniOS</li>
+<li>Adding OmniOS support to cookbooks</li>
+</ul>
+
+
+<p>I also want to facilitate plugins and the ecosystem around Chef for
+IllumOS, including zone based knife, vagrant and test-kitchen plugins.</p>
+
+<p>Finally, I plan to convert my Linux home-server to OmniOS. There are a
+couple things I&rsquo;m running that will require Linux (namely
+<a href="http://www.plexapp.com">Plex</a>), but fortunately,
+<a href="http://omnios.omniti.com/wiki.php/VirtualMachinesKVM">OmniOS has KVM</a>
+thanks to <a href="http://smartos.org">SmartOS</a>.</p>
+
+<h2>References</h2>
+
+<p>The following links were helpful in composing this post, and of course
+for the reference material they contain.</p>
+
+<ul>
+<li><a href="http://zero-knowledge.org/post/74">http://zero-knowledge.org/post/74</a></li>
+<li><a href="https://blogs.oracle.com/mandalika/entry/solaris_10_zone_creation_for">https://blogs.oracle.com/mandalika/entry/solaris_10_zone_creation_for</a></li>
+<li><a href="http://www.oracle.com/technetwork/articles/servers-storage-admin/o11-092-s11-zones-intro-524494.html">http://www.oracle.com/technetwork/articles/servers-storage-admin/o11-092-s11-zones-intro-524494.html</a></li>
+<li><a href="http://lists.omniti.com/pipermail/omnios-discuss/2012-December/000322.html">http://lists.omniti.com/pipermail/omnios-discuss/2012-December/000322.html</a></li>
+<li><a href="http://lists.omniti.com/pipermail/omnios-discuss/2012-December/000323.html">http://lists.omniti.com/pipermail/omnios-discuss/2012-December/000323.html</a></li>
+<li><a href="http://omnios.omniti.com/ticket.php/11">http://omnios.omniti.com/ticket.php/11</a> (related to above list post(s))</li>
+</ul>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1888,173 +2176,6 @@ examples, one should always read the code and understand it first :&ndash;).</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/01/28/local-templates-for-application-configuration/">Local Templates for Application Configuration</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-01-28T09:57:00-07:00" pubdate data-updated="true">Jan 28<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Today I joined the
-<a href="http://foodfightshow.org/2013/01/application-deployment.html">Food Fight Show</a>
-for a conversation about Application Deployment. Along the way, the
-question came up about where to store application specific
-configuration files. Should they be stored in a Chef cookbook for
-setting up the system for the application? Or shoud they be stored in
-the application codebase itself?</p>
-
-<p>The answer is either, as far as Chef is concerned. Chef&rsquo;s
-<a href="http://docs.opscode.com/resource_template.html">template resource</a>
-can render a template from a local file on disk, or retrieve the
-template from a cookbook. The latter is the most common pattern, so
-let&rsquo;s examine the former, using a local file on disk.</p>
-
-<p>For sake of discussion, let&rsquo;s use a Rails application that needs a
-<code>database.yml</code> file rendered. Also, we&rsquo;ll assume that information
-about the application (database user, password, server) we need is
-stored in a Chef
-<a href="http://docs.opscode.com/essentials_data_bags_store.html">data bag</a>.
-Finally, we&rsquo;re going to assume that the application is already
-deployed on the system somehow and we just want to render the
-database.yml.</p>
-
-<p>The application source tree looks something like this:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>myapp/
-</span><span class='line'>-&gt; config/
-</span><span class='line'>    -&gt; database.yml.erb</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note that there should not be a database.yml (non-.erb) here, as it
-will be rendered with Chef. The deployment of the app will end up
-in <code>/srv</code>, so the full path of this template is, for example,
-<code>/srv/myapp/current/config/database.yml.erb</code>. The content of the
-template may look like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">&lt;%= @rails_env %&gt;</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @adapter %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @host %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @database %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @username %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">&lt;%= @password %&gt;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="s">&#39;utf8&#39;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The Chef recipe looks like this. Note we&rsquo;ll use a search to find
-the first node that should be the database master (there should only
-be one). For the adapter, we may have set an attribute in the role
-that selects the adapter to use.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">results</span> <span class="o">=</span> <span class="n">search</span><span class="p">(</span><span class="ss">:node</span><span class="p">,</span> <span class="s2">&quot;role:myapp_database_master AND environment:</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">db_master</span> <span class="o">=</span> <span class="n">results</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">template</span> <span class="s2">&quot;/srv/myapp/shared/database.yml&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">source</span> <span class="s2">&quot;/srv/myapp/current/config/database.yml.erb&quot;</span>
-</span><span class='line'>  <span class="n">local</span> <span class="kp">true</span>
-</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
-</span><span class='line'>    <span class="ss">:rails_env</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:adapter</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;myapp&#39;</span><span class="o">][</span><span class="s1">&#39;db_adapter&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:host</span> <span class="o">=&gt;</span> <span class="n">db_master</span><span class="o">[</span><span class="s1">&#39;fqdn&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:database</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp_</span><span class="si">#{</span><span class="n">node</span><span class="o">.</span><span class="n">chef_environment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:username</span> <span class="o">=&gt;</span> <span class="s2">&quot;myapp&quot;</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:password</span> <span class="o">=&gt;</span> <span class="s2">&quot;SUPERSECRET&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The rendered template, <code>/srv/myapp/shared/database.yml</code>, will look
-like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">production</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mysql</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">domU-12-31-39-14-F1-C3.compute-1.internal</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp_production</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">myapp</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">SUPERSECRET</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">utf8</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">reconnect</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This post is only part of the puzzle, mainly to explain what I
-mentioned on the Food Fight Show today. There are a number of
-unanswered questions like,</p>
-
-<ul>
-<li>Should database.yml be .gitignore&rsquo;d?</li>
-<li>How do developers run the app locally?</li>
-<li>How do I use this with Chef Solo?</li>
-</ul>
-
-
-<p>As mentioned on the show, there&rsquo;s currently a
-<a href="http://lists.opscode.com/sympa/arc/chef/2013-01/msg00392.html">thread</a>
-related to this topic on the Chef mailing list.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/4/">&larr; Older</a>
@@ -2089,6 +2210,10 @@ related to this topic on the Chef mailing list.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
       </li>
     
@@ -2102,10 +2227,6 @@ related to this topic on the Chef mailing list.</p>
     
       <li class="post">
         <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a>
       </li>
     
   </ul>
