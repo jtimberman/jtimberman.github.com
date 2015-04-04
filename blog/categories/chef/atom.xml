@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chef | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-03-26T12:09:51-06:00</updated>
+  <updated>2015-04-03T22:08:10-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,205 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Chef Audit Mode Introduction]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/04/03/chef-audit-mode-introduction/"/>
+    <updated>2015-04-03T20:48:23-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/04/03/chef-audit-mode-introduction</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his talk, &ldquo;Compliance At Velocity,&rdquo; James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
+
+<p>First, we need to update ChefDK to version 0.5.0 (rc 3 is current), as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
+
+<p><code>
+curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk -p
+</code></p>
+
+<p>The <code>-p</code> option tells the script to use the prerelease version, as of this writing 0.5.0 is not released, but we have a release candidate.</p>
+
+<p>Next, create a new cookbook for the audit mode tests.</p>
+
+<p><code>
+chef generate cookbook audit-test
+cd audit-test
+</code></p>
+
+<p>Then, modify the audit-test cookbook&rsquo;s <code>.kitchen.yml</code>:</p>
+
+<h2>```</h2>
+
+<p>driver:
+  name: vagrant</p>
+
+<p>provisioner:
+  name: chef_zero
+  client_rb:</p>
+
+<pre><code>audit_mode: :audit_only
+</code></pre>
+
+<p>platforms:
+  &ndash; name: ubuntu-12.04
+  &ndash; name: centos-6.5</p>
+
+<p>suites:
+  &ndash; name: default</p>
+
+<pre><code>run_list:
+  - recipe[audit-test::default]
+attributes:
+</code></pre>
+
+<p>```</p>
+
+<p>This is the generated <code>.kitchen.yml</code> with <code>client_rb</code> added to the provisioner config. Note that we must use the Ruby symbol syntax for the config value, <code>:audit_only</code>. The other valid values for <code>audit_mode</code> are <code>:enabled</code> and <code>:disabled</code>. This will be translated to an actual Ruby symbol in the generated config file (<code>/tmp/kitchen/client.rb</code>):</p>
+
+<p><code>ruby
+audit_mode :audit_only
+</code></p>
+
+<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. Let&rsquo;s write a control that asserts this is true.</p>
+
+<p>```ruby
+control_group &lsquo;Blog Post Examples&rsquo; do
+  control &lsquo;SSH&rsquo; do</p>
+
+<pre><code>it 'should be listening on port 22' do
+  expect(port(22)).to be_listening
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>Now run <code>kitchen converge ubuntu</code> to run Chef, but not tear down the VM aftward &ndash; we&rsquo;ll use it again for another example. Here&rsquo;s the audit phase output from the Chef run:</p>
+
+<pre><code>% kitchen converge ubuntu
+Synchronizing Cookbooks:
+  - audit-test
+Compiling Cookbooks...
+Starting audit phase
+
+Blog Post Examples
+  SSH
+    should be listening on port 22
+
+Finished in 0.10453 seconds (files took 0.37536 seconds to load)
+1 example, 0 failures
+Auditing complete
+</code></pre>
+
+<p>Cool! So we have asserted that the node complies with this control by default. But what does a failing control look like? Let&rsquo;s write one. Since we&rsquo;re working with SSH already, let&rsquo;s use the SSHd configuration. By default in the Vagrant base box we&rsquo;re using, root login is permitted, so this value is present:</p>
+
+<p><code>
+PermitRootLogin yes
+</code></p>
+
+<p>However, our security policy mandates that we set this to <code>no</code>, and we want to audit that.</p>
+
+<p>```ruby
+control_group &lsquo;Blog Post Examples&rsquo; do
+  control &lsquo;SSH&rsquo; do</p>
+
+<pre><code>it 'should be listening on port 22' do
+  expect(port(22)).to be_listening
+end
+
+it 'disables root logins over ssh' do
+  expect(file('/etc/ssh/sshd_config')).to contain('PermitRootLogin no')
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>Rerun <code>kitchen converge ubuntu</code> and we see the validation fails.</p>
+
+<pre><code>Starting audit phase
+
+Blog Post Examples
+  SSH
+    should be listening on port 22
+    disables root logins over ssh (FAILED - 1)
+
+Failures:
+
+  1) Blog Post Examples SSH disables root logins over ssh
+     Failure/Error: expect(file('/etc/ssh/sshd_config')).to contain('PermitRootLogin no')
+expected File "/etc/ssh/sshd_config" to contain "PermitRootLogin no"
+     # /tmp/kitchen/cache/cookbooks/audit-test/recipes/default.rb:8:in `block (3 levels) in from_file'
+
+Finished in 0.13067 seconds (files took 0.32089 seconds to load)
+2 examples, 1 failure
+
+Failed examples:
+
+rspec  # Blog Post Examples SSH disables root logins over ssh
+[2015-04-04T03:29:41+00:00] ERROR: Audit phase failed with error message: Audit phase found failures - 1/2 controls failed
+
+Audit phase exception:
+Audit phase found failures - 1/2 controls failed
+</code></pre>
+
+<p>When we have a failure, we&rsquo;ll have contextual information about the failure, including the line number in the recipe where itwas found, and a stack trace (cut from the output here), in case more information is required for debugging. To fix the test, we can simply edit the config file to have the desired setting, or we can manage the file with Chef to set the value accordingly. Either way, after updating the file, the validation will pass, and all will be well.</p>
+
+<p>We can put as many <code>control_group</code> and <code>control</code> blocks with the <code>it</code> validation rules as required to audit our policy. If we have many validations, it can be difficult to follow with all the output if there are failures. Chef&rsquo;s audit mode is based on <a href="http://serverspec.org/">Serverspec</a>, which is based on <a href="http://rspec.info/">RSpec</a>. We can use the <code>filter_tag</code> configuration feature of RSpec to only run the <code>control</code> blocks or <code>it</code> statements that we&rsquo;re interested in debugging. To do this, we need an <code>RSpec.configuration</code> block within the <code>control_group</code> &ndash; due to the way that audit mode is implemented, we can&rsquo;t do it outside of <code>control_group</code>.</p>
+
+<p>For example, we could debug our root login configuration:</p>
+
+<p>```ruby
+control_group &lsquo;Blog Post Examples&rsquo; do
+  ::RSpec.configure do |c|</p>
+
+<pre><code>c.filter_run focus: true
+</code></pre>
+
+<p>  end</p>
+
+<p>  control &lsquo;SSH&rsquo; do</p>
+
+<pre><code>it 'should be listening on port 22' do
+  expect(port(22)).to be_listening
+end
+
+it 'disables root logins over ssh', focus: true do
+  expect(file('/etc/ssh/sshd_config')).to contain('PermitRootLogin no')
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>The key here is to pass the argument <code>focus: true</code> (or if you like hash rockets, <code>:focus =&gt; true</code>) on the <code>it</code> block. This could also be used on a <code>control</code> block:</p>
+
+<p><code>ruby
+control 'SSH', focus: true do
+  it 'does stuff...'
+end
+</code></p>
+
+<p>Then, when running <code>kitchen converge ubuntu</code>, we see only that validation:</p>
+
+<pre><code>Starting audit phase
+
+Blog Post Examples
+  SSH
+    disables root logins over ssh (FAILED - 1)
+
+Failures:
+
+  1) Blog Post Examples SSH disables root logins over ssh
+     Failure/Error: expect(file('/etc/ssh/sshd_config')).to contain('PermitRootLogin no')
+</code></pre>
+
+<p>This example is simple enough that this isn&rsquo;t necessary, but if we were implementing audit mode checks for our entire security policy, that could be dozens or even hundreds of controls.</p>
+
+<p>As of this writing, audit mode is still under development, and is considered an experimental feature. There will be further information, guides, and documentation about it coming to the Chef blog and docs site, and I&rsquo;ll have a post coming soon with something I&rsquo;m working on, so stay tuned!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Missing Transitive Dependencies]]></title>
@@ -391,122 +590,6 @@ Recipe: notif::default
 <p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
 
 <p>Also, define the resources that you need to notify when you&rsquo;re doing this in your provider&rsquo;s actions. A common example is within a provider that writes configuration for a service, and needs to tell that service to restart.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Testing Conditionals in ChefSpec]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/"/>
-    <updated>2015-01-12T14:07:06-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec</id>
-    <content type="html"><![CDATA[<p>This tip is brought to you by the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew</a> cookbook.</p>
-
-<p><a href="http://sethvargo.github.io/chefspec/">ChefSpec</a> is a great way to create tests for Chef recipes to catch regressions. Sometimes recipes end up having branching conditional logic that can have very different outcomes based on external factors &ndash; attributes, existing system state, or cross-platform support.</p>
-
-<p>The homebrew cookbook only supports OS X, so we don&rsquo;t have cross-platform support to test there. However, its default recipe has four conditionals to test. You can read the entire <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/spec/recipes/default_spec.rb">default_spec.rb</a> for full context, I&rsquo;m going to focus on just one aspect here:</p>
-
-<ul>
-<li>Installing homebrew should only happen if the <code>brew</code> binary does not exist.</li>
-</ul>
-
-
-<p>This is a common use case in Chef recipes. The best way to go about converging your node to the desired state involves running some arbitrary command. In this case, it&rsquo;s the installation of Homebrew itself. Normally for installations we want to use an idempotent, convergent resource like <code>package</code>. However, since homebrew is to be our package management system, we have to do something else. As it turns out the homebrew project provides an installation script and that script will install a binary, <code>/usr/local/bin/brew</code>. We will assume that if Chef converged on a node after running the script, and the <code>brew</code> binary exists, then we don&rsquo;t need to attempt reinstallation. There&rsquo;s more robust ways to go about it (e.g., running <code>brew</code> gives some desired output), but this works for example purposes today.</p>
-
-<p>From <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/recipes/default.rb">the recipe</a>, here&rsquo;s the resource:</p>
-
-<p><code>ruby
-execute 'install homebrew' do
-  command homebrew_go
-  user node['homebrew']['owner'] || homebrew_owner
-  not_if { ::File.exist? '/usr/local/bin/brew' }
-end
-</code></p>
-
-<p><code>command</code> is a script, called <code>homebrew_go</code>, which is a local variable set to a path in <code>Chef::Config[:file_cache_path]</code>. It is retrieved in the recipe with <code>remote_file</code>. The resource used to have <code>execute homebrew_go</code>, but when ChefSpec runs, it does so in a random temporary directory, which we cannot predict the name.</p>
-
-<p>The astute observer will note that the <code>user</code> parameter has another conditional (designated by the <code>||</code>). That&rsquo;s actually the subject of another post. In this post, I&rsquo;m concerned only with testing the guard, <code>not_if</code>.</p>
-
-<p>The <code>not_if</code> is a Ruby block, which means the Ruby code is evaluated inline during the Chef run. How we go about testing that is the subject of this post.</p>
-
-<p>First, we need to mock the return result of sending the <code>#exist?</code> method to the <code>File</code> class. There are two reasons. First, we want to control the conditional so we can write a test for each outcome. Second, someone running the test (like me) might have already installed homebrew on their local system (which I have), and so <code>/usr/local/bin/brew</code> will exist. To do this, in our context, we have a <code>before</code> block that stubs the return to false:</p>
-
-<p><code>ruby
-before(:each) do
-  allow_any_instance_of(Chef::Resource).to receive(:homebrew_owner).and_return('vagrant')
-  allow_any_instance_of(Chef::Recipe).to receive(:homebrew_owner).and_return('vagrant')
-  allow(File).to receive(:exist?).and_return(false)
-  stub_command('which git').and_return(true)
-end
-</code></p>
-
-<p>There&rsquo;s some other mocked values here. I&rsquo;ll talk about the <code>vagrant</code> user for <code>homebrew_owner</code> in a moment, though again, that&rsquo;s the subject of another post.</p>
-
-<p>The actual spec will test that the installation script will actually get executed when we run chef, and as the <code>vagrant</code> user.</p>
-
-<p>```ruby
-it &lsquo;runs homebrew installation as the default user&rsquo; do
-  expect(chef_run).to run_execute(&lsquo;install homebrew&rsquo;).with(</p>
-
-<pre><code>:user =&gt; 'vagrant'
-</code></pre>
-
-<p>  )
-end
-```</p>
-
-<p>When rspec runs, we see this is the case:</p>
-
-<p>```
-homebrew::default
-  default user</p>
-
-<pre><code>runs homebrew installation as the default user
-</code></pre>
-
-<p>```</p>
-
-<p>If I didn&rsquo;t mock the user, it would be <code>jtimberman</code>, as that is the user that is running Chef via rspec/ChefSpec. The test would fail. If you&rsquo;re looking at the full file, there&rsquo;s some other details we&rsquo;re going to look at shortly. If I didn&rsquo;t mock the return for <code>File.exist?</code>, the execute wouldn&rsquo;t run at all.</p>
-
-<p>To test what happens when <code>/usr/local/bin/brew</code> exists, I set up a new context in rspec, and create a new <code>before</code> block.</p>
-
-<p>```ruby
-context &lsquo;/usr/local/bin/brew exists&rsquo; do
-  before(:each) do</p>
-
-<pre><code>allow(File).to receive(:exist?).and_return(true)
-stub_command('which git').and_return(true)
-</code></pre>
-
-<p>  end</p>
-
-<p>  it &lsquo;does not run homebrew installation&rsquo; do</p>
-
-<pre><code>expect(chef_run).to_not run_execute('install homebrew')
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>We don&rsquo;t need the <code>vagrant</code> mocks earlier, but we do need to stub <code>File.exist?</code>. This test would pass on my system without it, but not on, e.g., a Linux system that doesn&rsquo;t have homebrew.</p>
-
-<p>Then running rspec, we see:</p>
-
-<p>```
-homebrew::default
-  /usr/local/bin/brew exists</p>
-
-<pre><code>does not run homebrew installation
-</code></pre>
-
-<p>  default user</p>
-
-<pre><code>runs homebrew installation as the default user
-</code></pre>
-
-<p>```</p>
-
-<p>In a coming post, I will walk through the conditionals related to the <code>homebrew_owner</code>.</p>
 ]]></content>
   </entry>
   

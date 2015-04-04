@@ -9,10 +9,10 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I&rsquo;ve become enamored with
-IllumOS
-recently. Years ago, I used Solaris (2.5.1 through 8) at IBM.
-Unfortunately (for me), I stopped using it &hellip;">
+  <meta name="description" content="Two years ago, I wrote a post about
+using Chef encrypted data bags
+for SASL authentication with Postfix. At the time, my ISP didn&rsquo;t allow
+non- &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +82,1045 @@ Unfortunately (for me), I stopped using it &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/10/managing-secrets-with-chef-vault/">Managing Secrets With Chef Vault</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-10T09:30:00-06:00" pubdate data-updated="true">Sep 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Two years ago, I wrote a post about
+<a href="http://jtimberman.housepub.org/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">using Chef encrypted data bags</a>
+for SASL authentication with Postfix. At the time, my ISP didn&rsquo;t allow
+non-authenticated SMTP, so I had to find a solution so I could get
+cronspam and other vital email from my servers at home. I&rsquo;ve since
+switched ISPs to one that doesn&rsquo;t care so much about this, so I&rsquo;m not
+using any of that code anymore.</p>
+
+<p>However, that doesn&rsquo;t mean I don&rsquo;t have secrets to manage! I actually
+don&rsquo;t for my personal systems due to what I&rsquo;m managing with Chef now,
+but we certainly do for Opscode&rsquo;s hosted Enterprise Chef environment.
+The usual suspects for any web application are required: database
+passwords, SSL certificates, service API tokens, etc.</p>
+
+<p>We&rsquo;re evaluating chef-vault as a possible solution. This blog post
+will serve as notes for me so I can remember what I did when my
+terminal history is gone, and hopefully information for you to be able
+to use in your own environment.</p>
+
+<h1>Chef Vault</h1>
+
+<p>Chef Vault is an
+<a href="https://github.com/Nordstrom/chef-vault">open source project</a>
+published by <a href="http://nordstrom.com">Nordstrom</a>. It is distributed as a
+RubyGem. You&rsquo;ll need it installed on your local workstation so you can
+encrypt sensitive secrets, and on any systems that need to decrypt
+said secrets. Since the workstation is where we&rsquo;re going to start,
+install the gem. I&rsquo;ll talk about using this in a recipe later.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem install chef-vault</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Use Cases</h1>
+
+<p>Now, for the use cases, I&rsquo;m going to take two fairly simple examples,
+and explain how chef-vault works along the way.</p>
+
+<ol>
+<li>A username/password combination. The <code>vaultuser</code> will be created on
+the system with Chef&rsquo;s built-in <code>user</code> resource.</li>
+<li>A file with sensitive content. In this case, I&rsquo;m going to use a
+junk RSA private key for <code>vaultuser</code>.</li>
+</ol>
+
+
+<p>Secrets are generally one of these things. Either a value passed into
+a command-line program (like <code>useradd</code>) or a file that should live on
+disk (like an SSL certificate or RSA key).</p>
+
+<h1>Command-line Structure</h1>
+
+<p>Chef Vault includes knife plugins to allow you to manage the secrets
+from your workstation, uploading them to the Chef Server just like
+normal data bags. The secrets themselves live in Data Bags on the Chef
+Server. The &ldquo;bag&rdquo; is called the &ldquo;vault&rdquo; for chef-vault.</p>
+
+<p>After installation, the <code>encrypt</code> and <code>decrypt</code> sub-commands will be
+available for knife.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>knife encrypt create [VAULT] [ITEM] [VALUES] --mode MODE --search SEARCH --admins ADMINS --json FILE
+</span><span class='line'>knife encrypt delete [VAULT] [ITEM] --mode MODE
+</span><span class='line'>knife encrypt remove [VAULT] [ITEM] [VALUES] --mode MODE --search SEARCH --admins ADMINS
+</span><span class='line'>knife rotate secret [VAULT] [ITEM] --mode MODE
+</span><span class='line'>knife encrypt update [VAULT] [ITEM] [VALUES] --mode MODE --search SEARCH --admins ADMINS --json FILE
+</span><span class='line'>knife decrypt [VAULT] [ITEM] [VALUES] --mode MODE</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The
+<a href="https://github.com/Nordstrom/chef-vault/blob/master/README.md">README</a>
+and
+<a href="https://github.com/Nordstrom/chef-vault/blob/master/KNIFE_EXAMPLES.md">Examples</a>
+document these quite well.</p>
+
+<h2>Mode: Solo vs Client</h2>
+
+<p>I&rsquo;m using Chef with a Chef Server (Enterprise Chef), so I&rsquo;ll specify
+<code>--mode client</code> for the knife commands.</p>
+
+<p>It is important to note the <code>MODE</code> in the chef-vault knife plugin
+commands affects where the encrypted data bags will be saved. Chef
+supports data bags with both Solo and Client/Server use. When using
+chef-solo, you&rsquo;ll need to configure <code>data_bag_path</code> in your
+<code>knife.rb</code>. That is, even if you&rsquo;re using Solo, since these are knife
+plugins, the configuration is for knife, not chef-solo. I&rsquo;m using a
+Chef Server though, so I&rsquo;m going to use <code>--mode client</code>.</p>
+
+<h1>Create a User with a Password</h1>
+
+<p>The user I&rsquo;m going to create is the arbitrarily named <code>vaultuser</code>,
+with the super secret password, <code>chef-vault</code>. I&rsquo;m going to use this on
+a Linux system with SHA512 hashing, so first I generate a password
+using mkpasswd:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% mkpasswd -m sha-512
+</span><span class='line'>Password: chef-vault
+</span><span class='line'>$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Note</strong>: This is the <code>mkpasswd(1)</code> command from the Ubuntu 10.04
+  <a href="http://packages.ubuntu.com/lucid/mkpasswd">mkpasswd package</a>.</p>
+
+<h2>Create the Item</h2>
+
+<p>The command I&rsquo;m going to use is <code>knife encrypt create</code> since this is a
+new secret. I&rsquo;ll show two examples. First, I&rsquo;ll pass in the raw JSON
+data as &ldquo;values&rdquo;. You would do this if you&rsquo;re not going to store the
+unencrypted secret on disk or in a repository. Second, I&rsquo;ll pass a
+JSON file. You would do this if you want to store the unencrypted
+secret on disk or in a repository.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife encrypt create secrets vaultuser \
+</span><span class='line'>  '{"vaultuser":"$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/"}' \
+</span><span class='line'>  --search 'role:base' \
+</span><span class='line'>  --admins jtimberman --mode client</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>[VALUES]</code> in this command is raw JSON that will be created in the
+data bag item by <code>chef-vault</code>. The <code>--search</code> option tells chef-vault
+to use the <strong>public</strong> keys of the nodes matching the SOLR query for
+encrypting the value. Then during the Chef run, chef-vault uses those
+node&rsquo;s <strong>private</strong> keys to decrypt the value. The <code>--admins</code> option tells chef-vault
+the list of users on the Chef Server who are also allowed to decrypt
+the secret. This is specified as a comma separated string for
+multiple admins. Finally, as I mentioned, I&rsquo;m using a Chef Server so I
+need to specify <code>--mode client</code>, since &ldquo;solo&rdquo; is the default.</p>
+
+<p>Here&rsquo;s the equivalent, using a JSON file named <code>secrets_vaultuser.json</code>. It has the content:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span><span class="nt">&quot;vaultuser&quot;</span><span class="p">:</span><span class="s2">&quot;$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/&quot;</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The command is:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt create secrets vaultuser \
+</span><span class='line'>  --json secrets_vaultuser.json
+</span><span class='line'>  --search &#39;role:base&#39; \
+</span><span class='line'>  --admins jtimberman --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, let&rsquo;s see what has been created on the Chef Server. I&rsquo;ll use the
+core Chef knife plugin, <code>data bag item show</code> for this.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife data bag show secrets
+</span><span class='line'>vaultuser
+</span><span class='line'>vaultuser_keys
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I now have a &ldquo;secrets&rdquo; data bag, with two items. The first,
+<code>vaultuser</code> is the one that contains the actual secret. Let&rsquo;s see:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife data bag show secrets vaultuser
+</span><span class='line'>id:        vaultuser
+</span><span class='line'>vaultuser:
+</span><span class='line'>  cipher:         aes-256-cbc
+</span><span class='line'>  encrypted_data: j+/fFM7ist6I7K360GNfzSgu6ix63HGyXN2ZAd99R6H4TAJ4pQKuFNpJXYnC
+</span><span class='line'>  SXA5n68xn9frxHAJNcLuDXCkEv+F/MnW9vMlTaiuwW/jO++vS5mIxWU170mR
+</span><span class='line'>  EgeB7gvPH7lfUdJFURNGQzdiTSSFua9E06kAu9dcrT83PpoQQzk=
+</span><span class='line'>  iv:             cu2Ugw+RpTDVRu1QaaAfug==
+</span><span class='line'>  version:        1
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you can see, I have encrypted data. I also told chef-vault that my
+user can decrypt this. I need to use the knife plugin to do so:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife decrypt secrets vaultuser &#39;vaultuser&#39; --mode client
+</span><span class='line'>secrets/vaultuser
+</span><span class='line'>  vaultuser: $6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>'vaultuser'</code> in quotes is the key from the hash of JSON data that
+I specified earlier. As you can see, the password is that which was
+generated from the mkpasswd command earlier.</p>
+
+<p>But what nodes have access to decrypt this password? That&rsquo;s what
+chef-vault stored in the <code>vaultuser_keys</code> item. Let&rsquo;s look:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife data bag show secrets vaultuser_keys
+</span><span class='line'>admins:              jtimberman
+</span><span class='line'>clients:
+</span><span class='line'>  os-945926465950316
+</span><span class='line'>  os-2790002246935003
+</span><span class='line'>id:                  vaultuser_keys
+</span><span class='line'>jtimberman:          0Q2bhw/kJl2aIVEwqY6wYhrrfdz9fdsf8tCiIrBih2ZORvV7EEIpzzKQggRX
+</span><span class='line'>4P4vnVQjMjfkRwIXndTzctCJONQYF50OSZi5ByXWqbich9iCWvVIbnhcLWSp
+</span><span class='line'>z5mQoSTNXyZz/JQZGnubkckh4wGLBFDrLJ6WKl6UNXH1dRwqDNo5sEK7/3Wn
+</span><span class='line'>b4ztVSRxzB01wVli0wLvFSZzGsKYJYINBcidnbIgLh/xGYGtBJVlgG2z/7TV
+</span><span class='line'>uN0b/qvGj8VlhbS6zPlwh39O3mexDdkLwry/+gbO1nj8qKNkKDKaix5zypwE
+</span><span class='line'>XdmdfMKNYGaM6kzG8cwuKZXLAgGAgblVUB1HP8+8kQ==
+</span><span class='line'>
+</span><span class='line'>os-2790002246935003: kGQLsxsFmBe9uPuWxZpKiNBnqJq55hQZJLgaKdjG2Vvivv98RrFGz1y8Xbwe
+</span><span class='line'>uzeSgPgAURCZmxpNxpHrwvvKcvL77sBOL6TTKiNzs8n5B3ZOawy17dsuG24v
+</span><span class='line'>41R0cRMnYLgbLcjln9dpVe4Esr4goPxko+1XqBPik1SBapthQq/pLUJ1BIKh
+</span><span class='line'>Fxu1QVGj1w4HPUftLaUzeS33jKbtfvgZyZsYZBdVCVEVidOxC90WRf4wtkd6
+</span><span class='line'>Ueyj+0gd1QKv84Q387O1R5LtRMS6u+17PJinrcRIkVNZ6P1z6oT2Dasfvrex
+</span><span class='line'>rK3s5vD7v6jpkUW12Wj74Lz3Z6x3sKuIDzCtvEUnWw==
+</span><span class='line'>
+</span><span class='line'>os-945926465950316:  XzTJrJ3TZZZ1u9L9p6DZledf3bo2ToH2yrLGZQKPV6/ANzElHXGcYrEdtP0q
+</span><span class='line'>14Nz1NzsqEftzviAebUUnc6ke91ltD8s6hNQQrPJRqkUoDlM7lNEwiUiz/dD
+</span><span class='line'>+sFI6CSzQptO3zPrUbAlUI1Zog5h7k/CCtiYtmFRD6wbAWnxmCqvLhO1jwqL
+</span><span class='line'>VNJ1vfjlFsG77BDm2HFw7jgleuxRGYEgBfCCuBuW70FAdUTvNHIAwKQVkfU/
+</span><span class='line'>Am75UYm7N4N0E+W76ZwojLoYtXXTV/iOGG1cw3C75SVAmCsBOuxUK/otub67
+</span><span class='line'>zsNDsKToKa+laxzXGylrmkTricYXIqVpIQO8OL5nnw==
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As we can see, I have two nodes that are API clients with access to
+decrypt the data bag items. These values are all generated by
+chef-vault, and I&rsquo;ll talk about how to update the list and rotate
+secrets later in this post.</p>
+
+<h2>Manage a User Password</h2>
+
+<p>Let&rsquo;s manage a user resource with a password set to the value from our
+encrypted data bag using Chef Vault.</p>
+
+<p>First, I created a cookbook named <code>vault</code>, and added it to the base
+role. It contains the following recipe:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef_gem</span> <span class="s2">&quot;chef-vault&quot;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s2">&quot;chef-vault&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">vault</span> <span class="o">=</span> <span class="ss">ChefVault</span><span class="p">:</span><span class="ss">:Item</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;vaultuser&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">user</span> <span class="s2">&quot;vaultuser&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">password</span> <span class="n">vault</span><span class="o">[</span><span class="s1">&#39;vaultuser&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">home</span> <span class="s2">&quot;/home/vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">supports</span> <span class="ss">:manage_home</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="n">shell</span> <span class="s2">&quot;/bin/bash&quot;</span>
+</span><span class='line'>  <span class="n">comment</span> <span class="s2">&quot;Chef Vault User&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let me break this down.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">chef_gem</span> <span class="s2">&quot;chef-vault&quot;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s2">&quot;chef-vault&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>chef-vault</code> is distributed as a RubyGem, and I want to use it in my
+recipe(s), so here I use the
+<a href="http://docs.opscode.com/resource_chef_gem.html"><code>chef_gem</code> resource</a>.
+Then, I require it like any other Ruby library.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">vault</span> <span class="o">=</span> <span class="ss">ChefVault</span><span class="p">:</span><span class="ss">:Item</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;vaultuser&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is where the decryption happens. If I do this under a
+<code>chef-shell</code>, I can see:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>chef:recipe &gt; vault = ChefVault::Item.load(&quot;secrets&quot;, &quot;vaultuser&quot;)
+</span><span class='line'> =&gt; data_bag_item[&quot;secrets&quot;, &quot;vaultuser&quot;, {&quot;id&quot;=&gt;&quot;vaultuser&quot;, &quot;vaultuser&quot;=&gt;&quot;$6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/&quot;}]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>ChefVault::Item.load</code> takes two arguments, the &ldquo;vault&rdquo; or data bag,
+in this case <code>secrets</code>, and the &ldquo;item&rdquo;, in this case <code>vaultuser</code>. It
+returns a data bag item. Then in the
+<a href="http://docs.opscode.com/resource_user.html"><code>user</code> resource</a>, I use
+the password:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">user</span> <span class="s2">&quot;vaultuser&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">password</span> <span class="n">vault</span><span class="o">[</span><span class="s1">&#39;vaultuser&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">home</span> <span class="s2">&quot;/home/vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">supports</span> <span class="ss">:manage_home</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="n">shell</span> <span class="s2">&quot;/bin/bash&quot;</span>
+</span><span class='line'>  <span class="n">comment</span> <span class="s2">&quot;Chef Vault User&quot;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The important resource attribute here is <code>password</code>, where I&rsquo;m using
+the local variable, <code>vault</code> and the <code>vaultuser</code> key from the item as
+decrypted by <code>ChefVault::Item.load</code>. When Chef runs, it will look like
+this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Recipe: vault::default
+</span><span class='line'>  * chef_gem[chef-vault] action install
+</span><span class='line'>    - install version 2.0.1 of package chef-vault
+</span><span class='line'>  * chef_gem[chef-vault] action install (up to date)
+</span><span class='line'>  * user[vaultuser] action create
+</span><span class='line'>    - create user user[vaultuser]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, I can su to <code>vaultuser</code> using the password I created:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>ubuntu@-2790002246935003:~$ su - vaultuser
+</span><span class='line'>Password: chef-vault
+</span><span class='line'>vaultuser@os-2790002246935003:~$ id
+</span><span class='line'>uid=1001(vaultuser) gid=1001(vaultuser) groups=1001(vaultuser)
+</span><span class='line'>vaultuser@os-2790002246935003:~$ pwd
+</span><span class='line'>/home/vaultuser
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yay! To show that the user was created with the right password,
+here&rsquo;s the DEBUG log output:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>INFO: Processing user[vaultuser] action create ((irb#1) line 12)
+</span><span class='line'>DEBUG: user[vaultuser] user does not exist
+</span><span class='line'>DEBUG: user[vaultuser] setting comment to Chef Vault User
+</span><span class='line'>DEBUG: user[vaultuser] setting password to $6$VqEIDjsp$7NtPMhA9cnxvSMTE9l7DMmydJJEymi9b4t1Vhk475vrWlfxMgVb3bDLhpk/RZt0J3X7l5H8WnqFgvq3dIa9Kt/
+</span><span class='line'>DEBUG: user[vaultuser] setting shell to /bin/bash
+</span><span class='line'>INFO: user[vaultuser] created
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, I&rsquo;ll create a secret that is a file rendered on the system.</p>
+
+<h1>Create a Private SSH Key</h1>
+
+<p>Suppose this <code>vaultuser</code> is to be used for deploying code by cloning a
+repository. It will need a private SSH key to authenticate, so I&rsquo;ll
+create one, with an empty passphrase in this case.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% ssh-keygen -b 4096 -t rsa -f vaultuser-ssh
+</span><span class='line'>Generating public/private rsa key pair.
+</span><span class='line'>Enter passphrase (empty for no passphrase):
+</span><span class='line'>Enter same passphrase again:
+</span><span class='line'>Your identification has been saved in vaultuser-ssh.
+</span><span class='line'>Your public key has been saved in vaultuser-ssh.pub.
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Get the SHA256 checksum of the private key. I use SHA256 because
+that&rsquo;s what Chef uses for file content. We&rsquo;ll use this to verify
+content later.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% sha256sum vaultuser-ssh
+</span><span class='line'>a83221c243c9d39d20761e87db6c781ed0729b8ff4c3b330214ebca26e2ea89d  vaultuser-ssh
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Assume that I also
+<a href="https://help.github.com/articles/generating-ssh-keys">created the SSH key on GitHub</a>
+for this user.</p>
+
+<p>In order to have a file&rsquo;s contents be a JSON value for the data bag
+item, I&rsquo;ll remove the newlines (<code>\n</code>), and generate the JSON:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>ruby -rjson -e &#39;puts JSON.generate({&quot;vaultuser-ssh-private&quot; =&gt; File.read(&quot;vaultuser-ssh&quot;)})&#39; \
+</span><span class='line'>  &gt; secrets_vaultuser-ssh-private.json
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, create the secret on the Chef Server:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>knife encrypt create secrets vaultuser-ssh-private \
+</span><span class='line'>  --search &#39;role:base&#39; \
+</span><span class='line'>  --json secrets_vaultuser-ssh-private.json \
+</span><span class='line'>  --admins jtimberman \
+</span><span class='line'>  --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s verify the server has what we need:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife data bag show secrets vaultuser-ssh-private
+</span><span class='line'>id:                    vaultuser-ssh-private
+</span><span class='line'>vaultuser-ssh-private:
+</span><span class='line'>  cipher:         aes-256-cbc
+</span><span class='line'>  encrypted_data: mRRToM2N/0F+OyJxkYlHo/cUtHSIuy69ROAKuGoHIhX9Fr5vFTCM4RyWQSTN
+</span><span class='line'>  trimmed for brevity even though scrollbars
+</span><span class='line'>% knife decrypt secrets vaultuser-ssh-private &#39;vaultuser-ssh-private&#39; --mode client
+</span><span class='line'>secrets/vaultuser-ssh-private
+</span><span class='line'>  vaultuser-ssh-private: -----BEGIN RSA PRIVATE KEY-----
+</span><span class='line'>trimmed for brevity even though scrollbars
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Manage the Key File</h2>
+
+<p>Now, I&rsquo;ll manage the private key file with the vault cookbook.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">vault_ssh</span> <span class="o">=</span> <span class="ss">ChefVault</span><span class="p">:</span><span class="ss">:Item</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;vaultuser-ssh-private&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">directory</span> <span class="s2">&quot;/home/vaultuser/.ssh&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">0700</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">file</span> <span class="s2">&quot;/home/vaultuser/.ssh/id_rsa&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">content</span> <span class="n">vault_ssh</span><span class="o">[</span><span class="s2">&quot;vaultuser-ssh-private&quot;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">0600</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Again, let&rsquo;s break this up a bit. First, load the item from the
+encrypted data bag like we did before.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">vault_ssh</span> <span class="o">=</span> <span class="ss">ChefVault</span><span class="p">:</span><span class="ss">:Item</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;vaultuser-ssh-private&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, make sure that the vaultuser has an <code>.ssh</code> directory with the
+correct permissions.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">directory</span> <span class="s2">&quot;/home/vaultuser/.ssh&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">0700</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally, manage the content of the private key file with a <code>file</code>
+resource and the <code>content</code> resource attribute. The value of
+<code>vault_ssh["vaultuser-ssh-private"]</code> will be a string, with <code>\n</code>&rsquo;s
+embedded, but when it&rsquo;s rendered on disk, it will display properly.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file</span> <span class="s2">&quot;/home/vaultuser/.ssh/id_rsa&quot;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">content</span> <span class="n">vault_ssh</span><span class="o">[</span><span class="s2">&quot;vaultuser-ssh-private&quot;</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">owner</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">group</span> <span class="s2">&quot;vaultuser&quot;</span>
+</span><span class='line'>  <span class="n">mode</span> <span class="mo">0600</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And now run chef on a target node:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Recipe: vault::default
+</span><span class='line'>  * chef_gem[chef-vault] action install (up to date)
+</span><span class='line'>  * user[vaultuser] action create (up to date)
+</span><span class='line'>  * directory[/home/vaultuser/.ssh] action create
+</span><span class='line'>    - create new directory /home/vaultuser/.ssh
+</span><span class='line'>    - change mode from &#39;&#39; to &#39;0700&#39;
+</span><span class='line'>    - change owner from &#39;&#39; to &#39;vaultuser&#39;
+</span><span class='line'>    - change group from &#39;&#39; to &#39;vaultuser&#39;
+</span><span class='line'>
+</span><span class='line'>  * file[/home/vaultuser/.ssh/id_rsa] action create
+</span><span class='line'>    - create new file /home/vaultuser/.ssh/id_rsa with content checksum a83221
+</span><span class='line'>        --- /tmp/chef-tempfile20130909-1918-1v5hezo   2013-09-09 22:41:21.887239999 +0000
+</span><span class='line'>        +++ /tmp/chef-diff20130909-1918-xwbmsn    2013-09-09 22:41:21.883240065 +0000
+</span><span class='line'>        @@ -0,0 +1,51 @@
+</span><span class='line'>        +-----BEGIN RSA PRIVATE KEY-----
+</span><span class='line'>        +MIIJJwIBAAKCAgEAtZmwFTlVOBbr2ZfG+cDtUGx04xCcgaa0p0ISmeyMEoGYH/CP
+</span><span class='line'>        output trimmed because its long even though scrollbars again
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note the content checksum, <code>a83221</code>. This will match the checksum of
+the source file from earlier (scroll up!), and the one rendered:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>ubuntu@os-2790002246935003:~$ sudo sha256sum /home/vaultuser/.ssh/id_rsa
+</span><span class='line'>a83221c243c9d39d20761e87db6c781ed0729b8ff4c3b330214ebca26e2ea89d  /home/vaultuser/.ssh/id_rsa
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yay! Now, we can SSH to GitHub (note, this is fake GitHub for example
+purposes).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>ubuntu@os-2790002246935003:~$ su - vaultuser
+</span><span class='line'>Password: chef-vault
+</span><span class='line'>vaultuser@os-2790002246935003:~$ ssh -i .ssh/id_rsa github@172.31.7.15
+</span><span class='line'>$ hostname
+</span><span class='line'>os-945926465950316
+</span><span class='line'>$ id
+</span><span class='line'>uid=1002(github) gid=1002(github) groups=1002(github)
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Updating a Secret</h1>
+
+<p>What happens if we need to update a secret? For example, if an
+administrator leaves the organization, we will want to change the
+<code>vaultuser</code> password (and SSH private key).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% mkpasswd -m sha-512
+</span><span class='line'>Password: gone-user
+</span><span class='line'>$6$zM5STNtXdmsrOSm$svJr0tauijqqxTjnMIGJGJPv5V3ovMFCQo.ZDBleiL.yOxcngRqh9yAjpMAsMBA7RlKPv5DKFd1aPZm/wUoKs.
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>encrypt create</code> command will return an error if the target
+already exists:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt create secrets vaultuser --search &#39;role:base&#39; --json secrets_vaultuser.json --admins jtimberman --mode client
+</span><span class='line'>ERROR: ChefVault::Exceptions::ItemAlreadyExists: secrets/vaultuser already exists, use &#39;knife encrypt remove&#39; and &#39;knife encrypt update&#39; to make changes.
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So, I need to use <code>encrypt update</code>. <strong>Note</strong> make sure that the
+contents of the JSON file are valid JSON.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt update secrets vaultuser --search &#39;role:base&#39; --json secrets_vaultuser.json --admins jtimberman --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>encrypt update</code> only updates the things that change, so I can also
+shorten this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt update secrets vaultuser --json secrets_vaultuser.json --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Since the search and the admins didn&rsquo;t change.</p>
+
+<p>Verify it:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife decrypt secrets vaultuser &#39;vaultuser&#39; --mode client
+</span><span class='line'>secrets/vaultuser
+</span><span class='line'>  vaultuser: $6$zM5STNtXdmsrOSm$svJr0tauijqqxTjnMIGJGJPv5V3ovMFCQo.ZDBleiL.yOxcngRqh9yAjpMAsMBA7RlKPv5DKFd1aPZm/wUoKs.
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, just run Chef on any nodes affected.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Recipe: vault::default
+</span><span class='line'>  * chef_gem[chef-vault] action install (up to date)
+</span><span class='line'>  * user[vaultuser] action create
+</span><span class='line'>    - alter user user[vaultuser]
+</span><span class='line'>
+</span><span class='line'>  * directory[/home/vaultuser/.ssh] action create (up to date)
+</span><span class='line'>  * file[/home/vaultuser/.ssh/id_rsa] action create (up to date)
+</span><span class='line'>Chef Client finished, 1 resources updated
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And su to the vault user with the <code>gone-user</code> password:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>ubuntu@os-2790002246935003:~$ su - vaultuser
+</span><span class='line'>Password: gone-user
+</span><span class='line'>vaultuser@os-2790002246935003:~$
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Managing Access to Items</h1>
+
+<p>There are three common scenarios which require managing the access to an item
+in the vault.</p>
+
+<ol>
+<li>A system needs to be taken offline, or otherwise prevented from
+accessing the item(s).</li>
+<li>A new system comes online that needs access.</li>
+<li>An admin user has left the organization.</li>
+<li>A new admin user has joined the organization.</li>
+</ol>
+
+
+<p>Suppose we have a system that we need to take offline for some reason,
+so we want to disable its access to a secret. Or, perhaps we have a
+user who has left the organization that was an admin. We can do that in a
+few ways.</p>
+
+<h2>Update the Vault Item</h2>
+
+<p>The most straightforward way to manage access to an item is to use the
+<code>update</code> or <code>remove</code> sub-commands.</p>
+
+<h3>Remove a System</h3>
+
+<p>Suppose I want to remove node <code>DEADNODE</code>, I can qualify the search to
+exclude the node named <code>DEADNODE</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt update secrets vaultuser \
+</span><span class='line'>  --search &#39;role:base NOT name:DEADNODE&#39; \
+</span><span class='line'>  --json secrets_vaultuser.json \
+</span><span class='line'>  --admins jtimberman --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note, as before, admins didn&rsquo;t change so I don&rsquo;t need to pass that
+argument.</p>
+
+<h3>Add a New System</h3>
+
+<p>If the node has run Chef and is indexed on the Chef Server already,
+simply rerun the update command with the search:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt update secrets vaultuser \
+</span><span class='line'>  --search &#39;role:base&#39; \
+</span><span class='line'>  --json secrets_vaultuser.json \
+</span><span class='line'>  --admins jtimberman --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There&rsquo;s a bit of a &ldquo;Chicken and Egg&rdquo; problem here, in that a new node
+might not be indexed for search if it tried to load the secret during
+a bootstrap beforehand. For example, if I create an OpenStack instance
+with the base role in its run list, the node doesn&rsquo;t exist for the
+search yet. A solution here is to create the node with an empty run
+list, allowing it to register with the Chef Server, and then use
+<code>knife bootstrap</code> to rerun Chef with the proper run list. This is
+annoying, but no one claimed that chef-vault would solve <em>all</em>
+problems with shared secret management :&ndash;).</p>
+
+<h3>Remove an Admin</h3>
+
+<p>The admins argument takes a list. Earlier, I only had my userid as an
+admin. Suppose I created the item with &ldquo;bofh&rdquo; as an admin too:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt create secrets vaultuser \
+</span><span class='line'>  --search &#39;role:base&#39; \
+</span><span class='line'>  --json secrets_vaultuser.json \
+</span><span class='line'>  --admins &quot;jtimberman,bofh&quot; --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To remove the bofh user, use the <code>encrypt remove</code> subcommand. In this
+case, the <code>--admins</code> argument is the list of admins to remove, rather
+than add.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt remove secrets vaultuser --admins bofh --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Add a New Admin</h3>
+
+<p>I want to add &ldquo;mandi&rdquo; as an administrator because she&rsquo;s awesome and
+will help manage our secrets. As above, I just pass a comma-separated
+string, <code>"jtimberman,mandi"</code> to the <code>--admins</code> argument.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife encrypt update secrets vaultuser \
+</span><span class='line'>  --search &#39;role:base&#39; \
+</span><span class='line'>  --json secrets_vaultuser.json \
+</span><span class='line'>  --admins &quot;jtimberman,mandi&quot; --mode client
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Regenerate the Client</h2>
+
+<p>The heavyhanded way to remove access is to regenerate the API client
+on the Chef Server. For example, of my nodes, say I want to remove
+<code>os-945926465950316</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife client reregister os-945926465950316
+</span><span class='line'>-----BEGIN RSA PRIVATE KEY-----
+</span><span class='line'>MIIEpAIBAAKCAQEAybzwv53tDLIzW+GHRJwLthZmiGTfZVyqQX6m6RGuZjemEIdy
+</span><span class='line'>trim trim
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you&rsquo;re familiar with Chef Server&rsquo;s authentication cycle, you&rsquo;ll
+know that until that private key is copied to the node, it will
+completely fail to authenticate. However, once the
+<code>/etc/chef/client.pem</code> file is updated with the content from the knife
+command, we&rsquo;ll see that the node fails to read the Chef Vault item:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>================================================================================
+</span><span class='line'>Recipe Compile Error in /var/chef/cache/cookbooks/vault/recipes/default.rb
+</span><span class='line'>================================================================================
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>OpenSSL::PKey::RSAError
+</span><span class='line'>-----------------------
+</span><span class='line'>padding check failed
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>Cookbook Trace:
+</span><span class='line'>---------------
+</span><span class='line'>  /var/chef/cache/cookbooks/vault/recipes/default.rb:4:in `from_file&#39;
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>Relevant File Content:
+</span><span class='line'>----------------------
+</span><span class='line'>/var/chef/cache/cookbooks/vault/recipes/default.rb:
+</span><span class='line'>
+</span><span class='line'>  1:  chef_gem &quot;chef-vault&quot;
+</span><span class='line'>  2:  require &quot;chef-vault&quot;
+</span><span class='line'>  3:
+</span><span class='line'>  4&gt;&gt; vault = ChefVault::Item.load(&quot;secrets&quot;, &quot;vaultuser&quot;)
+</span><span class='line'>  5:
+</span><span class='line'>  6:  user &quot;vaultuser&quot; do
+</span><span class='line'>  7:    password vault[&quot;vaultuser&quot;]
+</span><span class='line'>  8:    home &quot;/home/vaultuser&quot;
+</span><span class='line'>  9:    supports :manage_home =&gt; true
+</span><span class='line'> 10:    shell &quot;/bin/bash&quot;
+</span><span class='line'> 11:    comment &quot;Chef Vault User&quot;
+</span><span class='line'> 12:  end
+</span><span class='line'> 13:
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Note</strong> I say this is heavy-handed because if you make a mistake, you
+  need to re-upload every single secret that this node needs access to.</p>
+
+<h2>Removing Users</h2>
+
+<p>We can also remove user access from Enterprise Chef simply by
+disassociating that user from the organization on the Chef Server. I
+won&rsquo;t show an example of that here, since I&rsquo;m using Opscode&rsquo;s hosted
+Enterprise Chef server and I&rsquo;m the only admin, however :&ndash;).</p>
+
+<h1>Backing Up Secrets</h1>
+
+<p>To back up the secrets, as encrypted data from the Chef Server, use
+<code>knife-essentials</code> (comes with Chef 11+, available as a RubyGem for
+Chef 10).</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% knife download data_bags/secrets/
+</span><span class='line'>Created data_bags/secrets/vaultuser_keys.json
+</span><span class='line'>Created data_bags/secrets/vaultuser.json
+</span><span class='line'>Created data_bags/secrets/vaultuser-ssh-private_keys.json
+</span><span class='line'>Created data_bags/secrets/vaultuser-ssh-private.json
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>For example, the vaultuser.json file looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;vaultuser&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;vaultuser&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;encrypted_data&quot;</span><span class="p">:</span> <span class="s2">&quot;3yREwInxdyKpf8nuTIivXAeuEzHt7o4vF4FsOwmVLHmMWol5nCBoMWF0YdaW\n3P3NpEAAAxYEYeJYdVkrdLqjjB2kTJdx0+ceh/RBHBWqmSeHOWFH9pCRGjV8\nfS5XaTueShb320b/+Ia8iqUJJWg6utnbJCDx+VMcGNggPXgPKC8=\n&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;iv&quot;</span><span class="p">:</span> <span class="s2">&quot;EI+y74Uj2uwq7EVaP+0K6Q==\n&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;cipher&quot;</span><span class="p">:</span> <span class="s2">&quot;aes-256-cbc&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Since these are encrypted using a strong cipher (AES 256), they should
+be safe to store in repository. Unless you think the NSA has access to
+that repository ;&ndash;).</p>
+
+<h1>Conclusion</h1>
+
+<p>Secrets management is hard! Especially when you need to store secrets
+that are used by multiple systems, services, and people. Chef&rsquo;s
+encrypted data bag feature isn&rsquo;t a panacea, but it certainly helps.
+Hopefully, this blog post was informative. While I don&rsquo;t always
+respond, I do read all comments posted here via Disqus, so let me know
+if something is out of whack, or needs an update.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2007,175 +3046,6 @@ net-ssh version constraints in Chef:</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/02/01/local-only-knife-configuration/">Local-only Knife Configuration</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-02-01T10:57:00-07:00" pubdate data-updated="true">Feb 1<span>st</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>In this post I want to discuss briefly an approach to setting up a
-shared Knife configuration file for teams using the same Chef
-Repository, while supporting customized configuration.</p>
-
-<h2>Background</h2>
-
-<p>Most infrastructures managed by Chef have multiple people working on
-them. Recently, several people in the Ruby community started working
-together on migrating <a href="http://rubygems.org">RubyGems</a> to
-<a href="https://github.com/rubygems/rubygems-aws">Amazon EC2</a>.</p>
-
-<p>The repository has a shared <code>.chef/knife.rb</code> which sets some local
-paths where cookbooks and roles are located. In addition to this, I
-wanted to test building the infrastructure using a Chef Server and my
-own EC2 account.</p>
-
-<h2>The Approach</h2>
-
-<p>At Opscode, we believe in leveraging internal DSLs. The
-<code>.chef/knife.rb</code> (and Chef&rsquo;s <code>client.rb</code> or <code>solo.rb</code>, etc) is no
-exception. While you can have a fairly simple configuration like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>        <span class="s2">&quot;jtimberman&quot;</span>
-</span><span class='line'><span class="n">client_key</span>       <span class="s2">&quot;/home/jtimberman/.chef/jtimberman.pem&quot;</span>
-</span><span class='line'><span class="n">chef_server_url</span>  <span class="s2">&quot;https://api.opscode.com/organizations/my_organization&quot;</span>
-</span><span class='line'><span class="n">cookbook_path</span>    <span class="s2">&quot;cookbooks&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>You can also have something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>     <span class="ss">:info</span>
-</span><span class='line'><span class="n">log_location</span>  <span class="no">STDOUT</span>
-</span><span class='line'><span class="n">node_name</span>     <span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;NODE_NAME&quot;</span><span class="o">]</span> <span class="o">||</span> <span class="s2">&quot;solo&quot;</span>
-</span><span class='line'><span class="n">client_key</span>    <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../solo.pem&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span>
-</span><span class='line'><span class="n">cache_type</span>    <span class="s2">&quot;BasicFile&quot;</span>
-</span><span class='line'><span class="n">cache_options</span><span class="p">(</span><span class="ss">path</span><span class="p">:</span> <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../checksums&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'><span class="n">cookbook_path</span> <span class="o">[</span> <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span> <span class="o">]</span>
-</span><span class='line'><span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'>  <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is the <code>knife.rb</code> included in the
-<a href="https://github.com/rubygems/rubygems-aws">RubyGems-AWS repo</a>.</p>
-
-<p>The main part of interest here is the last three lines.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'>  <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../knife.local.rb&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">))</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This says &ldquo;if a file <code>knife.local.rb</code> exists, then load its
-configuration. The <code>Chef::Config</code> class is what Chef uses for
-configuration files, and the <code>#from_file</code> method will load the
-specified file.</p>
-
-<p>In this case, the content of my <code>knife.local.rb</code> is:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>                <span class="s2">&quot;jtimberman&quot;</span>
-</span><span class='line'><span class="n">client_key</span>               <span class="s2">&quot;/Users/jtimberman/.chef/jtimberman.pem&quot;</span>
-</span><span class='line'><span class="n">validation_client_name</span>   <span class="s2">&quot;ORGNAME-validator&quot;</span>
-</span><span class='line'><span class="n">validation_key</span>           <span class="s2">&quot;/Users/jtimberman/.chef/ORGNAME-validator.pem&quot;</span>
-</span><span class='line'><span class="n">chef_server_url</span>          <span class="s2">&quot;https://api.opscode.com/organizations/ORGNAME&quot;</span>
-</span><span class='line'><span class="n">cookbook_path</span> <span class="o">[</span>
-</span><span class='line'>  <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">),</span>
-</span><span class='line'>  <span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../chef/site-cookbooks&quot;</span><span class="p">,</span> <span class="bp">__FILE__</span><span class="p">)</span>
-</span><span class='line'><span class="o">]</span>
-</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_access_key_id</span><span class="o">]</span>      <span class="o">=</span> <span class="s2">&quot;Some access key I like&quot;</span>
-</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_secret_access_key</span><span class="o">]</span>  <span class="o">=</span> <span class="s2">&quot;The matching secret access key&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here I&rsquo;m setting my Opscode Hosted Chef credentials and server. I also
-set the <code>cookbook_path</code> to include the site-cookbooks directory (this
-should probably go in the regular knife.rb). Finally, I set the knife
-configuration options for my AWS EC2 account.</p>
-
-<p>The configuration is parsed top-down, so the options here that overlap
-the <code>knife.rb</code> will be used instead.</p>
-
-<h2>In the Repository</h2>
-
-<p>In the repository, commit only the <code>.chef/knife.rb</code> and not the
-<code>.chef/knife.local.rb</code>. I recommend adding the local file to the
-.gitignore or VCS equivalent.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% echo </span><span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">knife</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">rb</span> <span class="o">&gt;&gt;</span> <span class="o">.</span><span class="n">gitignore</span>
-</span><span class='line'><span class="sx">% git </span><span class="n">add</span> <span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">knife</span><span class="o">.</span><span class="n">rb</span> <span class="o">.</span><span class="n">gitignore</span>
-</span><span class='line'><span class="sx">% git </span><span class="n">commit</span> <span class="o">-</span><span class="n">m</span> <span class="s1">&#39;keep general knife.rb, local config is ignored&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Conclusion</h2>
-
-<p>There are many approaches to solving the issue of having shared Knife
-configuration for multiple people in a single repository. The real
-benefit here is that the configuration file is Ruby, which provides a
-lot of flexibility. Of course, when using someone else&rsquo;s configuration
-examples, one should always read the code and understand it first :&ndash;).</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/4/">&larr; Older</a>
@@ -2210,6 +3080,10 @@ examples, one should always read the code and understand it first :&ndash;).</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
       </li>
     
@@ -2223,10 +3097,6 @@ examples, one should always read the code and understand it first :&ndash;).</p>
     
       <li class="post">
         <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
       </li>
     
   </ul>

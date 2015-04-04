@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="One of my home projects while I&rsquo;m on vacation this week is rebuilding my server with Fedora 21 (Server). In order to do this, I needed to add &hellip;">
+  <meta name="description" content="I&rsquo;ve started working with the audit mode feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,271 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-04-03T20:48:23-06:00" pubdate data-updated="true">Apr 3<span>rd</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his talk, &ldquo;Compliance At Velocity,&rdquo; James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
+
+<p>First, we need to update ChefDK to version 0.5.0 (rc 3 is current), as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk -p</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>-p</code> option tells the script to use the prerelease version, as of this writing 0.5.0 is not released, but we have a release candidate.</p>
+
+<p>Next, create a new cookbook for the audit mode tests.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>chef generate cookbook audit-test
+</span><span class='line'>cd audit-test</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, modify the audit-test cookbook&rsquo;s <code>.kitchen.yml</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>---
+</span><span class='line'>driver:
+</span><span class='line'>  name: vagrant
+</span><span class='line'>
+</span><span class='line'>provisioner:
+</span><span class='line'>  name: chef_zero
+</span><span class='line'>  client_rb:
+</span><span class='line'>    audit_mode: :audit_only
+</span><span class='line'>
+</span><span class='line'>platforms:
+</span><span class='line'>  - name: ubuntu-12.04
+</span><span class='line'>  - name: centos-6.5
+</span><span class='line'>
+</span><span class='line'>suites:
+</span><span class='line'>  - name: default
+</span><span class='line'>    run_list:
+</span><span class='line'>      - recipe[audit-test::default]
+</span><span class='line'>    attributes:</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is the generated <code>.kitchen.yml</code> with <code>client_rb</code> added to the provisioner config. Note that we must use the Ruby symbol syntax for the config value, <code>:audit_only</code>. The other valid values for <code>audit_mode</code> are <code>:enabled</code> and <code>:disabled</code>. This will be translated to an actual Ruby symbol in the generated config file (<code>/tmp/kitchen/client.rb</code>):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">audit_mode</span> <span class="ss">:audit_only</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. Let&rsquo;s write a control that asserts this is true.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">control_group</span> <span class="s1">&#39;Blog Post Examples&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">control</span> <span class="s1">&#39;SSH&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should be listening on port 22&#39;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">expect</span><span class="p">(</span><span class="n">port</span><span class="p">(</span><span class="mi">22</span><span class="p">))</span><span class="o">.</span><span class="n">to</span> <span class="n">be_listening</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now run <code>kitchen converge ubuntu</code> to run Chef, but not tear down the VM aftward &ndash; we&rsquo;ll use it again for another example. Here&rsquo;s the audit phase output from the Chef run:</p>
+
+<pre><code>% kitchen converge ubuntu
+Synchronizing Cookbooks:
+  - audit-test
+Compiling Cookbooks...
+Starting audit phase
+
+Blog Post Examples
+  SSH
+    should be listening on port 22
+
+Finished in 0.10453 seconds (files took 0.37536 seconds to load)
+1 example, 0 failures
+Auditing complete
+</code></pre>
+
+<p>Cool! So we have asserted that the node complies with this control by default. But what does a failing control look like? Let&rsquo;s write one. Since we&rsquo;re working with SSH already, let&rsquo;s use the SSHd configuration. By default in the Vagrant base box we&rsquo;re using, root login is permitted, so this value is present:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">PermitRootLogin</span> <span class="n">yes</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, our security policy mandates that we set this to <code>no</code>, and we want to audit that.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">control_group</span> <span class="s1">&#39;Blog Post Examples&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">control</span> <span class="s1">&#39;SSH&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should be listening on port 22&#39;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">expect</span><span class="p">(</span><span class="n">port</span><span class="p">(</span><span class="mi">22</span><span class="p">))</span><span class="o">.</span><span class="n">to</span> <span class="n">be_listening</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;disables root logins over ssh&#39;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">expect</span><span class="p">(</span><span class="n">file</span><span class="p">(</span><span class="s1">&#39;/etc/ssh/sshd_config&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">to</span> <span class="n">contain</span><span class="p">(</span><span class="s1">&#39;PermitRootLogin no&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Rerun <code>kitchen converge ubuntu</code> and we see the validation fails.</p>
+
+<pre><code>Starting audit phase
+
+Blog Post Examples
+  SSH
+    should be listening on port 22
+    disables root logins over ssh (FAILED - 1)
+
+Failures:
+
+  1) Blog Post Examples SSH disables root logins over ssh
+     Failure/Error: expect(file('/etc/ssh/sshd_config')).to contain('PermitRootLogin no')
+expected File "/etc/ssh/sshd_config" to contain "PermitRootLogin no"
+     # /tmp/kitchen/cache/cookbooks/audit-test/recipes/default.rb:8:in `block (3 levels) in from_file'
+
+Finished in 0.13067 seconds (files took 0.32089 seconds to load)
+2 examples, 1 failure
+
+Failed examples:
+
+rspec  # Blog Post Examples SSH disables root logins over ssh
+[2015-04-04T03:29:41+00:00] ERROR: Audit phase failed with error message: Audit phase found failures - 1/2 controls failed
+
+Audit phase exception:
+Audit phase found failures - 1/2 controls failed
+</code></pre>
+
+<p>When we have a failure, we&rsquo;ll have contextual information about the failure, including the line number in the recipe where itwas found, and a stack trace (cut from the output here), in case more information is required for debugging. To fix the test, we can simply edit the config file to have the desired setting, or we can manage the file with Chef to set the value accordingly. Either way, after updating the file, the validation will pass, and all will be well.</p>
+
+<p>We can put as many <code>control_group</code> and <code>control</code> blocks with the <code>it</code> validation rules as required to audit our policy. If we have many validations, it can be difficult to follow with all the output if there are failures. Chef&rsquo;s audit mode is based on <a href="http://serverspec.org/">Serverspec</a>, which is based on <a href="http://rspec.info/">RSpec</a>. We can use the <code>filter_tag</code> configuration feature of RSpec to only run the <code>control</code> blocks or <code>it</code> statements that we&rsquo;re interested in debugging. To do this, we need an <code>RSpec.configuration</code> block within the <code>control_group</code> &ndash; due to the way that audit mode is implemented, we can&rsquo;t do it outside of <code>control_group</code>.</p>
+
+<p>For example, we could debug our root login configuration:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">control_group</span> <span class="s1">&#39;Blog Post Examples&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="o">::</span><span class="no">RSpec</span><span class="o">.</span><span class="n">configure</span> <span class="k">do</span> <span class="o">|</span><span class="n">c</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">c</span><span class="o">.</span><span class="n">filter_run</span> <span class="ss">focus</span><span class="p">:</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">control</span> <span class="s1">&#39;SSH&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;should be listening on port 22&#39;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">expect</span><span class="p">(</span><span class="n">port</span><span class="p">(</span><span class="mi">22</span><span class="p">))</span><span class="o">.</span><span class="n">to</span> <span class="n">be_listening</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">it</span> <span class="s1">&#39;disables root logins over ssh&#39;</span><span class="p">,</span> <span class="ss">focus</span><span class="p">:</span> <span class="kp">true</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">expect</span><span class="p">(</span><span class="n">file</span><span class="p">(</span><span class="s1">&#39;/etc/ssh/sshd_config&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">to</span> <span class="n">contain</span><span class="p">(</span><span class="s1">&#39;PermitRootLogin no&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The key here is to pass the argument <code>focus: true</code> (or if you like hash rockets, <code>:focus =&gt; true</code>) on the <code>it</code> block. This could also be used on a <code>control</code> block:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">control</span> <span class="s1">&#39;SSH&#39;</span><span class="p">,</span> <span class="ss">focus</span><span class="p">:</span> <span class="kp">true</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;does stuff...&#39;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, when running <code>kitchen converge ubuntu</code>, we see only that validation:</p>
+
+<pre><code>Starting audit phase
+
+Blog Post Examples
+  SSH
+    disables root logins over ssh (FAILED - 1)
+
+Failures:
+
+  1) Blog Post Examples SSH disables root logins over ssh
+     Failure/Error: expect(file('/etc/ssh/sshd_config')).to contain('PermitRootLogin no')
+</code></pre>
+
+<p>This example is simple enough that this isn&rsquo;t necessary, but if we were implementing audit mode checks for our entire security policy, that could be dozens or even hundreds of controls.</p>
+
+<p>As of this writing, audit mode is still under development, and is considered an experimental feature. There will be further information, guides, and documentation about it coming to the Chef blog and docs site, and I&rsquo;ll have a post coming soon with something I&rsquo;m working on, so stay tuned!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1343,197 +1608,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/11/chef-12-fix-untrusted-self-sign-certs/">Chef 12: Fix Untrusted Self Sign Certs</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-12-11T13:42:41-07:00" pubdate data-updated="true">Dec 11<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Scenario: You&rsquo;ve started up a brand new Chef Server using version 12, and you have installed Chef 12 on your local system. You log into the Management Console to create a user and organization (or do this with the command-line <code>chef-server-ctl</code> commands), and you&rsquo;re ready to rock with this knife.rb:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
-</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;jtimberman.pem&#39;</span>
-</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;tester-validator&#39;</span>
-</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;tester-validator.pem&#39;</span>
-</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;https://chef-server.example.com/organizations/tester&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>However, when you try to check things out with knife:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">client</span> <span class="n">list</span>
-</span><span class='line'><span class="ss">ERROR</span><span class="p">:</span> <span class="no">SSL</span> <span class="no">Validation</span> <span class="n">failure</span> <span class="n">connecting</span> <span class="n">to</span> <span class="ss">host</span><span class="p">:</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="o">-</span> <span class="no">SSL_connect</span> <span class="n">returned</span><span class="o">=</span><span class="mi">1</span> <span class="n">errno</span><span class="o">=</span><span class="mi">0</span> <span class="n">state</span><span class="o">=</span><span class="no">SSLv3</span> <span class="n">read</span> <span class="n">server</span> <span class="n">certificate</span> <span class="ss">B</span><span class="p">:</span> <span class="n">certificate</span> <span class="n">verify</span> <span class="n">failed</span>
-</span><span class='line'><span class="ss">ERROR</span><span class="p">:</span> <span class="ss">OpenSSL</span><span class="p">:</span><span class="ss">:SSL</span><span class="o">::</span><span class="ss">SSLError</span><span class="p">:</span> <span class="no">SSL_connect</span> <span class="n">returned</span><span class="o">=</span><span class="mi">1</span> <span class="n">errno</span><span class="o">=</span><span class="mi">0</span> <span class="n">state</span><span class="o">=</span><span class="no">SSLv3</span> <span class="n">read</span> <span class="n">server</span> <span class="n">certificate</span> <span class="ss">B</span><span class="p">:</span> <span class="n">certificate</span> <span class="n">verify</span> <span class="n">failed</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is because Chef client 12 has SSL verification enabled by default for all requests. Since the certificate generated by the Chef Server 12 installation is self-signed, there isn&rsquo;t a signing CA that can be verified, and this fails. Never fear intrepid user, for you can get the SSL certificate from the server and store it as a &ldquo;trusted&rdquo; certificate. To find out how, use <code>knife ssl check</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">Connecting</span> <span class="n">to</span> <span class="n">host</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="p">:</span><span class="mi">443</span>
-</span><span class='line'><span class="ss">ERROR</span><span class="p">:</span> <span class="no">The</span> <span class="no">SSL</span> <span class="n">certificate</span> <span class="n">of</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">could</span> <span class="ow">not</span> <span class="n">be</span> <span class="n">verified</span>
-</span><span class='line'><span class="no">Certificate</span> <span class="n">issuer</span> <span class="ss">data</span><span class="p">:</span> <span class="sr">/C=US/</span><span class="no">ST</span><span class="o">=</span><span class="no">WA</span><span class="o">/</span><span class="n">L</span><span class="o">=</span><span class="no">Seattle</span><span class="o">/</span><span class="n">O</span><span class="o">=</span><span class="no">YouCorp</span><span class="o">/</span><span class="no">OU</span><span class="o">=</span><span class="no">Operations</span><span class="o">/</span><span class="no">CN</span><span class="o">=</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">emailAddress</span><span class="o">=</span><span class="n">you</span><span class="vi">@example</span><span class="o">.</span><span class="n">com</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">Configuration</span> <span class="ss">Info</span><span class="p">:</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">OpenSSL</span> <span class="ss">Configuration</span><span class="p">:</span>
-</span><span class='line'><span class="o">*</span> <span class="ss">Version</span><span class="p">:</span> <span class="no">OpenSSL</span> <span class="mi">1</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span><span class="n">j</span> <span class="mi">15</span> <span class="no">Oct</span> <span class="mi">2014</span>
-</span><span class='line'><span class="o">*</span> <span class="no">Certificate</span> <span class="ss">file</span><span class="p">:</span> <span class="sr">/opt/</span><span class="n">chefdk</span><span class="o">/</span><span class="n">embedded</span><span class="o">/</span><span class="n">ssl</span><span class="o">/</span><span class="n">cert</span><span class="o">.</span><span class="n">pem</span>
-</span><span class='line'><span class="o">*</span> <span class="no">Certificate</span> <span class="ss">directory</span><span class="p">:</span> <span class="sr">/opt/</span><span class="n">chefdk</span><span class="o">/</span><span class="n">embedded</span><span class="o">/</span><span class="n">ssl</span><span class="o">/</span><span class="n">certs</span>
-</span><span class='line'><span class="no">Chef</span> <span class="no">SSL</span> <span class="ss">Configuration</span><span class="p">:</span>
-</span><span class='line'><span class="o">*</span> <span class="n">ssl_ca_path</span><span class="p">:</span> <span class="kp">nil</span>
-</span><span class='line'><span class="o">*</span> <span class="n">ssl_ca_file</span><span class="p">:</span> <span class="kp">nil</span>
-</span><span class='line'><span class="o">*</span> <span class="n">trusted_certs_dir</span><span class="p">:</span> <span class="s2">&quot;/Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs&quot;</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">TO</span> <span class="no">FIX</span> <span class="no">THIS</span> <span class="ss">ERROR</span><span class="p">:</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">If</span> <span class="n">the</span> <span class="n">server</span> <span class="n">you</span> <span class="n">are</span> <span class="n">connecting</span> <span class="n">to</span> <span class="n">uses</span> <span class="n">a</span> <span class="nb">self</span><span class="o">-</span><span class="n">signed</span> <span class="n">certificate</span><span class="p">,</span> <span class="n">you</span> <span class="n">must</span>
-</span><span class='line'><span class="n">configure</span> <span class="n">chef</span> <span class="n">to</span> <span class="n">trust</span> <span class="n">that</span> <span class="n">server</span><span class="s1">&#39;s certificate.</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">By default, the certificate is stored in the following location on the host</span>
-</span><span class='line'><span class="s1">where your chef-server runs:</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">  /var/opt/chef-server/nginx/ca/SERVER_HOSTNAME.crt</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">Copy that file to your trusted_certs_dir (currently: /Users/jtimberman/Downloads/chef-repo/.chef/trusted_certs)</span>
-</span><span class='line'><span class="s1">using SSH/SCP or some other secure method, then re-run this command to confirm</span>
-</span><span class='line'><span class="s1">that the server&#39;</span><span class="n">s</span> <span class="n">certificate</span> <span class="n">is</span> <span class="n">now</span> <span class="n">trusted</span><span class="o">.</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>(note, <a href="https://github.com/opscode/chef/issues/2604">this chef-server location is incorrect</a>, it&rsquo;s <code>/var/opt/opscode</code>)</p>
-
-<p>There is a <code>fetch</code> plugin for <code>knife</code> too. Let&rsquo;s download the certificate to the automatically preconfigured trusted certificate location mentioned in the output above.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">ssl</span> <span class="n">fetch</span>
-</span><span class='line'><span class="ss">WARNING</span><span class="p">:</span> <span class="no">Certificates</span> <span class="n">from</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">will</span> <span class="n">be</span> <span class="n">fetched</span> <span class="ow">and</span> <span class="n">placed</span> <span class="k">in</span> <span class="n">your</span> <span class="n">trusted_cert</span>
-</span><span class='line'><span class="n">directory</span> <span class="p">(</span><span class="sr">/Users/</span><span class="n">jtimberman</span><span class="o">/</span><span class="no">Downloads</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">repo</span><span class="o">/.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="p">)</span><span class="o">.</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">Knife</span> <span class="n">has</span> <span class="n">no</span> <span class="n">means</span> <span class="n">to</span> <span class="n">verify</span> <span class="n">these</span> <span class="n">are</span> <span class="n">the</span> <span class="n">correct</span> <span class="n">certificates</span><span class="o">.</span> <span class="no">You</span> <span class="n">should</span>
-</span><span class='line'><span class="n">verify</span> <span class="n">the</span> <span class="n">authenticity</span> <span class="n">of</span> <span class="n">these</span> <span class="n">certificates</span> <span class="n">after</span> <span class="n">downloading</span><span class="o">.</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">Adding</span> <span class="n">certificate</span> <span class="k">for</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="k">in</span> <span class="sr">/Users/</span><span class="n">jtimberman</span><span class="o">/</span><span class="no">Downloads</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">repo</span><span class="o">/.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The certificate should be verified that what was downloaded is in fact the same as the certificate on the Chef Server. For example, I compared SHA256 checksums:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% ssh </span><span class="n">ubuntu</span><span class="vi">@chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">sudo</span> <span class="n">sha256sum</span> <span class="sr">/var/o</span><span class="n">pt</span><span class="o">/</span><span class="n">opscode</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">ca</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
-</span><span class='line'><span class="mo">04372</span><span class="mi">8</span><span class="n">b55144861ed43a426c67addca357a5889158886aee50685cf1422b5ebf</span>  <span class="sr">/var/o</span><span class="n">pt</span><span class="o">/</span><span class="n">opscode</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">ca</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
-</span><span class='line'><span class="sx">% gsha256sum </span><span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
-</span><span class='line'><span class="mo">04372</span><span class="mi">8</span><span class="n">b55144861ed43a426c67addca357a5889158886aee50685cf1422b5ebf</span>  <span class="o">.</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now check knife client list again.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">client</span> <span class="n">list</span>
-</span><span class='line'><span class="n">tester</span><span class="o">-</span><span class="n">validator</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Victory!</p>
-
-<p>Now, we need to get the ceritficate out to every node in the infrastructure in its <code>trusted_certs_dir</code> &ndash; by default this is <code>/etc/chef/trusted_certs</code>. The most simple way to do this is to use <code>knife ssh</code> to run knife on the target nodes.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">ssh</span> <span class="s1">&#39;name:*&#39;</span> <span class="s1">&#39;sudo knife ssl fetch -c /etc/chef/client.rb&#39;</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="ss">WARNING</span><span class="p">:</span> <span class="no">Certificates</span> <span class="n">from</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">-</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">will</span> <span class="n">be</span> <span class="n">fetched</span> <span class="ow">and</span> <span class="n">placed</span> <span class="k">in</span> <span class="n">your</span> <span class="n">trusted_cert</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">directory</span> <span class="p">(</span><span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="p">)</span><span class="o">.</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="no">Knife</span> <span class="n">has</span> <span class="n">no</span> <span class="n">means</span> <span class="n">to</span> <span class="n">verify</span> <span class="n">these</span> <span class="n">are</span> <span class="n">the</span> <span class="n">correct</span> <span class="n">certificates</span><span class="o">.</span> <span class="no">You</span> <span class="n">should</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="n">verify</span> <span class="n">the</span> <span class="n">authenticity</span> <span class="n">of</span> <span class="n">these</span> <span class="n">certificates</span> <span class="n">after</span> <span class="n">downloading</span><span class="o">.</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span>
-</span><span class='line'><span class="n">node</span><span class="o">-</span><span class="n">output</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="no">Adding</span> <span class="n">certificate</span> <span class="k">for</span> <span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span> <span class="k">in</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">trusted_certs</span><span class="o">/</span><span class="n">chef</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">crt</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The output will be interleaved for all the nodes returned by <code>knife ssh</code>. Of course, we should verify the SHA256 checksums like before, which can be done again with <code>knife ssh</code>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1566,6 +1640,10 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
       </li>
     
@@ -1579,10 +1657,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
     
       <li class="post">
         <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
       </li>
     
   </ul>

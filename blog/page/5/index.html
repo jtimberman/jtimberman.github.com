@@ -9,9 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="It is quite common in Debian and Ubuntu that when installing a package
-that provides a daemon, said daemon is started by the init script(s)
-included &hellip;">
+  <meta name="description" content="I upgraded my work laptop to Mountain Lion today. It was not as smooth
+as previous OS X upgrades have been for me, despite my efforts in
+managing my &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +81,242 @@ included &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/07/27/mountain-lion-upgrade/">Mountain Lion Upgrade</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-07-27T16:25:00-06:00" pubdate data-updated="true">Jul 27<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I upgraded my work laptop to Mountain Lion today. It was not as smooth
+as previous OS X upgrades have been for me, despite my efforts in
+managing my workstation(s) with Chef.</p>
+
+<p>I received a replacement laptop for the one that was damaged at
+ChefConf a couple weeks ago (champagne spill &ndash; long story, maybe for
+another blog post). As this is a new laptop, it is eligible for the
+free Mountain Lion upgrade. So on ML release day, I submitted my
+information to Apple for the redemption code, which I received this
+morning. As I&rsquo;m actually on vacation this week, I thought there was no
+better time to upgrade.</p>
+
+<p>You may recall that I have managed my
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">workstations</a>
+<a href="/blog/2011/09/04/update-to-managing-my-workstations/">with Chef</a> for
+quite some time. This has been all well and good so far, though the
+Mountain Lion installation didn&rsquo;t seem to like something in my
+preferences along the way.</p>
+
+<p>After the installation finished and the system rebooted, I logged in,
+expecting to be greeted with my already configured system. This was
+not the case, however! My desktop was that light grey of the OS X boot
+screen, and the Dock was not running at all. I put on my
+<a href="http://sysadminday.com">sysadmin hat</a> (like I ever take it off?!),
+and started debugging. I found the issue pretty quickly.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Jul 27 08:42:35 champagne.local Dock[423]: -[__NSCFBoolean isEqualToString:]: unrecognized selector sent to instance 0x7fff75d0fab0
+</span><span class='line'>Jul 27 08:42:35 champagne.local Dock[423]: *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '-[__NSCFBoolean isEqualToString:]: unrecognized selector sent to instance 0x7fff75d0fab0'
+</span><span class='line'>        *** First throw call stack:
+</span><span class='line'>        (
+</span><span class='line'>                0   CoreFoundation                      0x00007fff8fca9716 __exceptionPreprocess + 198
+</span><span class='line'>                1   libobjc.A.dylib                     0x00007fff8dc63470 objc_exception_throw + 43
+</span><span class='line'>                2   CoreFoundation                      0x00007fff8fd3fd5a -[NSObject(NSObject) doesNotRecognizeSelector:] + 186
+</span><span class='line'>                3   CoreFoundation                      0x00007fff8fc97c3e ___forwarding___ + 414
+</span><span class='line'>                4   CoreFoundation                      0x00007fff8fc97a28 _CF_forwarding_prep_0 + 232
+</span><span class='line'>                5   Dock                                0x000000010da92786 Dock + 681862
+</span><span class='line'>                6   Dock                                0x000000010d9f10b2 Dock + 20658
+</span><span class='line'>                7   Dock                                0x000000010dab9aed Dock + 842477
+</span><span class='line'>                8   libdyld.dylib                       0x00007fff852c17e1 start + 0
+</span><span class='line'>        )
+</span><span class='line'>Jul 27 08:42:35 champagne com.apple.launchd.peruser.501[267] (com.apple.Dock.agent[423]): Job appears to have crashed: Abort trap: 6
+</span><span class='line'>Jul 27 08:42:35 champagne com.apple.launchd.peruser.501[267] (com.apple.Dock.agent): Throttling respawn: Will start in 1 seconds
+</span><span class='line'>Jul 27 08:42:35 champagne.local ReportCrash[302]: Saved crash report for Dock[423] version 1.8 (1168) to /Users/jtimberman/Library/Logs/DiagnosticReports/Dock_2012-07-27-084235_champagne.crash</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This happened every second, constantly crashing and restarting, and
+generating a new crash report. What is the problem? Well, let&rsquo;s look
+at one of the reports:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Process:         Dock [21816]
+</span><span class='line'>Path:            /System/Library/CoreServices/Dock.app/Contents/MacOS/Dock
+</span><span class='line'>Identifier:      Dock
+</span><span class='line'>Version:         1.8 (1168)
+</span><span class='line'>Code Type:       X86-64 (Native)
+</span><span class='line'>Parent Process:  launchd [1039]
+</span><span class='line'>User ID:         501
+</span><span class='line'>
+</span><span class='line'>Date/Time:       2012-07-27 11:26:58.819 -0600
+</span><span class='line'>OS Version:      Mac OS X 10.8 (12A269)
+</span><span class='line'>Report Version:  10
+</span><span class='line'>
+</span><span class='line'>Crashed Thread:  0  Dispatch queue: com.apple.main-thread
+</span><span class='line'>
+</span><span class='line'>Exception Type:  EXC_CRASH (SIGABRT)
+</span><span class='line'>Exception Codes: 0x0000000000000000, 0x0000000000000000
+</span><span class='line'>
+</span><span class='line'>Application Specific Information:
+</span><span class='line'>*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '-[__NSCFBoolean isEqualToString:]: unrecognized selector sent to instance 0x7fff7b2a2ab0'
+</span><span class='line'>abort() called
+</span><span class='line'>terminate called throwing an exception
+</span><span class='line'>
+</span><span class='line'>Application Specific Backtrace 1:
+</span><span class='line'>0   CoreFoundation                      0x00007fff8cd77716 __exceptionPreprocess + 198
+</span><span class='line'>1   libobjc.A.dylib                     0x00007fff8e6df470 objc_exception_throw + 43
+</span><span class='line'>2   CoreFoundation                      0x00007fff8ce0dd5a -[NSObject(NSObject) doesNotRecognizeSelector:] + 186
+</span><span class='line'>3   CoreFoundation                      0x00007fff8cd65c3e ___forwarding___ + 414
+</span><span class='line'>4   CoreFoundation                      0x00007fff8cd65a28 _CF_forwarding_prep_0 + 232
+</span><span class='line'>5   Dock                                0x000000010d1b6786 Dock + 681862
+</span><span class='line'>6   Dock                                0x000000010d1150b2 Dock + 20658
+</span><span class='line'>7   Dock                                0x000000010d1ddaed Dock + 842477
+</span><span class='line'>8   libdyld.dylib                       0x00007fff8d7827e1 start + 0</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I&rsquo;ll spare you the detail of the rest of the file. Suffice to say, it
+is less informative than one might want for troubleshooting the issue.
+I (foolishly) spent about an hour and a half trying to get to the root
+of the problem. I found out that the problem was isolated to my own
+user, and something between <code>~/Library/Preferences</code> and
+<code>~/Library/Application Support</code>. I&rsquo;m not sure what the problem was &ndash; I
+eventually decided to just do this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo rm -rf ~/Library/Preferences ~/Library/Application\ Support</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then I logged back in, and everything was well. I have a back up from
+before the upgrade (Yay, TimeMachine!), so I wasn&rsquo;t concerned with
+losing anything important, and I knew that Chef would bring back most
+of my settings anyway.</p>
+
+<p>The first thing I did was, of course, <code>/usr/bin/chef-client</code>. This
+worked great. Until the Dock was restarted as part of my recipes. The
+symptom was the same as before &ndash; the desktop went light grey, the dock
+wasn&rsquo;t running and launchd was respawning it contnually, with the same
+errors from above.</p>
+
+<p>I decided to have some quality time with my configuration and get to
+the bottom of the problem. I went through all the settings I modify
+through <code>recipe[mac_os_x::settings]</code> attributes, and did a careful
+comparison of manual settings through the OS X system preferences, and
+the files changed in <code>~/Library/Preferences</code>.</p>
+
+<p><strong>Side note</strong>: This handy hint comes from
+  <a href="http://twitter.com/bleything">Ben Bleything</a>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cd ~/Library/Preferences
+</span><span class='line'>git init
+</span><span class='line'>git add .
+</span><span class='line'>git commit -m 'initial commit'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, make a change in system preferences, you can use <code>git status</code> to
+see what plist files are updated. Of course, most of the plist files
+are binary so you can&rsquo;t really diff them, but the filename will
+indicate which domain to use with the <code>defaults(1)</code> command. Handy,
+thanks Ben! <strong>End side note.</strong></p>
+
+<p>Anyway, it took some time, but I tuned all my configuration for the
+things I wanted to ensure happened on any new system, and nothing
+else. I believe what happened is that some setting I had is no longer
+supported on Mountain Lion and its presence makes Dock.app grumpy, but
+that is purely speculation. The end result now, though, is that I have
+a pretty sane set of configuration that is automatically applied in a
+more data driven way, and I&rsquo;m not using settings that I don&rsquo;t know
+100% what they do.</p>
+
+<p>That aside, Mountain Lion is nice so far. The GCC Installer for 10.7
+seems to be working just fine, though I haven&rsquo;t tried installing a new
+Ruby under it yet. I am looking forward to wider use and adoption of
+the Notification Center as a replacement for Growl.</p>
+
+<p>I hope this post is helpful in some way. Unfortunately I don&rsquo;t have an
+answer to the Dock crash problem itself, but I have now remedied the
+issue for my own use. I&rsquo;m going to write a new post about how I&rsquo;m
+managing my workstations, to bring the
+<a href="/blog/2011/04/03/managing-my-workstations-with-chef/">information posted</a>
+<a href="/blog/2011/09/04/update-to-managing-my-workstations/">previously up to date</a>,
+so stay tuned.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1643,146 +1879,6 @@ that has <code>ntpdate -u pool.ntp.org</code> in it.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/01/29/dnsimple-self-registration-recipe/">DNSimple Self Registration Recipe</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-01-29T19:00:00-07:00" pubdate data-updated="true">Jan 29<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Earlier this month, I completed a
-<a href="/blog/2012/01/02/switching-to-dnsimple/">switch to DNSimple</a> for my
-domain&rsquo;s DNS provider. I am still happy with the switch, and finally,
-just now, got around to writing a recipe to have my systems
-automatically register themselves in DNS.</p>
-
-<p>In the post, I described automatically adding the DNS entries with the
-<a href="http://community.opscode.com/cookbooks/dnsimple">dnsimple cookbook</a>.
-I did this as a proof of concept, but I didn&rsquo;t add it to all my nodes,
-instead using my existing data bag-driven solution.</p>
-
-<p>That said, this post serves as a brief document on how you can mimic
-this behavior with your own environment.</p>
-
-<h1>Encrypted Data Bag</h1>
-
-<p>I put my DNSimple credentials in an
-<a href="http://wiki.opscode.com/display/chef/Encrypted+Data+Bags">encrypted data bag</a>.
-Since I have to decrypt and read the entire thing anyway, I also store
-the relevant data there. I keep my encrypted data bags in a bag called
-secrets. The structure looks like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="s2">&quot;api_token&quot;</span><span class="o">:</span> <span class="s2">&quot;DNSimple API Token Here&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="s2">&quot;domain&quot;</span><span class="o">:</span> <span class="s2">&quot;your-domain.example.com&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="s2">&quot;username&quot;</span><span class="o">:</span> <span class="s2">&quot;DNSimple username&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="s2">&quot;password&quot;</span><span class="o">:</span> <span class="s2">&quot;DNSimple password&quot;</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Replace the values with your values. Encrypting the data is optional,
-but requires that you create a secret key or key file. Read my
-<a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">previous post on the topic</a>
-for more information.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="o">%</span> <span class="nx">knife</span> <span class="nx">data</span> <span class="nx">bag</span> <span class="nx">from</span> <span class="nx">file</span> <span class="nx">secrets</span> <span class="nx">dnsimple</span><span class="p">.</span><span class="nx">json</span>
-</span><span class='line'><span class="o">%</span> <span class="nx">knife</span> <span class="nx">data</span> <span class="nx">bag</span> <span class="nx">from</span> <span class="nx">file</span> <span class="nx">secrets</span> <span class="nx">dnsimple</span><span class="p">.</span><span class="nx">json</span> <span class="o">--</span><span class="nx">secret</span><span class="o">-</span><span class="nx">file</span> <span class="o">/</span><span class="nx">etc</span><span class="o">/</span><span class="nx">chef</span><span class="o">/</span><span class="nx">encrypted_data_bag_secret</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The first command just uploads the data bag item, the second encrypts
-it. Note that I manage my workstation with Chef, so I will use the
-same secret file as the Chef default. The secret file needs to be
-copied to each system that will need it.</p>
-
-<h1>Recipe</h1>
-
-<p>The recipe looks like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="n">encrypted_data_bag_item</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">dnsimple_record</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;hostname&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">.int.</span><span class="si">#{</span><span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">content</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;ipaddress&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">type</span> <span class="s2">&quot;A&quot;</span>
-</span><span class='line'>  <span class="n">action</span> <span class="ss">:create</span>
-</span><span class='line'>  <span class="n">username</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;username&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">password</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;password&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">domain</span> <span class="n">dnsimple</span><span class="o">[</span><span class="s1">&#39;domain&#39;</span><span class="o">]</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>As
-<a href="/blog/2011/08/06/encrypted-data-bag-for-postfix-sasl-authentication/">mentioned in the previous blog post</a>,
-the <code>encrypted_data_bag_item</code> method is in a library. Either add that
-library to your cookbook, or use the class directly.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:EncryptedDataBagItem</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;secrets&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>If you&rsquo;re not using an encrypted data bag, then the item can be
-accessed with the normal method:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">dnsimple</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;bagname&quot;</span><span class="p">,</span> <span class="s2">&quot;dnsimple&quot;</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The real work happens in the <code>dnsimple_record</code> LWRP, which will add an
-&ldquo;A&rdquo; record for the system running the recipe. Note that the actual
-entry is going to use the <code>int</code> subdomain, and it will use the domain
-stored in the data bag item. It also will use the default IP address
-of the node, which means the IP for the interface with the default
-route.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -1817,6 +1913,10 @@ route.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
       </li>
     
@@ -1830,10 +1930,6 @@ route.</p>
     
       <li class="post">
         <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/">Quick Tip: Define Resources to Notifiy in LWRPs</a>
       </li>
     
   </ul>
