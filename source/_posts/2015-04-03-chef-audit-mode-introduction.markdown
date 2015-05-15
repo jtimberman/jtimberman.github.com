@@ -6,15 +6,13 @@ comments: true
 categories: [chef]
 ---
 
-I've started working with the [audit mode](https://docs.chef.io/analytics.html#audit-mode) feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his talk, "Compliance At Velocity," James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.
+I've started working with the [audit mode](https://docs.chef.io/analytics.html#audit-mode) feature introduced in Chef version 12.1.0. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his [ChefConf 2015 talk, "Compliance At Velocity,"](https://www.youtube.com/watch?v=g-_SW3adPwU) James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.
 
-First, we need to update ChefDK to version 0.5.0 (rc 3 is current), as that includes a version of test kitchen that [allows us to configure audit mode](https://github.com/test-kitchen/test-kitchen/pull/652) for chef-client.
+First, we need to update ChefDK to version 0.5.0, as that includes a version of test kitchen that [allows us to configure audit mode](https://github.com/test-kitchen/test-kitchen/pull/652) for chef-client.
 
 ```
-curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk -p
+curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk
 ```
-
-The `-p` option tells the script to use the prerelease version, as of this writing 0.5.0 is not released, but we have a release candidate.
 
 Next, create a new cookbook for the audit mode tests.
 
@@ -52,7 +50,7 @@ This is the generated `.kitchen.yml` with `client_rb` added to the provisioner c
 audit_mode :audit_only
 ```
 
-Next, let's write a control rule to test. Since we're using the default `.kitchen.yml`, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. Let's write a control that asserts this is true.
+Next, let's write a control rule to test. Since we're using the default `.kitchen.yml`, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. The following control asserts this is true.
 
 ```ruby
 control_group 'Blog Post Examples' do
