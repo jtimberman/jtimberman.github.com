@@ -6,7 +6,7 @@ comments: true
 categories: [quicktips, chef]
 ---
 
-Earlier today, [ChefDK 0.6.0 was released](https://www.chef.io/blog/2015/05/15/chefdk-0-6-0-released/). In this post, I will illustrate a fairly simple walkthrough using Amazon EC2, based on [Dan's notes](https://gist.github.com/danielsdeleo/9112b6c7932452bdb7e8#deploy). This example will include Policyfile use, too. Let's get started.
+Earlier today, [ChefDK 0.6.0 was released](https://www.chef.io/blog/2015/05/15/chefdk-0-6-0-released/). In this post, I will illustrate a fairly simple walkthrough using Amazon EC2, based on information in the [document](https://github.com/chef/chef-dk/blob/master/PROVISION_README.md#basic-example). This example will include Policyfile use, too. Let's get started.
 
 First, install ChefDK 0.6.0. You can get it from the [Chef Downloads page](downloads.chef.io/chef-dk).
 
