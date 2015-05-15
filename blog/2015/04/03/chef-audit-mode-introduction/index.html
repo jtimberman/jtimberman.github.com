@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I&rsquo;ve started working with the audit mode feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) &hellip;">
+  <meta name="description" content="I&rsquo;ve started working with the audit mode feature introduced in Chef version 12.1.0. Audit mode allows users to write custom rules (controls) in &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -105,15 +105,13 @@
   </header>
 
 
-<div class="entry-content"><p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his talk, &ldquo;Compliance At Velocity,&rdquo; James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
+<div class="entry-content"><p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature introduced in Chef version 12.1.0. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his <a href="https://www.youtube.com/watch?v=g-_SW3adPwU">ChefConf 2015 talk, &ldquo;Compliance At Velocity,&rdquo;</a> James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
 
-<p>First, we need to update ChefDK to version 0.5.0 (rc 3 is current), as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
+<p>First, we need to update ChefDK to version 0.5.0, as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk -p</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk</span></code></pre></td></tr></table></div></figure>
 
-
-<p>The <code>-p</code> option tells the script to use the prerelease version, as of this writing 0.5.0 is not released, but we have a release candidate.</p>
 
 <p>Next, create a new cookbook for the audit mode tests.</p>
 
@@ -170,7 +168,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. Let&rsquo;s write a control that asserts this is true.</p>
+<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. The following control asserts this is true.</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -381,6 +379,8 @@ Failures:
         <a class="basic-alignment left" href="/blog/2015/03/25/missing-transitive-dependencies/" title="Previous Post: Missing Transitive Dependencies">&laquo; Missing Transitive Dependencies</a>
       
       
+        <a class="basic-alignment right" href="/blog/2015/05/15/quick-tip-chefdk-provision/" title="Next Post: Quick Tip: ChefDK Provision">Quick Tip: ChefDK Provision &raquo;</a>
+      
     </p>
   </footer>
 </article>
@@ -417,6 +417,10 @@ Failures:
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/15/quick-tip-chefdk-provision/">Quick Tip: ChefDK Provision</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a>
       </li>
     
@@ -430,10 +434,6 @@ Failures:
     
       <li class="post">
         <a href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/">Awesome Syntax Highlighting in Keynote</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
       </li>
     
   </ul>

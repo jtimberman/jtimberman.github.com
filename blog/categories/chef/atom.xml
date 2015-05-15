@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chef | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-04-03T22:08:10-06:00</updated>
+  <updated>2015-05-15T16:55:19-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -14,19 +14,146 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Quick Tip: ChefDK Provision]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/05/15/quick-tip-chefdk-provision/"/>
+    <updated>2015-05-15T16:18:03-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/05/15/quick-tip-chefdk-provision</id>
+    <content type="html"><![CDATA[<p>Earlier today, <a href="https://www.chef.io/blog/2015/05/15/chefdk-0-6-0-released/">ChefDK 0.6.0 was released</a>. In this post, I will illustrate a fairly simple walkthrough using Amazon EC2, based on <a href="https://gist.github.com/danielsdeleo/9112b6c7932452bdb7e8#deploy">Dan&rsquo;s notes</a>. This example will include Policyfile use, too. Let&rsquo;s get started.</p>
+
+<p>First, install ChefDK 0.6.0. You can get it from the <a href="downloads.chef.io/chef-dk">Chef Downloads page</a>.</p>
+
+<p>Next, setup <a href="https://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials/">AWS credentials</a>. Ensure that they are exported to the current shell environment.</p>
+
+<pre><code>AWS_ACCESS_KEY_ID=secrets
+AWS_SECRET_ACCESS_KEY=secrets
+AWS_DEFAULT_REGION=us-east-1
+AWS_SSH_KEY=your_ssh_key_name
+AWS_ACCESS_KEY=secrets
+AWS_SECRET_KEY=secrets
+</code></pre>
+
+<p>I&rsquo;m going to use Hosted Chef as my Chef Server. I already have my user API key and configuration in <code>~/.chef</code>, and I&rsquo;m going to rely on the automatic configuration detection in the <code>chef</code> command for that.</p>
+
+<p>Generate a new repository using the <code>chef generate</code> command. Further commands run from this directory.</p>
+
+<pre><code>chef generate repo chefdk-provision-demo
+cd chefdk-provision-demo
+</code></pre>
+
+<p>Generate a <code>provision</code> cookbook. This is the required name, and it must be in the current directory.</p>
+
+<pre><code>chef generate cookbook provision
+</code></pre>
+
+<p>Edit the default recipe, <code>$EDITOR provision/recipes/default.rb</code>.</p>
+
+<p>```ruby
+context = ChefDK::ProvisioningData.context
+with_driver &lsquo;aws::us-west-2&rsquo;
+options = {
+  ssh_username: &lsquo;admin&rsquo;,
+  use_private_ip_for_ssh: false,
+  bootstrap_options: {</p>
+
+<pre><code>key_name: 'jtimberman',
+image_id: 'ami-0d5b6c3d',
+instance_type: 'm3.medium',
+</code></pre>
+
+<p>  },
+  convergence_options: context.convergence_options,
+}
+machine context.node_name do
+  machine_options options
+  action context.action
+  converge true
+end
+```</p>
+
+<p>To break this down, first we get the ChefDK provisioning context that will pass in options to <code>chef-provisioning</code>. Then we tell <code>chef-provisioning</code> to use the AWS driver, and in the <code>us-west-2</code> region. The options hash is used to setup the instance. We&rsquo;re using <a href="https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie">Debian 8</a>, which uses the <code>admin</code> user to log in, an SSH key that exists in the AWS region, the actual AMI, and finally the instance type. Then, we&rsquo;re going to set the convergence options automatically from ChefDK. This is the important part that will ensure the node has the right run list.</p>
+
+<p>Generate a <code>Policyfile.rb</code>.</p>
+
+<pre><code>chef generate policyfile
+</code></pre>
+
+<p>And edit its content, <code>$EDITOR Policyfile.rb</code>.</p>
+
+<p><code>ruby
+name            "chefdk-provision-demo"
+default_source  :community
+run_list        "recipe[libuuid-user]"
+cookbook        "libuuid-user"
+</code></p>
+
+<p>Here we&rsquo;re simply getting the <a href="https://supermarket.chef.io/cookbooks/libuuid">libuuid-user cookbook from Supermarket</a> and applying the default recipe to the nodes that have this policy.</p>
+
+<p>The next step is to install the Policyfile. This generates the Policyfile.lock.json, and downloads the cookbooks to the cache, <code>~/.chefdk/cache/cookbooks</code>. If this isn&rsquo;t run, <code>chef</code> will complain, with a reminder to run it.</p>
+
+<pre><code>chef install
+</code></pre>
+
+<p>Finally, we can provision a testing system with this policy:</p>
+
+<pre><code>chef provision testing --sync -n debian-libuuid
+</code></pre>
+
+<p>This will result in output similar to this:</p>
+
+<pre><code>Uploading policy to policy group testing
+Uploaded libuuid-user 1.0.1 (c3220a49)
+Compiling Cookbooks...
+Recipe: provision::default
+  * machine[debian-libuuid] action converge
+    - Create debian-libuuid with AMI ami-0d5b6c3d in us-west-2
+    - create node debian-libuuid at https://chef-api.example.com/organizations/testing
+    -   add normal.tags = nil
+    -   add normal.chef_provisioning = {"hash" =&gt; "of options"}
+    - waiting for debian-libuuid (i-251f1cec on aws::us-west-2) to be connectable (transport up and running) ...
+    - been waiting 60/120 -- sleeping 10 seconds for debian-libuuid (i-251f1cec on aws::us-west-2) to be connectable ...
+    - debian-libuuid is now connectable        - generate private key (2048 bits)
+    - create directory /etc/chef on debian-libuuid
+    - write file /etc/chef/client.pem on debian-libuuid
+    - create client debian-libuuid at clients
+    -   add public_key = "-----BEGIN PUBLIC KEY-----\n..."
+    - Add debian-libuuid to client read ACLs
+    - Add debian-libuuid to client update ACLs
+    - create directory /etc/chef/ohai/hints on debian-libuuid
+    - write file /etc/chef/ohai/hints/ec2.json on debian-libuuid
+    - write file /etc/chef/client.rb on debian-libuuid
+    - write file /tmp/chef-install.sh on debian-libuuid
+    - run 'bash -c ' bash /tmp/chef-install.sh'' on debian-libuuid
+    [debian-libuuid] Starting Chef Client, version 12.3.0
+                     [2015-05-15T22:42:43+00:00] WARN: Using experimental Policyfile feature
+                     resolving cookbooks for run list: ["libuuid-user::default@1.0.1 (c3220a4)", "libuuid-user::verify@1.0.1 (c3220a4)"]
+                     Synchronizing Cookbooks:
+                       - libuuid-user
+                     Compiling Cookbooks...
+                     Converging 1 resources
+                     Recipe: libuuid-user::default
+                       * user[libuuid] action create
+                       - create user libuuid
+
+                     Running handlers:
+                     Running handlers complete
+                     Chef Client finished, 1/1 resources updated in 5.29666495 seconds
+    - run 'chef-client -l auto' on debian-libuuid
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Chef Audit Mode Introduction]]></title>
     <link href="http://jtimberman.housepub.org/blog/2015/04/03/chef-audit-mode-introduction/"/>
     <updated>2015-04-03T20:48:23-06:00</updated>
     <id>http://jtimberman.housepub.org/blog/2015/04/03/chef-audit-mode-introduction</id>
-    <content type="html"><![CDATA[<p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his talk, &ldquo;Compliance At Velocity,&rdquo; James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
+    <content type="html"><![CDATA[<p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature introduced in Chef version 12.1.0. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his <a href="https://www.youtube.com/watch?v=g-_SW3adPwU">ChefConf 2015 talk, &ldquo;Compliance At Velocity,&rdquo;</a> James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
 
-<p>First, we need to update ChefDK to version 0.5.0 (rc 3 is current), as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
+<p>First, we need to update ChefDK to version 0.5.0, as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
 
 <p><code>
-curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk -p
+curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk
 </code></p>
-
-<p>The <code>-p</code> option tells the script to use the prerelease version, as of this writing 0.5.0 is not released, but we have a release candidate.</p>
 
 <p>Next, create a new cookbook for the audit mode tests.</p>
 
@@ -69,7 +196,7 @@ attributes:
 audit_mode :audit_only
 </code></p>
 
-<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. Let&rsquo;s write a control that asserts this is true.</p>
+<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. The following control asserts this is true.</p>
 
 <p>```ruby
 control_group &lsquo;Blog Post Examples&rsquo; do
@@ -417,179 +544,6 @@ knife group add actor provisioners chefconf-provisioner</p>
 ```</p>
 
 <p>Hopefully this helps you out with your use of Chef Provisioning, and a non-zero Chef server. If you have further questions, find me at ChefConf!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Define Resources to Notifiy in LWRPs]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/"/>
-    <updated>2015-01-17T22:37:06-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps</id>
-    <content type="html"><![CDATA[<p>In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when using <code>use_inline_resources</code> in Chef&rsquo;s <a href="http://docs.chef.io/lwrp.html">LWRP DSL</a>.</p>
-
-<p>I&rsquo;ll use an example cookbook, <code>notif</code>, to illustrate. First, I&rsquo;ve created <code>cookbooks/notif/resources/default.rb</code>, with the following content.</p>
-
-<p><code>ruby
-actions :write
-default_action :write
-</code></p>
-
-<p>Then, I have written <code>cookbooks/notif/providers/default.rb</code> like this:</p>
-
-<p>```ruby
-use_inline_resources</p>
-
-<p>action :write do
-  log &lsquo;notifer&rsquo; do</p>
-
-<pre><code>notifies :create, 'file[notified]'
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>Then the default recipe, where I&rsquo;ll use the resource automatically generated from the resource directory, <code>notif</code>.</p>
-
-<p>```ruby
-file &lsquo;notified&rsquo; do
-  content &lsquo;something&rsquo;
-  action :nothing
-end</p>
-
-<p>notif &lsquo;doer&rsquo;
-```</p>
-
-<p>When I run Chef, I&rsquo;ll get an error like this:</p>
-
-<p>```
- Recipe: notif::default
-   * file[notified] action nothing (skipped due to action :nothing)
-   * notif[doer] action write</p>
-
-<pre><code> ================================================================================
- Error executing action `write` on resource 'notif[doer]'
- ================================================================================
-
- Chef::Exceptions::ResourceNotFound
- ----------------------------------
- resource log[notifer] is configured to notify resource file[notified] with action create, but file[notified] cannot be found in the resource collection. log[notifer] is defined in /tmp/kitchen/cookbooks/notif/providers/default.rb:4:in `block in class_from_file'
-
- Resource Declaration:
- ---------------------
- # In /tmp/kitchen/cookbooks/notif/recipes/default.rb
-
-  12: notif 'doer'
-
- Compiled Resource:
-</code></pre>
-
-<hr />
-
-<pre><code> # Declared in /tmp/kitchen/cookbooks/notif/recipes/default.rb:12:in `from_file'
-
- notif("doer") do
-   action :write
-   retries 0
-   retry_delay 2
-   default_guard_interpreter :default
-   declared_type :notif
-
-   recipe_name "default"
- end
-</code></pre>
-
-<p>```</p>
-
-<p>To fix this, I define the <code>file</code> resource in the provider:</p>
-
-<p>```ruby
-use_inline_resources</p>
-
-<p>action :write do
-  log &lsquo;notifer&rsquo; do</p>
-
-<pre><code>notifies :create, 'file[notified]'
-</code></pre>
-
-<p>  end</p>
-
-<p>  file &lsquo;notified&rsquo; do</p>
-
-<pre><code>content new_resource.name
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>Then when I run Chef, it will converge and notify the file resource to be configured.</p>
-
-<p>```
-Recipe: notif::default
-  * file[notified] action nothing (skipped due to action :nothing)
-  * notif[doer] action write</p>
-
-<pre><code>* log[notifer] action write
-
-* file[notified] action create
-  - create new file notified
-  - update content in file notified from none to 935e8e
-  --- notified       2015-01-18 05:47:49.186399317 +0000
-  +++ ./.notified20150118-15795-om5fiw       2015-01-18 05:47:49.186399317 +0000
-  @@ -1 +1,2 @@
-  +doer
-* file[notified] action create (up to date)
-</code></pre>
-
-<p>Running handlers:
-Running handlers complete
-Chef Client finished, &frac34; resources updated in 1.298990565 seconds
-```</p>
-
-<h2>Why does this happen?</h2>
-
-<p>The reason for this is because <code>use_inline_resources</code> tells Chef that in this provider, we&rsquo;re using inline resources that will be added to their own run context, with their own resource collection. We don&rsquo;t have access to the resource collection from the recipe. Even though the <code>file[notified]</code> resource exists from the recipe, it doesn&rsquo;t actually get inherited in the provider&rsquo;s run context, raising the error we saw before.</p>
-
-<p>We can turn off <code>use_inline_resources</code> by removing it, and the custom resource will be configured:</p>
-
-<p>```ruby
-action :write do
-  log &lsquo;notifer&rsquo; do</p>
-
-<pre><code>notifies :create, 'file[notified]'
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>Then run Chef:</p>
-
-<p>```
-Recipe: notif::default
-  * file[notified] action nothing (skipped due to action :nothing)
-  * notif[doer] action write (up to date)
-  * log[notifer] action write
-  * file[notified] action create</p>
-
-<pre><code>- update content in file notified from 935e8e to 3fc9b6
---- notified 2015-01-18 05:47:49.186399317 +0000
-+++ ./.notified20150118-16159-r18q7z 2015-01-18 05:50:57.832140405 +0000
-@@ -1,2 +1,2 @@
--doer
-+something
-</code></pre>
-
-<p>```</p>
-
-<p>Notice that the <code>file[notified]</code> resource wasn&rsquo;t updated at the start of the run, when it was encountered in the recipe, but it was when notified by the log resource in the provider action, changing the content.</p>
-
-<h2>Use inline compile mode!</h2>
-
-<p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
-
-<p>Also, define the resources that you need to notify when you&rsquo;re doing this in your provider&rsquo;s actions. A common example is within a provider that writes configuration for a service, and needs to tell that service to restart.</p>
 ]]></content>
   </entry>
   

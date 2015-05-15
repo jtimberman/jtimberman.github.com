@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-04-03T22:08:10-06:00</updated>
+  <updated>2015-05-15T16:55:19-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,135 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: ChefDK Provision]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/05/15/quick-tip-chefdk-provision/"/>
+    <updated>2015-05-15T16:18:03-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/05/15/quick-tip-chefdk-provision</id>
+    <content type="html"><![CDATA[<p>Earlier today, <a href="https://www.chef.io/blog/2015/05/15/chefdk-0-6-0-released/">ChefDK 0.6.0 was released</a>. In this post, I will illustrate a fairly simple walkthrough using Amazon EC2, based on <a href="https://gist.github.com/danielsdeleo/9112b6c7932452bdb7e8#deploy">Dan&rsquo;s notes</a>. This example will include Policyfile use, too. Let&rsquo;s get started.</p>
+
+<p>First, install ChefDK 0.6.0. You can get it from the <a href="downloads.chef.io/chef-dk">Chef Downloads page</a>.</p>
+
+<p>Next, setup <a href="https://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials/">AWS credentials</a>. Ensure that they are exported to the current shell environment.</p>
+
+<pre><code>AWS_ACCESS_KEY_ID=secrets
+AWS_SECRET_ACCESS_KEY=secrets
+AWS_DEFAULT_REGION=us-east-1
+AWS_SSH_KEY=your_ssh_key_name
+AWS_ACCESS_KEY=secrets
+AWS_SECRET_KEY=secrets
+</code></pre>
+
+<p>I&rsquo;m going to use Hosted Chef as my Chef Server. I already have my user API key and configuration in <code>~/.chef</code>, and I&rsquo;m going to rely on the automatic configuration detection in the <code>chef</code> command for that.</p>
+
+<p>Generate a new repository using the <code>chef generate</code> command. Further commands run from this directory.</p>
+
+<pre><code>chef generate repo chefdk-provision-demo
+cd chefdk-provision-demo
+</code></pre>
+
+<p>Generate a <code>provision</code> cookbook. This is the required name, and it must be in the current directory.</p>
+
+<pre><code>chef generate cookbook provision
+</code></pre>
+
+<p>Edit the default recipe, <code>$EDITOR provision/recipes/default.rb</code>.</p>
+
+<p>```ruby
+context = ChefDK::ProvisioningData.context
+with_driver &lsquo;aws::us-west-2&rsquo;
+options = {
+  ssh_username: &lsquo;admin&rsquo;,
+  use_private_ip_for_ssh: false,
+  bootstrap_options: {</p>
+
+<pre><code>key_name: 'jtimberman',
+image_id: 'ami-0d5b6c3d',
+instance_type: 'm3.medium',
+</code></pre>
+
+<p>  },
+  convergence_options: context.convergence_options,
+}
+machine context.node_name do
+  machine_options options
+  action context.action
+  converge true
+end
+```</p>
+
+<p>To break this down, first we get the ChefDK provisioning context that will pass in options to <code>chef-provisioning</code>. Then we tell <code>chef-provisioning</code> to use the AWS driver, and in the <code>us-west-2</code> region. The options hash is used to setup the instance. We&rsquo;re using <a href="https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie">Debian 8</a>, which uses the <code>admin</code> user to log in, an SSH key that exists in the AWS region, the actual AMI, and finally the instance type. Then, we&rsquo;re going to set the convergence options automatically from ChefDK. This is the important part that will ensure the node has the right run list.</p>
+
+<p>Generate a <code>Policyfile.rb</code>.</p>
+
+<pre><code>chef generate policyfile
+</code></pre>
+
+<p>And edit its content, <code>$EDITOR Policyfile.rb</code>.</p>
+
+<p><code>ruby
+name            "chefdk-provision-demo"
+default_source  :community
+run_list        "recipe[libuuid-user]"
+cookbook        "libuuid-user"
+</code></p>
+
+<p>Here we&rsquo;re simply getting the <a href="https://supermarket.chef.io/cookbooks/libuuid">libuuid-user cookbook from Supermarket</a> and applying the default recipe to the nodes that have this policy.</p>
+
+<p>The next step is to install the Policyfile. This generates the Policyfile.lock.json, and downloads the cookbooks to the cache, <code>~/.chefdk/cache/cookbooks</code>. If this isn&rsquo;t run, <code>chef</code> will complain, with a reminder to run it.</p>
+
+<pre><code>chef install
+</code></pre>
+
+<p>Finally, we can provision a testing system with this policy:</p>
+
+<pre><code>chef provision testing --sync -n debian-libuuid
+</code></pre>
+
+<p>This will result in output similar to this:</p>
+
+<pre><code>Uploading policy to policy group testing
+Uploaded libuuid-user 1.0.1 (c3220a49)
+Compiling Cookbooks...
+Recipe: provision::default
+  * machine[debian-libuuid] action converge
+    - Create debian-libuuid with AMI ami-0d5b6c3d in us-west-2
+    - create node debian-libuuid at https://chef-api.example.com/organizations/testing
+    -   add normal.tags = nil
+    -   add normal.chef_provisioning = {"hash" =&gt; "of options"}
+    - waiting for debian-libuuid (i-251f1cec on aws::us-west-2) to be connectable (transport up and running) ...
+    - been waiting 60/120 -- sleeping 10 seconds for debian-libuuid (i-251f1cec on aws::us-west-2) to be connectable ...
+    - debian-libuuid is now connectable        - generate private key (2048 bits)
+    - create directory /etc/chef on debian-libuuid
+    - write file /etc/chef/client.pem on debian-libuuid
+    - create client debian-libuuid at clients
+    -   add public_key = "-----BEGIN PUBLIC KEY-----\n..."
+    - Add debian-libuuid to client read ACLs
+    - Add debian-libuuid to client update ACLs
+    - create directory /etc/chef/ohai/hints on debian-libuuid
+    - write file /etc/chef/ohai/hints/ec2.json on debian-libuuid
+    - write file /etc/chef/client.rb on debian-libuuid
+    - write file /tmp/chef-install.sh on debian-libuuid
+    - run 'bash -c ' bash /tmp/chef-install.sh'' on debian-libuuid
+    [debian-libuuid] Starting Chef Client, version 12.3.0
+                     [2015-05-15T22:42:43+00:00] WARN: Using experimental Policyfile feature
+                     resolving cookbooks for run list: ["libuuid-user::default@1.0.1 (c3220a4)", "libuuid-user::verify@1.0.1 (c3220a4)"]
+                     Synchronizing Cookbooks:
+                       - libuuid-user
+                     Compiling Cookbooks...
+                     Converging 1 resources
+                     Recipe: libuuid-user::default
+                       * user[libuuid] action create
+                       - create user libuuid
+
+                     Running handlers:
+                     Running handlers complete
+                     Chef Client finished, 1/1 resources updated in 5.29666495 seconds
+    - run 'chef-client -l auto' on debian-libuuid
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Create a Provisioner Node]]></title>
@@ -448,115 +577,6 @@ require_relative '../../../kitchen/data/spec_helper'
 </code></p>
 
 <p>That&rsquo;s it, now when running <code>kitchen test</code>, or <code>kitchen verify</code> on a converged instance, the helper will be used.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Chef 12 Homebrew User Mixin]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2014/12/29/chef-12-homebrew-user-mixin/"/>
-    <updated>2014-12-29T08:56:01-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2014/12/29/chef-12-homebrew-user-mixin</id>
-    <content type="html"><![CDATA[<p>OS X is an interesting operating system. It is a Unix, but is primarily used for workstations. As such, many system settings can, and should, be done as a non-privileged user. Some tasks, however, require administrative privileges. OS X uses <code>sudo</code> to escalate privileges. This is done by a nice GUI pop-up requesting the user password when done through another GUI element. However, one must use <code>sudo $COMMAND</code> when working at the Terminal.</p>
-
-<p>The <a href="http://brew.sh">Homebrew</a> package manager tries to do everything as a non-privileged user. The <a href="https://raw.githubusercontent.com/Homebrew/install/master/install">installation script</a> will invoke some commands with <code>sudo</code> &ndash; namely to create and set the correct permissions on <code>/usr/local</code> (its default installation location). Once that is complete, <code>brew install</code> will not require privileged access for installing packages. In fact, the <a href="https://github.com/Homebrew/homebrew/blob/b19d3afccef0ddc31820f1cb7d1a5316017e29df/share/doc/homebrew/FAQ.md#why-does-homebrew-say-sudo-is-bad-">Homebrew project recommends</a> never using <code>sudo</code> with the <code>brew</code> commands.</p>
-
-<p>In Chef 12 the default provider for the <code>package</code> resource is <code>homebrew</code>. This originally came from the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew cookbook</a>. In order to not use <code>sudo</code> when managing packages, there&rsquo;s a helper method (mixin) that attempts to determine what non-privileged user should run the <code>brew install</code> command. This is also <a href="https://github.com/opscode/chef/blob/4cb27331d81b394b816278e2bed6b3395b54b9c9/lib/chef/mixin/homebrew_user.rb">ported to Chef 12</a>. The method can also take an argument that specifies a particular user that should run the <code>brew</code> command.</p>
-
-<p>When managing an OS X system with Chef, it is often easier to just run <code>chef-client</code> as <code>root</code>, rather than be around when <code>sudo</code> prompts for a password. This means that we need a way to execute other commands for managing OS X as a non-privileged user. We can reuse the mixin to do this. I&rsquo;ll demonstrate this using plain old Ruby with <code>pry</code>, which is installed in ChefDK, and I&rsquo;ll start it up with <code>sudo</code>. Then, I&rsquo;ll show a short recipe with <code>chef-apply</code>.</p>
-
-<p><code>
-% which pry
-/opt/chefdk/embedded/bin/pry
-% sudo pry
-</code></p>
-
-<p>Paste in the following Ruby code:</p>
-
-<p>```ruby
-require &lsquo;chef&rsquo;
-include Chef::Mixin::HomebrewUser
-include Chef::Mixin::ShellOut</p>
-
-<p>find_homebrew_uid #=> 501
-```</p>
-
-<p>The method <code>find_homebrew_uid</code> is the helper we want. As we can see, rather than returning <code>0</code> (for <code>root</code>), it returns <code>501</code>, which is the UID of the <code>jtimberman</code> user on my system. To prove that I&rsquo;m executing in a process owned by <code>root</code>:</p>
-
-<p><code>ruby
-Process.uid #=&gt; 0
-</code></p>
-
-<p>Or, I can shell out to the <code>whoami</code> command using Chef&rsquo;s <code>shell_out</code> method &ndash; which is the same method Chef would use to run <code>brew install</code>.</p>
-
-<p><code>ruby
-shell_out('whoami').stdout #=&gt; "root\n"
-</code></p>
-
-<p>The <code>shell_out</code> method can take a <code>:user</code> attribute:</p>
-
-<p><code>ruby
-shell_out('whoami', :user =&gt; find_homebrew_uid).stdout #=&gt; "jtimberman\n"
-</code></p>
-
-<p>So this can be used to install packages with <code>brew</code>, and is exactly what Chef 12 does.</p>
-
-<p><code>ruby
-shell_out('brew install coreutils', :user =&gt; find_homebrew_uid)
-</code></p>
-
-<p>Or, it can be used to run <code>defaults(1)</code> settings that require running as a specific user, rather than <code>root</code></p>
-
-<p>```ruby</p>
-
-<h1>Turn off iPhoto face detection, please</h1>
-
-<p>shell_out(&lsquo;defaults write com.apple.iPhoto PKFaceDetectionEnabled 0&rsquo;,</p>
-
-<pre><code>      :user =&gt; find_homebrew_uid)
-</code></pre>
-
-<p>```</p>
-
-<p>```sh</p>
-
-<h1>before&hellip;</h1>
-
-<p>jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
-1</p>
-
-<h1>after!</h1>
-
-<p>jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
-0
-```</p>
-
-<p>Putting this together in a Chef recipe that gets run by <code>root</code>, we can disable face detection in iPhoto like this:</p>
-
-<p>```ruby
-Chef::Resource::Execute.send(:include, Chef::Mixin::HomebrewUser)</p>
-
-<p>execute &lsquo;defaults write com.apple.iPhoto PKFaceDetectionEnabled 0&rsquo; do
-  user find_homebrew_uid
-end
-```</p>
-
-<p>The first line makes the method available on all <code>execute</code> resources. To make the method available to all resources, use <code>Chef::Resource.send</code>, and to make it available across everything in all recipes, use <code>Chef::Recipe.send</code>. Otherwise we would get a <code>NoMethodError</code> exception.</p>
-
-<p>The <code>execute</code> resource takes a <code>user</code> attribute, so we use the <code>find_homebrew_uid</code> method here to set the user. And we can observe the same results as above:</p>
-
-<p><code>
-jtimberman@localhost% defaults write com.apple.iPhoto PKFaceDetectionEnabled 1
-jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
-1
-jtimberman@localhost% sudo chef-apply nofaces.rb
-Recipe: (chef-apply cookbook)::(chef-apply recipe)
-* execute[defaults write com.apple.iPhoto PKFaceDetectionEnabled 0] action run
-- execute defaults write com.apple.iPhoto PKFaceDetectionEnabled 0
-jtimberman@localhost% defaults read com.apple.iPhoto PKFaceDetectionEnabled
-0
-</code></p>
-
-<p>Those who have read the workstation management posts on this blog in the past may be aware that I have a <a href="https://supermarket.chef.io/cookbooks/mac_os_x">cookbook</a> that can manage OS X &ldquo;<code>defaults(1)</code>&rdquo; settings. I <a href="https://github.com/chef-osx/mac_os_x/issues/21">plan to make updates</a> to the resource in that cookbook that will leverage this method.</p>
 ]]></content>
   </entry>
   

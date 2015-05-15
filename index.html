@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I&rsquo;ve started working with the audit mode feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) &hellip;">
+  <meta name="description" content="Earlier today, ChefDK 0.6.0 was released. In this post, I will illustrate a fairly simple walkthrough using Amazon EC2, based on Dan&rsquo;s notes. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -85,6 +85,180 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2015/05/15/quick-tip-chefdk-provision/">Quick Tip: ChefDK Provision</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-05-15T16:18:03-06:00" pubdate data-updated="true">May 15<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Earlier today, <a href="https://www.chef.io/blog/2015/05/15/chefdk-0-6-0-released/">ChefDK 0.6.0 was released</a>. In this post, I will illustrate a fairly simple walkthrough using Amazon EC2, based on <a href="https://gist.github.com/danielsdeleo/9112b6c7932452bdb7e8#deploy">Dan&rsquo;s notes</a>. This example will include Policyfile use, too. Let&rsquo;s get started.</p>
+
+<p>First, install ChefDK 0.6.0. You can get it from the <a href="downloads.chef.io/chef-dk">Chef Downloads page</a>.</p>
+
+<p>Next, setup <a href="https://jtimberman.housepub.org/blog/2013/10/19/managing-multiple-aws-account-credentials/">AWS credentials</a>. Ensure that they are exported to the current shell environment.</p>
+
+<pre><code>AWS_ACCESS_KEY_ID=secrets
+AWS_SECRET_ACCESS_KEY=secrets
+AWS_DEFAULT_REGION=us-east-1
+AWS_SSH_KEY=your_ssh_key_name
+AWS_ACCESS_KEY=secrets
+AWS_SECRET_KEY=secrets
+</code></pre>
+
+<p>I&rsquo;m going to use Hosted Chef as my Chef Server. I already have my user API key and configuration in <code>~/.chef</code>, and I&rsquo;m going to rely on the automatic configuration detection in the <code>chef</code> command for that.</p>
+
+<p>Generate a new repository using the <code>chef generate</code> command. Further commands run from this directory.</p>
+
+<pre><code>chef generate repo chefdk-provision-demo
+cd chefdk-provision-demo
+</code></pre>
+
+<p>Generate a <code>provision</code> cookbook. This is the required name, and it must be in the current directory.</p>
+
+<pre><code>chef generate cookbook provision
+</code></pre>
+
+<p>Edit the default recipe, <code>$EDITOR provision/recipes/default.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">context</span> <span class="o">=</span> <span class="ss">ChefDK</span><span class="p">:</span><span class="ss">:ProvisioningData</span><span class="o">.</span><span class="n">context</span>
+</span><span class='line'><span class="n">with_driver</span> <span class="s1">&#39;aws::us-west-2&#39;</span>
+</span><span class='line'><span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">ssh_username</span><span class="p">:</span> <span class="s1">&#39;admin&#39;</span><span class="p">,</span>
+</span><span class='line'>  <span class="n">use_private_ip_for_ssh</span><span class="p">:</span> <span class="kp">false</span><span class="p">,</span>
+</span><span class='line'>  <span class="n">bootstrap_options</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">key_name</span><span class="p">:</span> <span class="s1">&#39;jtimberman&#39;</span><span class="p">,</span>
+</span><span class='line'>    <span class="n">image_id</span><span class="p">:</span> <span class="s1">&#39;ami-0d5b6c3d&#39;</span><span class="p">,</span>
+</span><span class='line'>    <span class="n">instance_type</span><span class="p">:</span> <span class="s1">&#39;m3.medium&#39;</span><span class="p">,</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="n">convergence_options</span><span class="p">:</span> <span class="n">context</span><span class="o">.</span><span class="n">convergence_options</span><span class="p">,</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="n">machine</span> <span class="n">context</span><span class="o">.</span><span class="n">node_name</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">machine_options</span> <span class="n">options</span>
+</span><span class='line'>  <span class="n">action</span> <span class="n">context</span><span class="o">.</span><span class="n">action</span>
+</span><span class='line'>  <span class="n">converge</span> <span class="kp">true</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To break this down, first we get the ChefDK provisioning context that will pass in options to <code>chef-provisioning</code>. Then we tell <code>chef-provisioning</code> to use the AWS driver, and in the <code>us-west-2</code> region. The options hash is used to setup the instance. We&rsquo;re using <a href="https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie">Debian 8</a>, which uses the <code>admin</code> user to log in, an SSH key that exists in the AWS region, the actual AMI, and finally the instance type. Then, we&rsquo;re going to set the convergence options automatically from ChefDK. This is the important part that will ensure the node has the right run list.</p>
+
+<p>Generate a <code>Policyfile.rb</code>.</p>
+
+<pre><code>chef generate policyfile
+</code></pre>
+
+<p>And edit its content, <code>$EDITOR Policyfile.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span>            <span class="s2">&quot;chefdk-provision-demo&quot;</span>
+</span><span class='line'><span class="n">default_source</span>  <span class="ss">:community</span>
+</span><span class='line'><span class="n">run_list</span>        <span class="s2">&quot;recipe[libuuid-user]&quot;</span>
+</span><span class='line'><span class="n">cookbook</span>        <span class="s2">&quot;libuuid-user&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here we&rsquo;re simply getting the <a href="https://supermarket.chef.io/cookbooks/libuuid">libuuid-user cookbook from Supermarket</a> and applying the default recipe to the nodes that have this policy.</p>
+
+<p>The next step is to install the Policyfile. This generates the Policyfile.lock.json, and downloads the cookbooks to the cache, <code>~/.chefdk/cache/cookbooks</code>. If this isn&rsquo;t run, <code>chef</code> will complain, with a reminder to run it.</p>
+
+<pre><code>chef install
+</code></pre>
+
+<p>Finally, we can provision a testing system with this policy:</p>
+
+<pre><code>chef provision testing --sync -n debian-libuuid
+</code></pre>
+
+<p>This will result in output similar to this:</p>
+
+<pre><code>Uploading policy to policy group testing
+Uploaded libuuid-user 1.0.1 (c3220a49)
+Compiling Cookbooks...
+Recipe: provision::default
+  * machine[debian-libuuid] action converge
+    - Create debian-libuuid with AMI ami-0d5b6c3d in us-west-2
+    - create node debian-libuuid at https://chef-api.example.com/organizations/testing
+    -   add normal.tags = nil
+    -   add normal.chef_provisioning = {"hash" =&gt; "of options"}
+    - waiting for debian-libuuid (i-251f1cec on aws::us-west-2) to be connectable (transport up and running) ...
+    - been waiting 60/120 -- sleeping 10 seconds for debian-libuuid (i-251f1cec on aws::us-west-2) to be connectable ...
+    - debian-libuuid is now connectable        - generate private key (2048 bits)
+    - create directory /etc/chef on debian-libuuid
+    - write file /etc/chef/client.pem on debian-libuuid
+    - create client debian-libuuid at clients
+    -   add public_key = "-----BEGIN PUBLIC KEY-----\n..."
+    - Add debian-libuuid to client read ACLs
+    - Add debian-libuuid to client update ACLs
+    - create directory /etc/chef/ohai/hints on debian-libuuid
+    - write file /etc/chef/ohai/hints/ec2.json on debian-libuuid
+    - write file /etc/chef/client.rb on debian-libuuid
+    - write file /tmp/chef-install.sh on debian-libuuid
+    - run 'bash -c ' bash /tmp/chef-install.sh'' on debian-libuuid
+    [debian-libuuid] Starting Chef Client, version 12.3.0
+                     [2015-05-15T22:42:43+00:00] WARN: Using experimental Policyfile feature
+                     resolving cookbooks for run list: ["libuuid-user::default@1.0.1 (c3220a4)", "libuuid-user::verify@1.0.1 (c3220a4)"]
+                     Synchronizing Cookbooks:
+                       - libuuid-user
+                     Compiling Cookbooks...
+                     Converging 1 resources
+                     Recipe: libuuid-user::default
+                       * user[libuuid] action create
+                       - create user libuuid
+
+                     Running handlers:
+                     Running handlers complete
+                     Chef Client finished, 1/1 resources updated in 5.29666495 seconds
+    - run 'chef-client -l auto' on debian-libuuid
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a></h1>
     
     
@@ -108,15 +282,13 @@
   </header>
 
 
-  <div class="entry-content"><p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature of Chef introduced in version 12.1. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his talk, &ldquo;Compliance At Velocity,&rdquo; James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
+  <div class="entry-content"><p>I&rsquo;ve started working with the <a href="https://docs.chef.io/analytics.html#audit-mode">audit mode</a> feature introduced in Chef version 12.1.0. Audit mode allows users to write custom rules (controls) in Chef recipes using new DSL helpers. In his <a href="https://www.youtube.com/watch?v=g-_SW3adPwU">ChefConf 2015 talk, &ldquo;Compliance At Velocity,&rdquo;</a> James Casey goes into more of the background and reasoning for this. For now, I wanted to share a few tips with users who may be experimenting with this feature on their own, too.</p>
 
-<p>First, we need to update ChefDK to version 0.5.0 (rc 3 is current), as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
+<p>First, we need to update ChefDK to version 0.5.0, as that includes a version of test kitchen that <a href="https://github.com/test-kitchen/test-kitchen/pull/652">allows us to configure audit mode</a> for chef-client.</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk -p</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>curl -L https://chef.io/chef/install.sh | sudo bash -s -- -P chefdk</span></code></pre></td></tr></table></div></figure>
 
-
-<p>The <code>-p</code> option tells the script to use the prerelease version, as of this writing 0.5.0 is not released, but we have a release candidate.</p>
 
 <p>Next, create a new cookbook for the audit mode tests.</p>
 
@@ -173,7 +345,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. Let&rsquo;s write a control that asserts this is true.</p>
+<p>Next, let&rsquo;s write a control rule to test. Since we&rsquo;re using the default <code>.kitchen.yml</code>, which includes Ubuntu 12.04 and uses SSH to connect, we can assume that SSH is running, so port 22 is listening. The following control asserts this is true.</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -1422,192 +1594,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/24/quicktip-delete-attributes/">Quick Tip: Deleting Attributes</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-12-24T10:00:40-07:00" pubdate data-updated="true">Dec 24<span>th</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I have a new goal for 2015, and that is to write at least one &ldquo;Quick Tip&rdquo; per week about Chef. I&rsquo;ve added the category &ldquo;<a href="/blog/categories/quicktips">quicktips</a>&rdquo; to make these easier to find.</p>
-
-<p>In this quick tip, I want to talk about a new feature of Chef 12. The new feature is the ability to remove an attribute from all levels (default, normal, override) on a node so it doesn&rsquo;t get saved back to the Chef Server. This was brought up in <a href="https://github.com/opscode/chef-rfc/blob/master/rfc023-chef-12-attributes-changes.md#global-level-removals">Chef RFC 23</a>. The reason I don&rsquo;t want to save the attribute in question back to the server is that it is a secret that I have in a <a href="https://github.com/Nordstrom/chef-vault">Chef Vault item</a>.</p>
-
-<p>I&rsquo;m using <a href="https://www.datadoghq.com">Datadog</a> for my home systems, and the wonderful folks at Datadog have a <a href="https://supermarket.chef.io/cookbooks/datadog">cookbook</a> to set it up. The documentation requires that you set two attributes to authenticate, the API key, and the application key:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;Secrets In Plain Text Attributes??&#39;</span>
-</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;application_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="s1">&#39;It is probably fine.&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I prefer to use chef-vault because <a href="http://jtimberman.housepub.org/blog/2013/09/10/managing-secrets-with-chef-vault/">I think it&rsquo;s the best way</a> to manage shared secrets in Chef recipes. I still need to set the attributes for Datadog&rsquo;s recipe to work, however. In order to accomplish the goal here, I will use a custom cookbook, <code>housepub-datadog</code>. It has one recipe that looks like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">include_recipe</span> <span class="s1">&#39;chef-vault&#39;</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span>
-</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;application_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;chef&#39;</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">include_recipe</span> <span class="s1">&#39;datadog::dd-agent&#39;</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">ruby_block</span> <span class="s1">&#39;smash-datadog-auth-attributes&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">block</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;api_key&#39;</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;application_key&#39;</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>  <span class="n">subscribes</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;template[/etc/dd-agent/datadog.conf]&#39;</span><span class="p">,</span> <span class="ss">:immediately</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s take a closer look at the recipe.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">include_recipe</span> <span class="s1">&#39;chef-vault&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here, the <code>chef-vault</code> recipe is included to ensure everything works, and I have a dependency on <code>chef-vault</code> in my cookbook&rsquo;s metadata. Next, we see the attributes set:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span>
-</span><span class='line'><span class="n">node</span><span class="o">.</span><span class="n">default</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;application_key&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">chef_vault_item</span><span class="p">(</span><span class="ss">:secrets</span><span class="p">,</span> <span class="s1">&#39;datadog&#39;</span><span class="p">)</span><span class="o">[</span><span class="s1">&#39;data&#39;</span><span class="o">][</span><span class="s1">&#39;chef&#39;</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>secrets/datadog</code> item looks like this in plaintext:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;datadog&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span class='line'>    <span class="nt">&quot;api_key&quot;</span><span class="p">:</span> <span class="s2">&quot;My datadog API key&quot;</span><span class="p">,</span>
-</span><span class='line'>    <span class="nt">&quot;chef&quot;</span><span class="p">:</span> <span class="s2">&quot;Application key for the &#39;chef&#39; application&quot;</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>When Chef runs, it will load the vault-encrypted data bag item, and populate the attributes that will be used in the template. This template comes from the <code>datadog::dd-agent</code> recipe, which is included next. The template from that recipe looks like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">template</span> <span class="s1">&#39;/etc/dd-agent/datadog.conf&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">owner</span> <span class="s1">&#39;root&#39;</span>
-</span><span class='line'>  <span class="n">group</span> <span class="s1">&#39;root&#39;</span>
-</span><span class='line'>  <span class="n">mode</span> <span class="mo">0644</span>
-</span><span class='line'>  <span class="n">variables</span><span class="p">(</span>
-</span><span class='line'>    <span class="ss">:api_key</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;api_key&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>    <span class="ss">:dd_url</span> <span class="o">=&gt;</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;datadog&#39;</span><span class="o">][</span><span class="s1">&#39;url&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now, for the grand finale of this post, I delete the attributes that were set using a <code>ruby_block</code> resource. The timing here is important, because these attributes must be deleted after Chef has converged the template. This does get updated every run, because the ruby block is not convergent, and this is okay because the attributes are updated every run, too. I could write additional logic to make this convergent, but I&rsquo;m okay with the behavior. The <code>subscribes</code> ensures that as soon as the template is written, the node object is updated to remove the attributes. Otherwise, this happens next after the <code>dd-agent</code> recipe.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">ruby_block</span> <span class="s1">&#39;smash-datadog-auth-attributes&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">block</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;api_key&#39;</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">node</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="s1">&#39;datadog&#39;</span><span class="p">,</span> <span class="s1">&#39;application_key&#39;</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>  <span class="n">subscribes</span> <span class="ss">:create</span><span class="p">,</span> <span class="s1">&#39;template[/etc/dd-agent/datadog.conf]&#39;</span><span class="p">,</span> <span class="ss">:immediately</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&rsquo;s see this in action:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">managed</span><span class="o">-</span><span class="n">node</span><span class="err">$</span> <span class="n">chef</span><span class="o">-</span><span class="n">client</span>
-</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="n">housepub</span><span class="o">-</span><span class="ss">datadog</span><span class="p">:</span><span class="ss">:default</span>
-</span><span class='line'>  <span class="o">*</span> <span class="n">ruby_block</span><span class="o">[</span><span class="n">smash</span><span class="o">-</span><span class="n">datadog</span><span class="o">-</span><span class="n">auth</span><span class="o">-</span><span class="n">attributes</span><span class="o">]</span> <span class="n">action</span> <span class="n">run</span>
-</span><span class='line'>    <span class="o">-</span> <span class="n">execute</span> <span class="n">the</span> <span class="n">ruby</span> <span class="n">block</span> <span class="n">smash</span><span class="o">-</span><span class="n">datadog</span><span class="o">-</span><span class="n">auth</span><span class="o">-</span><span class="n">attributes</span>
-</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="n">workstation</span><span class="o">%</span> <span class="n">knife</span> <span class="n">node</span> <span class="n">show</span> <span class="n">managed</span><span class="o">-</span><span class="n">node</span> <span class="o">-</span><span class="n">a</span> <span class="n">datadog</span><span class="o">.</span><span class="n">api_key</span> <span class="o">-</span><span class="n">a</span> <span class="n">datadog</span><span class="o">.</span><span class="n">application_key</span>
-</span><span class='line'><span class="n">managed</span><span class="o">-</span><span class="ss">node</span><span class="p">:</span>
-</span><span class='line'>  <span class="n">datadog</span><span class="o">.</span><span class="n">api_key</span><span class="p">:</span>
-</span><span class='line'>  <span class="n">datadog</span><span class="o">.</span><span class="n">application_key</span><span class="p">:</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>Bonus quick tip!</strong> <code>knife node show</code> can take the <code>-a</code> option multiple times to display more attributes. I just discovered this in writing this post, and I don&rsquo;t know when it was added. For sure in Chef 12.0.3, so you should just upgrade anyway ;).</p>
-
-<p><em>Update</em> This <a href="https://github.com/opscode/chef/commit/4133160972a9972a9a062579504faa40eaa4c8db">feature was added</a> by <a href="https://twitter.com/RanjibDey">Awesome Chef Ranjib Dey</a>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1640,6 +1626,10 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/15/quick-tip-chefdk-provision/">Quick Tip: ChefDK Provision</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a>
       </li>
     
@@ -1653,10 +1643,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
     
       <li class="post">
         <a href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/">Awesome Syntax Highlighting in Keynote</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/02/09/quick-tip-create-a-provisioner-node/">Quick Tip: Create a Provisioner Node</a>
       </li>
     
   </ul>
