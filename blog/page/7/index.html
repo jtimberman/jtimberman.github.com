@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I recently had a chance to sit down and implemented an encrypted data bag in my personal environment. This should translate nicely to anyone that &hellip;">
+  <meta name="description" content="I wanted smartmontools installed to monitor the disk health of my LAN server at home. This is not an uncommon thing to want to do, so I thought I&# &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,222 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/09/03/guide-to-writing-chef-cookbooks/">Guide to Writing Chef Cookbooks</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-09-03T00:00:00-06:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wanted smartmontools installed to monitor the disk health of my LAN server at home. This is not an uncommon thing to want to do, so I thought I&#8217;d write and share a Chef cookbook for it. I also took this opportunity to write up the experience so I can illustrate how easy it is to write a cookbook for Chef.</p>
+<p>The first thing to do when writing a cookbook is to create the cookbook directory structure with <code>knife cookbook create</code>. This command will create a README.rdoc by default, and I prefer Markdown, so I specify the <code>-r md</code> option.</p>
+<div class="CodeRay">
+  <div class="code"><pre>knife cookbook create smartmontools -r md</pre></div>
+</div>
+
+<p>By default, metadata and the default recipe are created with boilerplate content for author and copyright. I have configured the values in my knife.rb:</p>
+<div class="CodeRay">
+  <div class="code"><pre>cookbook_copyright &quot;Joshua Timberman&quot;
+cookbook_license   &quot;apachev2&quot;
+cookbook_email     &quot;cookbooks@housepub.org&quot;</pre></div>
+</div>
+
+<p>The resulting directory structure will be created:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree cookbooks/smartmontools
+cookbooks/smartmontools
+├── README.md
+├── attributes
+├── definitions
+├── files
+│   └── default
+├── libraries
+├── metadata.rb
+├── providers
+├── recipes
+│   └── default.rb
+├── resources
+└── templates
+    └── default
+
+10 directories, 3 files</pre></div>
+</div>
+
+<h2>README Driven Development</h2>
+<p>I&#8217;m a big fan of Tom Preston-Werner&#8217;s blog post on <a href="http://tom.preston-werner.com/2010/08/23/readme-driven-development.html" name="README Driven Development">README driven development</a>. I don&#8217;t write the complete README before I start writing code for a new cookbook. I do write it as I go.</p>
+<p>In order to write a proper README for a cookbook, and to write the cookbook itself, we&#8217;ll need to know a bit more about the software we&#8217;re installing. The best way to do that depends on the software, but often it is as simple as merely installing the package on a test system such as a virtual machine and explore its contents.</p>
+<div class="CodeRay">
+  <div class="code"><pre>apt-get install smartmontools
+dpkg -L smartmontools</pre></div>
+</div>
+
+<p>Of note for smartmontools, documentation is in <code>/usr/share/doc/smartmontools</code> and configuration is in <code>/etc</code>. In particular, <code>/etc/smartd.conf</code> and <code>/etc/smartmontools</code>.</p>
+<p>For now assume that the cookbook README.md is being written along the way.</p>
+<h3>List of Resources</h3>
+<p>One of the things I do when I am writing a new cookbook and exploring the contents of a package is to be mindful of <a href="http://wiki.opscode.com/display/chef/Resources" name="Chef Resources">Chef Resources</a> I want to manage in the recipe(s). In the case of smartmontools, at this point I have determined I need a few specific resources.</p>
+<h3>Install the Package</h3>
+<p>First, as I&#8217;ve installed the package, I clearly need a package. I&#8217;m pretty confident that this particular package will not break backwards compatibility, and can be safely upgraded to the latest version if necessary.</p>
+<p><script src="https://gist.github.com/1192321.js"></script></p>
+<h3>Configuration files are templates</h3>
+<p>The next resources in the recipe are the configuration files. I want to dynamically configure these, so I am going to use <a href="http://wiki.opscode.com/display/chef/Resources#Resources-Template" name="templates">templates</a>.</p>
+<p><script src="https://gist.github.com/1192326.js"></script></p>
+<p>I&#8217;m not going to write these from scratch. Instead, I will copy the source files from the installed package on my test system. These will go into <code>templates/default</code> in the cookbook.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree templates
+templates
+└── default
+    ├── smartd.conf.erb
+    └── smartmontools.default.erb</pre></div>
+</div>
+
+<p>Templates are dynamically generated using ERB, and they can use Node attributes. I can use the automatically detected attributes, or I can set new attributes for the node in the cookbook.</p>
+<h3>Attributes Used in the Templates</h3>
+<p>The attributes go in the <code>attributes/default.rb</code> file in the cookbook. The ones I use are:</p>
+<p><script src="https://gist.github.com/1192329.js"></script></p>
+<p>Attributes are definitely something to document in the README.</p>
+<p>In <code>templates/default/smartd.conf.erb</code>, I check if there&#8217;s a list of devices to monitor, and if so iterate over the list passing in the default options (<code>device_opts</code>). The cookbook doesn&#8217;t at this time support per-device options - the same ones are applied to all devices. If <code>devices</code> is empty, then the configuration will use DEVICESCAN.</p>
+<div class="CodeRay">
+  <div class="code"><pre>&lt;% if node['smartmontools']['devices'].length &gt; 0 -%&gt;
+&lt;%   node['smartmontools']['devices'].each do |device| -%&gt;
+&lt;%=    &quot;/dev/#{device} #{node['smartmontools']['device_opts']}&quot; %&gt;
+&lt;%   end -%&gt;
+&lt;% else -%&gt;
+
+DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
+&lt;% end -%&gt;</pre></div>
+</div>
+
+<p>In <code>templates/default/smartmontools.default.erb</code>, the smartmontools daemon will be enabled based on the <code>start_smartd</code> attribute. Additional options will be passed per <code>smartd_opts</code>:</p>
+<div class="CodeRay">
+  <div class="code"><pre>start_smartd=&lt;%= node['smartmontools']['start_smartd'] %&gt;
+
+&lt;% if node['smartmontools']['smartd_opts'].length &gt; 0 -%&gt;
+smartd_opts=&quot;&lt;%= node['smartmontools']['smartd_opts'] %&gt;&quot;
+&lt;% else -%&gt;
+#smartd_opts=&quot;--interval=1800&quot;
+&lt;% end -%&gt;</pre></div>
+</div>
+
+<p>Generally speaking when creating attributes and using them in a template, I use the default values that are found in the configuration file dropped off by the package. I also try to use the default settings over all.</p>
+<p>However, a cookbook is a place to express opinions. I made some with this cookbook, such as enabling DEVICESCAN if there are no devices, despite the configuration file&#8217;s comments indicating that the option shouldn&#8217;t be used. The best thing about attributes is they allow other people using the cookbook to change the behavior based on their preferences much easier than manually modifying things dropped off by a package.</p>
+<p>I strongly recommend documenting where a cookbook has behavior that is not default for the installed package or upstream documentation. I did this in the README for this cookbook discussing the DEVICESCAN option and otherwise where appropriate.</p>
+<h3>Static Files</h3>
+<p>This cookbook has only one static file which will be deployed to <code>/etc/smartmontools/run.d/10mail</code>. The smartmontools package allows creating a number of scripts that go in the directory, and I have created an attribute for the list of scripts. These generally don&#8217;t <code>cookbook_file</code> resources. Since the list is an attribute, I iterate over that with Ruby&#8217;s Array#each loop.</p>
+<p>The attribute:</p>
+<p><script src="https://gist.github.com/1192332.js"></script></p>
+<p>The loop of resources:</p>
+<p><script src="https://gist.github.com/1192334.js"></script></p>
+<p>Each filename in the array (currently only &#8216;10mail&#8217;) needs to have a corresponding file in the <code>files/default</code> directory of the cookbook.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree files
+files
+└── default
+    └── 10mail</pre></div>
+</div>
+
+<p>This file&#8217;s contents are not particularly exciting, I used the same one that came out of the package.</p>
+<p>Why would I want to manage a static file that came from the package? Perhaps I want to modify the script in some way that doesn&#8217;t make sense in an attribute. In this case I don&#8217;t, however creating the attribute and iterating over it makes it easy to extend this functonality in the cookbook.</p>
+<h3>Manage the Service</h3>
+<p>Smartmontools comes with a service. That is, there&#8217;s an init script that can be enabled and started to monitor disk devices. This is actually the whole point of the cookbook, so I&#8217;ll make sure there&#8217;s a resource to manage the service.</p>
+<p><script src="https://gist.github.com/1192336.js"></script></p>
+<p>In this resource, I used the meta parameter <code>supports</code> for the service. I found out what the init script can do by simply running it with no options on my test system.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% /etc/init.d/smartmontools
+Usage: /etc/init.d/smartmontools {start|stop|restart|reload|force-reload|status}</pre></div>
+</div>
+
+<p>The various options passed to the init script manage it in the familiar way. Telling Chef about it has a specific effect on the way the service provider functions when Chef manages it.</p>
+<ul>
+<li> status: Chef will use <code>/etc/init.d/SERVICE_NAME status</code> to determine if the service is running. If the return code is 0, its running. Otherwise, Chef checks the process table for a process running with the name of the service. </li>
+<li> reload: Chef can only take the <code>reload</code> action for a service if it actually supports reload. </li>
+<li> restart: When the <code>restart</code> action is sent to a service, if it supports restart then Chef will use <code>/etc/init.d/SERVICE_NAME restart</code>. Otherwise, Chef will use stop and start. </li>
+</ul>
+<p>Earlier when we wrote the template resources, we notified the service to reload. Since the resource supports reload, we can do this. Also note that the resource has an array of actions. Each of these actions will be taken if necessary when Chef manages it. In this case, it will be enabled at boot time, and then started if it is not already running.</p>
+<h2>Let&#8217;s Use the Recipe</h2>
+<p>Now that we&#8217;ve written a nice recipe and understand what it&#8217;s about to do, let&#8217;s actually use it on a node we&#8217;d like to have smartmontools. Before uploading, I remove the boilerplate directories that were created by knife. The actual cookbook contents for upload are:</p>
+<div class="CodeRay">
+  <div class="code"><pre>% tree cookbooks/smartmontools
+cookbooks/smartmontools
+├── README.md
+├── attributes
+│   └── default.rb
+├── files
+│   └── default
+│       └── 10mail
+├── metadata.rb
+├── recipes
+│   └── default.rb
+└── templates
+    └── default
+        ├── smartd.conf.erb
+        └── smartmontools.default.erb
+
+6 directories, 7 files</pre></div>
+</div>
+
+<p>I didn&#8217;t mention the metadata yet as I haven&#8217;t modified it yet. The knife command will create a default metadata.rb file as mentioned before. It will also populate it with some boilerplate content. The main thing I&#8217;m going to modify is the version and the platforms supported.</p>
+<p><script src="https://gist.github.com/1192349.js"></script></p>
+<p>Now it is time to actually upload the cookbook and apply it to a node.</p>
+<div class="CodeRay">
+  <div class="code"><pre>% knife cookbook upload smartmontools
+Uploading smartmontools             [0.5.0]
+upload complete
+
+% knife node run list add virt1test 'recipe[smartmontools]'
+run_list:
+    role[ubuntu]
+    recipe[smartmontools]</pre></div>
+</div>
+
+<h2>Run Chef</h2>
+<p>I&#8217;ll use <a href="http://wiki.opscode.com/display/chef/Knife#Knife-SSHSubcommand" name="knife ssh">knife ssh</a> to run chef-client on the nodes that have the smartmontools recipe applied.</p>
+<p><script src="https://gist.github.com/1239999.js"></script></p>
+<h2>Verify results</h2>
+<p>We can verify the results of running the recipe by examining the resources on the target system(s). Chef&#8217;s contract with you is that it will configure the resources in the manner specified in the recipe. You can be confident that it will completely configure every resource if it exits cleanly (which it did from the output above).</p>
+<div class="CodeRay">
+  <div class="code"><pre>% cat /etc/default/smartmontools
+...
+start_smartd=yes
+...
+% cat /etc/smartd.conf
+...
+DEVICESCAN -m root -M exec /usr/share/smartmontools/smartd-runner
+...
+% sudo service smartmontools status
+ * smartd is running</pre></div>
+</div>
+
+<p>Now we can take this same recipe and apply it to other systems. I tested smartmontools on an Ubuntu system. Notice earlier that I had an <code>ubuntu</code> role on my node. I actually modified that role to include the smartmontools recipe, and then all my Ubuntu nodes were configured for smartmontools when they ran Chef again.</p>
+<h2>Conclusion</h2>
+<p>I hope this guide was helpful. I shared the cookbook on the <a href="http://community.opscode.com/cookbooks/smartmontools" name="Chef Community: Smartmontools">Chef Community web site</a>, and the source code is available on <a href="https://github.com/jtimberman/smartmontools-cookbook" name="GitHub">Chef Community web site</a>. Note that while I said this would be easy, it certainly isn&#8217;t trivial. There are a lot of steps involved in making cookbooks that are dynamic, easily customized and shareable with others. It takes practice, but after a few you get the hang of it. End to end, this cookbook took me about 2 hours to write, test, tweak (fix bugs) and document.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -632,103 +848,6 @@ ami-19bfef5c</pre></div>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2011/04/03/managing-my-workstations-with-chef/">Managing My Workstations With Chef</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2011-04-03T00:00:00-06:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><em>Update: This post is old and outdated.</em></p>
-<p><em>Update: <a href="http://jtimberman.posterous.com/update-to-managing-my-workstations">New cookbook, Lion and more</a>!</em></p>
-<p>This post describes how I use <a href="http://wiki.opscode.com/display/chef/Home" title="Chef Wiki" target="_blank">Chef</a> and&nbsp;<a href="http://opscode.com/platform/" title="Opscode Platform" target="_blank">Opscode Hosted Chef</a>&nbsp;to manage my workstations, Apple Macbooks. I have three:</p>
-<ul>
-<li>Company issued Macbook Pro</li>
-<li>Personal Macbook Air</li>
-<li>Family Macbook Pro</li>
-</ul>
-<p>Note that while I do use this on my work laptop, Opscode has a different set of recipes to set up development and internal company workstations. At some point there may be a post on the <a href="http://www.opscode.com/blog" title="Opscode Blog" target="_blank">Opscode Blog</a>.</p>
-<p>Before I get started with Chef itself, I have to install a few things to &#8220;bootstrap&#8221; the systems to be ready. I&#8217;m not going to include the commands to install all these &#8220;pre-requisites&#8221;, as you can learn how to do that from their respective web sites.</p>
-<p><strong><span style="font-size: x-large;">Xcode 3.2 (or 4.0)</span></strong></p>
-<p>I wish I could purchase a Macbook with Xcode preinstalled. In fact, I would pay $50 to have this over iLife on new machines, so the $5 cost for version 4 is really minor. However, I don&#8217;t have any use for whatever 4.0 has to offer, since I only want Xcode because its the most sane way to get GCC and friends on OSX.</p>
-<p><a href="http://developer.apple.com/xcode/">http://developer.apple.com/xcode/</a></p>
-<p><strong><span style="font-size: x-large;">Ruby Version Manager</span></strong></p>
-<p>I want to use Ruby 1.9.2 instead of the default that comes with OSX, and RVM makes it easy to do that. I also like the gemset feature, which allows me to sandbox and play with various configurations of RubyGems.</p>
-<p><a href="http://rvm.beginrescueend.com">http://rvm.beginrescueend.com</a></p>
-<p><strong><span style="font-size: x-large;">Chef</span></strong></p>
-<p>I generally just install the latest released Chef gem from RubyGems.org once I have Ruby installed.</p>
-<p><a href="https://rubygems.org/gems/chef">https://rubygems.org/gems/chef</a></p>
-<p>Once Chef itself is installed, it&#8217;s time to get cooking! I have the following already set up:</p>
-<ul>
-<li>Opscode Community <a href="http://community.opscode.com/users/jtimberman" title="Joshua Timberman" target="_blank">userid</a>.</li>
-<li>Opscode Hosted Chef organization.</li>
-<li>Chef Repository</li>
-</ul>
-<p>Let&#8217;s take a look at what I put into the Chef Repository to configure my workstations. First, I created the repository and the listed components, then I upload everything to my Opscode Hosted Chef organization.</p>
-<p><span style="font-size: x-large;"><strong>Cookbooks</strong></span></p>
-<p>I have a number of cookbooks for my personal repository, but the relevant ones for workstations are:</p>
-<ul>
-<li><a href="http://community.opscode.com/cookbooks/dmg" title="dmg cookbook" target="_blank">dmg</a></li>
-<li><a href="http://community.opscode.com/cookbooks/homebrew" title="homebrew cookbook" target="_blank">homebrew</a></li>
-<li>workstation</li>
-</ul>
-<p>I wrote the dmg cookbook to automatically install OSX applications that are delivered to users via DMGs. After writing cookbooks for skype, and tunnelblick, I noticed some common patterns and abstracted those out to a lightweight resource and provider, &#8220;dmg_package&#8221;. This does the heavy lifting of:</p>
-<ol>
-<li>Retrieve a .dmg file from a remote URL.</li>
-<li>Mount the disk image.</li>
-<li>Copy the .app directory to /Applications.</li>
-<li>Unmount the disk image.</li>
-</ol>
-<p>The homebrew cookbook was written by&nbsp;<span style="line-height: 14px; color: #000000;"><a href="http://community.opscode.com/users/mathie" title="Graeme Mathieson" target="_blank">Graeme Mathieson</a>, and it will install Homebrew in /usr/local and use it as the default package provider on OSX.</span></p>
-<p><span style="line-height: 14px; color: #000000;">Both the dmg and homebrew cookbooks were downloaded to my local chef-repo with the &#8220;vendor&#8221; pattern supported by knife.</span></p>
-<p><span style="line-height: 14px; color: #000000;">The workstation cookbook consists of a number of recipes. Many of them contain commands lifted from Pivotal Labs experimental GitHub repository, <a href="https://github.com/pivotalexperimental/wschef" title="Pivotal Labs Experimental Chef Workstation Recipes" target="_blank">wschef</a>. I don&#8217;t use any of the scaffolding they wrote in that repository, but I grabbed lots of the executes. However, that repository <a href="https://github.com/pivotalexperimental/wschef/issues/3" title="No License for redistribution of wschef recipes" target="_blank">does not have any mention of a license</a>, so I haven&#8217;t published the workstation cookbook I use. I can publish the recipe I wrote, which will be part of the cookbook when the license of their recipes is sorted out.</span></p>
-<p><script src="https://gist.github.com/901008.js"></script></p>
-<p><span style="font-size: x-large;"><strong>Roles</strong></span></p>
-<p>I use two roles on my workstations that tell Chef what recipes to apply. First, is role[mac_os_x]:</p>
-<p><script src="https://gist.github.com/901013.js"></script></p>
-<p>Next is the actual workstation recipe.</p>
-<p><script src="https://gist.github.com/901012.js"></script></p>
-<p><strong><span style="font-size: x-large;">Data Bags</span></strong></p>
-<p>Chef is data driven, and I have written a data bag item for my workstation. It simply lists the gems, dmg&#8217;s and packages to install with the above recipe.</p>
-<p><script src="https://gist.github.com/901009.js"></script></p>
-<p><strong><span style="font-size: x-large;">Client Configuration</span></strong></p>
-<p>I run Chef as my normal user, so it will need to be able to write out cache and other files in a location my user has write access. I replace &#8220;workstation_hostname&#8221; for the node name depending on the host. For example, doppelbock is the hostname and node name of my Macbook Air.</p>
-<p><script src="https://gist.github.com/901065.js"></script></p>
-<p><span style="font-size: x-large;"><strong>Nodes</strong></span></p>
-<p>I use the following run list on my workstations.</p>
-<p><script src="https://gist.github.com/901014.js"></script></p>
-<p><span style="font-size: x-large;"><strong>Upload Chef Repository</strong></span></p>
-<p>Now that all the victims are assembled, it is time to upload the Chef repository, copy the configuration file and validation certificate and run Chef.</p>
-<p><script src="https://gist.github.com/901076.js"></script></p>
-<p>Then I simply run &#8216;chef-client&#8217; as my normal user and my laptop is configured. It does take some time because several of the DMGs are large, and homebrew compiles from source. All in all, it took about 1 hour to do the initial run of Chef on my Macbook Air 13&#8221; when I first set it up.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/8/">&larr; Older</a>
@@ -763,6 +882,10 @@ ami-19bfef5c</pre></div>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/15/quick-tip-chefdk-provision/">Quick Tip: ChefDK Provision</a>
       </li>
     
@@ -776,10 +899,6 @@ ami-19bfef5c</pre></div>
     
       <li class="post">
         <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/">Awesome Syntax Highlighting in Keynote</a>
       </li>
     
   </ul>

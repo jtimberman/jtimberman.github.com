@@ -9,10 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="2nd UPDATE
-CHEF-3835 was opened by
-a member of the community; Chef versions 11.2.0 and 10.20.0 have been
-released by Opscode to resolve the issue. &hellip;">
+  <meta name="description" content="A few months ago, I posted briefly on
+how to install Chef 10 server on CentOS.
+This post revisits the process for Chef 11. These steps were performed &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -82,6 +81,142 @@ released by Opscode to resolve the issue. &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/02/10/install-chef-11-server-on-centos-6/">Install Chef 11 Server on CentOS 6</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-10T07:57:00-07:00" pubdate data-updated="true">Feb 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A few months ago, I posted briefly on
+<a href="http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-centos/">how to install Chef 10 server on CentOS</a>.
+This post revisits the process for Chef 11.</p>
+
+<p>These steps were performed on a default CentOS 6.3 server install.</p>
+
+<p>First, navigate to the
+<a href="http://www.opscode.com/chef/install">Chef install page</a> to get the
+package download URL. Use the form on the &ldquo;Chef Server&rdquo; tab to select
+the appropriate drop-down items for your system.</p>
+
+<p>Install the package from the given URL.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rpm -Uvh https://opscode-omnitruck-release.s3.amazonaws.com/el/6/x86_64/chef-server-11.0.4-1.el6.x86_64.rpm</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The package just puts the bits on disk (in <code>/opt/chef-server</code>). The
+next step is to configure the Chef Server and start it.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% chef-server-ctl reconfigure</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This runs the embedded <code>chef-solo</code> with the included cookbooks, and
+sets up everything required &ndash; Erchef, RabbitMQ, PostgreSQL, etc.</p>
+
+<p>Next, run the Opscode Pedant test suite. This will verify that
+everything is working.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% chef-server-ctl test</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Copy the default admin user&rsquo;s key and the validator key to your local
+workstation system that you have Chef <em>client</em> installed on, and
+create a new user for yourself with knife. You&rsquo;ll need version 11.2.0.
+The key files on the Chef Server are readable only by root.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>scp root@chef-server:/etc/chef-server/admin.pem .
+</span><span class='line'>scp root@chef-server:/etc/chef-server/chef-validator.pem .</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Use <code>knife configure -i</code> to create an initial <code>~/.chef/knife.rb</code> and
+new administrative API user for yourself. Use the FQDN of your newly
+installed Chef Server, with HTTPS. The validation key needs to be
+copied over from the Chef Server from
+<code>/etc/chef-server/chef-validator.pem</code> to <code>~/.chef</code> to use it for
+automatically bootstrapping nodes with <code>knife bootstrap</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% knife configure -i</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>.chef/knife.rb</code> file should look something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/home/jtimberman/.chef/jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/home/jtimberman/.chef/chef-validator.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;https://chef-server.example.com&#39;</span>
+</span><span class='line'><span class="n">syntax_check_cache_path</span>  <span class="s1">&#39;/home/jtimberman/.chef/syntax_check_cache&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Your Chef Server is now ready to use. Test connectivity as your user
+with knife:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% knife </span><span class="n">client</span> <span class="n">list</span>
+</span><span class='line'><span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
+</span><span class='line'><span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
+</span><span class='line'><span class="sx">% knife </span><span class="n">user</span> <span class="n">list</span>
+</span><span class='line'><span class="n">admin</span>
+</span><span class='line'><span class="n">jtimberman</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In previous versions of Open Source Chef Server, users were API
+clients. In Chef 11, users are separate entities on the Server.</p>
+
+<p>The <code>chef-server-ctl</code> command is used on the Chef Server system for
+management. It has built-in help (<code>-h</code>) that will display the various
+sub-commands.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2188,168 +2323,6 @@ Now the Chef Server is ready to use.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/08/10/vagrant-multiple-provisioners/">Using Multiple Provisioners in Vagrant</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-08-10T11:39:00-06:00" pubdate data-updated="true">Aug 10<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><strong>Update</strong> Chef 10.14 is
-  <a href="http://www.opscode.com/blog/2012/09/07/chef-10-14-0-released/">released</a>.
-  I removed the &ldquo;<code>--pre</code>&rdquo; from the gem install commands but otherwise
-  left this post, since it was written by Past Me.</p>
-
-<p>As you may be aware, the next release of Chef, 10.14, is in
-<a href="http://lists.opscode.com/sympa/arc/chef-dev/2012-07/msg00021.html">beta testing</a>.
-Most publicly available baseboxes for <a href="http://vagrantup.com">Vagrant</a>
-aren&rsquo;t built for the beta. But perhaps you want to try it out?</p>
-
-<p>Vagrant to the rescue! Besides the Chef solo and client provisioners,
-Vagrant has a shell provisioner, too. It allows you to pass in an
-inline command, or a shell script. This example builds on my
-<a href="/blog/2012/03/18/multivm-vagrantfile-for-chef/">MultiVM Vagrantfile for Chef post</a>.
-You may wish to refer to the full file in that post for complete
-context.</p>
-
-<p>First, the shell provisioner line looks like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It goes in the config block. Remember that <code>cookbook_testers</code> is a
-hash of data about the multiple VMs I&rsquo;m using, so they would all get
-launched with this provisioner.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Config</span><span class="o">.</span><span class="n">run</span> <span class="k">do</span> <span class="o">|</span><span class="n">global_config</span><span class="o">|</span>
-</span><span class='line'>  <span class="n">cookbook_testers</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="nb">name</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">global_config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="nb">name</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
-</span><span class='line'>      <span class="c1">### Use shell for great justice!</span>
-</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc&quot;</span>
-</span><span class='line'>      <span class="c1">### chef-client (allthethings)</span>
-</span><span class='line'>      <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:chef_client</span> <span class="k">do</span> <span class="o">|</span><span class="n">chef</span><span class="o">|</span>
-</span><span class='line'>        <span class="c1"># ... chef provisioner is the same as before</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And now, a <code>vagrant up</code> on my Ubuntu 12.04 VM, with the less
-interesting output truncated:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% vagrant </span><span class="n">up</span> <span class="n">precise</span>
-</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="ss">provisioner</span><span class="p">:</span> <span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Provisioners</span><span class="o">::</span><span class="no">Shell</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="no">Successfully</span> <span class="n">installed</span> <span class="n">chef</span><span class="o">-</span><span class="mi">10</span><span class="o">.</span><span class="mi">14</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="mi">3</span>
-</span><span class='line'><span class="mi">1</span> <span class="n">gem</span> <span class="n">installed</span>
-</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="ss">provisioner</span><span class="p">:</span> <span class="ss">Vagrant</span><span class="p">:</span><span class="ss">:Provisioners</span><span class="o">::</span><span class="no">ChefClient</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="o">[</span><span class="n">precise</span><span class="o">]</span> <span class="no">Running</span> <span class="n">chef</span><span class="o">-</span><span class="n">client</span><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="o">[</span><span class="no">Fri</span><span class="p">,</span> <span class="mi">10</span> <span class="no">Aug</span> <span class="mi">2012</span> <span class="mi">17</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">23</span> <span class="o">+</span><span class="mo">0000</span><span class="o">]</span> <span class="ss">INFO</span><span class="p">:</span> <span class="o">***</span> <span class="no">Chef</span> <span class="mi">10</span><span class="o">.</span><span class="mi">14</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="mi">3</span> <span class="o">***</span>
-</span><span class='line'><span class="o">.</span><span class="n">.</span><span class="o">.</span>
-</span><span class='line'><span class="o">[</span><span class="no">Fri</span><span class="p">,</span> <span class="mi">10</span> <span class="no">Aug</span> <span class="mi">2012</span> <span class="mi">17</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="mi">37</span> <span class="o">+</span><span class="mo">0000</span><span class="o">]</span> <span class="ss">INFO</span><span class="p">:</span> <span class="no">Chef</span> <span class="no">Run</span> <span class="n">complete</span> <span class="k">in</span> <span class="mi">11</span><span class="o">.</span><span class="mi">323208919</span> <span class="n">seconds</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>One of the most compelling features of Chef 10.14 is the introduction
-of
-<a href="http://tickets.opscode.com/browse/CHEF-13">&ldquo;no-op&rdquo; or &ldquo;dry-run&rdquo; mode</a>,
-also called
-&ldquo;<a href="http://lists.opscode.com/sympa/arc/chef/2012-07/msg00025.html">Why Run Mode</a>&rdquo;.
-However, at this time, neither arbitrary command-line arguments nor why-run
-mode itself are supported in Vagrant. I opened a
-<a href="https://github.com/mitchellh/vagrant/pull/1067">pull request</a> for the
-former, which will allow the latter easily. Of course, vagrant is
-highly valuable for doing testing by <em>actually running</em> your recipes,
-but I think arbitrary command-line options will be a welcome feature
-for other purposes.</p>
-
-<p>Another use case for this particular method of using Vagrant
-provisioners is to update RubyGems inside an &ldquo;Omnibus&rdquo; full stack
-install, to resolve
-<a href="http://tickets.opscode.com/browse/CHEF-3295">this bug</a>, or
-<a href="http://tickets.opscode.com/browse/CHEF-2871">this request</a>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:inline</span> <span class="o">=&gt;</span> <span class="s2">&quot;sudo /opt/chef/embedded/bin/gem update --system&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>These two example commands can be combined in a single <code>:inline</code>, or
-as a shell script.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span><span class="p">,</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s2">&quot;gem-updater.sh&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And the shell script, <code>gem-updater.sh</code> in the same directory as the Vagrantfile:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/sh</span>
-</span><span class='line'>sudo /opt/chef/embedded/bin/gem update --system
-</span><span class='line'>sudo /opt/chef/embedded/bin/gem install chef --no-ri --no-rdoc
-</span></code></pre></td></tr></table></div></figure>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/5/">&larr; Older</a>
@@ -2384,6 +2357,10 @@ as a shell script.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/15/quick-tip-chefdk-provision/">Quick Tip: ChefDK Provision</a>
       </li>
     
@@ -2397,10 +2374,6 @@ as a shell script.</p>
     
       <li class="post">
         <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/">Awesome Syntax Highlighting in Keynote</a>
       </li>
     
   </ul>

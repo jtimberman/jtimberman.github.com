@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-05-15T17:02:25-06:00</updated>
+  <updated>2015-05-16T22:12:53-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,102 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Policyfile Run Lists]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/05/16/quick-tip-policyfile-run-lists/"/>
+    <updated>2015-05-16T21:52:17-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/05/16/quick-tip-policyfile-run-lists</id>
+    <content type="html"><![CDATA[<p>As I indicated on <a href="https://twitter.com/jtimberman/status/599779453456097280">Twitter earlier tonight</a>, I&rsquo;m working with the new Policyfile feature of <a href="https://github.com/chef/chef-dk/blob/master/POLICYFILE_README.md">ChefDK</a>. While converting my personal systems' repository to use Policyfile instead of roles, I found myself writing this Policyfile:</p>
+
+<p>```ruby
+name &lsquo;home_server&rsquo;
+default_source :community
+run_list(</p>
+
+<pre><code>     'build-essential',
+     'packages',
+     'users',
+     'sudo',
+     'runit',
+     'ntp',
+     'openssh',
+     'postfix'
+    )
+</code></pre>
+
+<p>cookbook &lsquo;build-essential&rsquo;
+cookbook &lsquo;packages&rsquo;, git: &lsquo;<a href="https://github.com/mattray/packages-cookbook">https://github.com/mattray/packages-cookbook</a>&rsquo;, branch: &lsquo;multipackage&rsquo;
+cookbook &lsquo;users&rsquo;, path: &lsquo;../housepub-chef-repo/cookbooks/users&rsquo;
+cookbook &lsquo;sudo&rsquo;
+cookbook &lsquo;runit&rsquo;
+cookbook &lsquo;ntp&rsquo;
+cookbook &lsquo;openssh&rsquo;
+cookbook &lsquo;postfix&rsquo;
+```</p>
+
+<p>No big deal, but I found the repetition&hellip; redundant. Several of these cookbooks are fine floating on the latest version from Supermarket &ndash; everything but <code>packages</code> and <code>users</code>. So I thought, &ldquo;wouldn&rsquo;t it be great if entries in the run list were automatically added as dependencies?&rdquo;</p>
+
+<p>Then, I added <code>chef-client-runit</code> to the run list, but I didn&rsquo;t add it as a <code>cookbook</code> entry, performed the <code>chef update</code>, and reran my <code>chef provision</code> command, and wound up with <code>chef-client-runit</code> being converged.</p>
+
+<p>To illustrate this with a really simple example, I confirmed with <code>zsh</code>:</p>
+
+<pre><code>% cd ~/Development/sandbox/test
+% chef generate policyfile
+</code></pre>
+
+<p>Then edit the <code>Policyfile.rb</code>:</p>
+
+<p><code>ruby
+name "example_application"
+default_source :community
+run_list "zsh"
+</code></p>
+
+<p>Note that there is no <code>cookbook</code> line here.</p>
+
+<pre><code>% chef install
+Building policy example_application
+Expanded run list: recipe[zsh]
+Caching Cookbooks...
+Using      zsh 1.0.1
+
+Lockfile written to /Users/jtimberman/Development/sandbox/test/Policyfile.lock.json
+</code></pre>
+
+<p>And if we examine the <code>Policyfile.lock.json</code>, we see:</p>
+
+<p>```json
+{
+  &ldquo;revision_id&rdquo;: &ldquo;e8b5b48d35f4a8efcd037ef6c9cc8e34f901561ffef160bd0a57ca1b612a1179&rdquo;,
+  &ldquo;name&rdquo;: &ldquo;example_application&rdquo;,
+  &ldquo;run_list&rdquo;: [</p>
+
+<pre><code>"recipe[zsh::default]"
+</code></pre>
+
+<p>  ],
+  &ldquo;cookbook_locks&rdquo;: {</p>
+
+<pre><code>"zsh": {
+  "version": "1.0.1",
+  "identifier": "b512ef33af29b8d34ad7e4e9b6ad38d42dea4945",
+  "dotted_decimal_identifier": "50967789358229944.59473511204894381.62483954551109",
+  "cache_key": "zsh-1.0.1-supermarket.chef.io",
+  "origin": "https://supermarket.chef.io/api/v1/cookbooks/zsh/versions/1.0.1/download",
+  "source_options": {
+    "artifactserver": "https://supermarket.chef.io/api/v1/cookbooks/zsh/versions/1.0.1/download",
+    "version": "1.0.1"
+  }
+}
+</code></pre>
+
+<p>  } <SNIP>
+```</p>
+
+<p>Yay! Shoutout to <a href="https://twitter.com/kallistec">Dan DeLeo</a> for preemptively implementing features I didn&rsquo;t even know I wanted yet :&ndash;).</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: ChefDK Provision]]></title>
@@ -535,48 +631,6 @@ homebrew::default
 <p>```</p>
 
 <p>In a coming post, I will walk through the conditionals related to the <code>homebrew_owner</code>.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Serverspec spec_helper in Test Kitchen]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/"/>
-    <updated>2014-12-31T16:01:23-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen</id>
-    <content type="html"><![CDATA[<p>Recently, I&rsquo;ve started refactoring some <a href="https://supermarket.chef.io/cookbooks/daemontools">old</a> <a href="https://supermarket.chef.io/cookbooks/djbdns">cookbooks</a> <a href="https://supermarket.chef.io/cookbooks/ucspi-tcp">I wrote</a> ages ago. I&rsquo;m adding Serverspec coverage that can be run with <code>kitchen verify</code>. In this <a href="/blog/categories/quicktips">quicktip</a>, I&rsquo;ll describe how to create a <code>spec_helper</code> that can be used in all the specs. This is a convention used by <a href="http://pivotallabs.com/spec-helper/">many</a> in the Ruby community to add configuration for RSpec.</p>
-
-<p>For Chef, we can run integration tests after convergence using <a href="http://kitchen.ci">Test Kitchen</a> using Serverspec. To do that, we need to require Serverspec, and then set its backend. In some cookbooks, the author/developer may have written <code>spec_helper</code> files in the various <code>test/integration/SUITE/serverspec/</code> directories, but this will use a single shared file for them all. Let&rsquo;s get started.</p>
-
-<p>In the <code>.kitchen.yml</code>, add the <code>data_path</code> configuration directive in the provisioner.</p>
-
-<p><code>yaml
-provisioner:
-  name: chef_zero
-  data_path: test/shared
-</code></p>
-
-<p>Then, create the <code>test/shared</code> directory in the cookbook, and create the <code>spec_helper.rb</code> in it.</p>
-
-<p><code>sh
-mkdir test/shared
-$EDITOR test/shared/spec_helper.rb
-</code></p>
-
-<p>Minimally, it should look like this:</p>
-
-<p>```ruby
-require &lsquo;serverspec&rsquo;</p>
-
-<p>set :backend, :exec
-```</p>
-
-<p>Then in your specs, for example <code>test/integration/default/serverspec/default_spec.rb</code>, require the <code>spec_helper</code>. On the instances under test, the file will be copied to <code>/tmp/kitchen/data/spec_helper.rb</code>.</p>
-
-<p><code>ruby
-require_relative '../../../kitchen/data/spec_helper'
-</code></p>
-
-<p>That&rsquo;s it, now when running <code>kitchen test</code>, or <code>kitchen verify</code> on a converged instance, the helper will be used.</p>
 ]]></content>
   </entry>
   

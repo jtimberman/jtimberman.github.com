@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I have a new goal for 2015, and that is to write at least one &ldquo;Quick Tip&rdquo; per week about Chef. I&rsquo;ve added the category &ldquo; &hellip;">
+  <meta name="description" content="OS X is an interesting operating system. It is a Unix, but is primarily used for workstations. As such, many system settings can, and should, be done &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,169 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/12/29/chef-12-homebrew-user-mixin/">Quick Tip: Chef 12 Homebrew User Mixin</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-29T08:56:01-07:00" pubdate data-updated="true">Dec 29<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>OS X is an interesting operating system. It is a Unix, but is primarily used for workstations. As such, many system settings can, and should, be done as a non-privileged user. Some tasks, however, require administrative privileges. OS X uses <code>sudo</code> to escalate privileges. This is done by a nice GUI pop-up requesting the user password when done through another GUI element. However, one must use <code>sudo $COMMAND</code> when working at the Terminal.</p>
+
+<p>The <a href="http://brew.sh">Homebrew</a> package manager tries to do everything as a non-privileged user. The <a href="https://raw.githubusercontent.com/Homebrew/install/master/install">installation script</a> will invoke some commands with <code>sudo</code> &ndash; namely to create and set the correct permissions on <code>/usr/local</code> (its default installation location). Once that is complete, <code>brew install</code> will not require privileged access for installing packages. In fact, the <a href="https://github.com/Homebrew/homebrew/blob/b19d3afccef0ddc31820f1cb7d1a5316017e29df/share/doc/homebrew/FAQ.md#why-does-homebrew-say-sudo-is-bad-">Homebrew project recommends</a> never using <code>sudo</code> with the <code>brew</code> commands.</p>
+
+<p>In Chef 12 the default provider for the <code>package</code> resource is <code>homebrew</code>. This originally came from the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew cookbook</a>. In order to not use <code>sudo</code> when managing packages, there&rsquo;s a helper method (mixin) that attempts to determine what non-privileged user should run the <code>brew install</code> command. This is also <a href="https://github.com/opscode/chef/blob/4cb27331d81b394b816278e2bed6b3395b54b9c9/lib/chef/mixin/homebrew_user.rb">ported to Chef 12</a>. The method can also take an argument that specifies a particular user that should run the <code>brew</code> command.</p>
+
+<p>When managing an OS X system with Chef, it is often easier to just run <code>chef-client</code> as <code>root</code>, rather than be around when <code>sudo</code> prompts for a password. This means that we need a way to execute other commands for managing OS X as a non-privileged user. We can reuse the mixin to do this. I&rsquo;ll demonstrate this using plain old Ruby with <code>pry</code>, which is installed in ChefDK, and I&rsquo;ll start it up with <code>sudo</code>. Then, I&rsquo;ll show a short recipe with <code>chef-apply</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% which pry
+</span><span class='line'>/opt/chefdk/embedded/bin/pry
+</span><span class='line'>% sudo pry</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Paste in the following Ruby code:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef&#39;</span>
+</span><span class='line'><span class="kp">include</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Mixin</span><span class="o">::</span><span class="no">HomebrewUser</span>
+</span><span class='line'><span class="kp">include</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Mixin</span><span class="o">::</span><span class="no">ShellOut</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">find_homebrew_uid</span> <span class="c1">#=&gt; 501</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The method <code>find_homebrew_uid</code> is the helper we want. As we can see, rather than returning <code>0</code> (for <code>root</code>), it returns <code>501</code>, which is the UID of the <code>jtimberman</code> user on my system. To prove that I&rsquo;m executing in a process owned by <code>root</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">Process</span><span class="o">.</span><span class="n">uid</span> <span class="c1">#=&gt; 0</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Or, I can shell out to the <code>whoami</code> command using Chef&rsquo;s <code>shell_out</code> method &ndash; which is the same method Chef would use to run <code>brew install</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">shell_out</span><span class="p">(</span><span class="s1">&#39;whoami&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span> <span class="c1">#=&gt; &quot;root\n&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>shell_out</code> method can take a <code>:user</code> attribute:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">shell_out</span><span class="p">(</span><span class="s1">&#39;whoami&#39;</span><span class="p">,</span> <span class="ss">:user</span> <span class="o">=&gt;</span> <span class="n">find_homebrew_uid</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span> <span class="c1">#=&gt; &quot;jtimberman\n&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So this can be used to install packages with <code>brew</code>, and is exactly what Chef 12 does.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">shell_out</span><span class="p">(</span><span class="s1">&#39;brew install coreutils&#39;</span><span class="p">,</span> <span class="ss">:user</span> <span class="o">=&gt;</span> <span class="n">find_homebrew_uid</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Or, it can be used to run <code>defaults(1)</code> settings that require running as a specific user, rather than <code>root</code></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># Turn off iPhoto face detection, please</span>
+</span><span class='line'><span class="n">shell_out</span><span class="p">(</span><span class="s1">&#39;defaults write com.apple.iPhoto PKFaceDetectionEnabled 0&#39;</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">:user</span> <span class="o">=&gt;</span> <span class="n">find_homebrew_uid</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># before...</span>
+</span><span class='line'>jtimberman@localhost% defaults <span class="nb">read </span>com.apple.iPhoto PKFaceDetectionEnabled
+</span><span class='line'>1
+</span><span class='line'><span class="c"># after!</span>
+</span><span class='line'>jtimberman@localhost% defaults <span class="nb">read </span>com.apple.iPhoto PKFaceDetectionEnabled
+</span><span class='line'>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Putting this together in a Chef recipe that gets run by <code>root</code>, we can disable face detection in iPhoto like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="o">::</span><span class="no">Execute</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="ss">:include</span><span class="p">,</span> <span class="ss">Chef</span><span class="p">:</span><span class="ss">:Mixin</span><span class="o">::</span><span class="no">HomebrewUser</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">execute</span> <span class="s1">&#39;defaults write com.apple.iPhoto PKFaceDetectionEnabled 0&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">user</span> <span class="n">find_homebrew_uid</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The first line makes the method available on all <code>execute</code> resources. To make the method available to all resources, use <code>Chef::Resource.send</code>, and to make it available across everything in all recipes, use <code>Chef::Recipe.send</code>. Otherwise we would get a <code>NoMethodError</code> exception.</p>
+
+<p>The <code>execute</code> resource takes a <code>user</code> attribute, so we use the <code>find_homebrew_uid</code> method here to set the user. And we can observe the same results as above:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">jtimberman</span><span class="vi">@localhost</span><span class="o">%</span> <span class="n">defaults</span> <span class="n">write</span> <span class="n">com</span><span class="o">.</span><span class="n">apple</span><span class="o">.</span><span class="n">iPhoto</span> <span class="no">PKFaceDetectionEnabled</span> <span class="mi">1</span>
+</span><span class='line'><span class="n">jtimberman</span><span class="vi">@localhost</span><span class="o">%</span> <span class="n">defaults</span> <span class="n">read</span> <span class="n">com</span><span class="o">.</span><span class="n">apple</span><span class="o">.</span><span class="n">iPhoto</span> <span class="no">PKFaceDetectionEnabled</span>
+</span><span class='line'><span class="mi">1</span>
+</span><span class='line'><span class="n">jtimberman</span><span class="vi">@localhost</span><span class="o">%</span> <span class="n">sudo</span> <span class="n">chef</span><span class="o">-</span><span class="n">apply</span> <span class="n">nofaces</span><span class="o">.</span><span class="n">rb</span>
+</span><span class='line'><span class="ss">Recipe</span><span class="p">:</span> <span class="p">(</span><span class="n">chef</span><span class="o">-</span><span class="n">apply</span> <span class="n">cookbook</span><span class="p">)</span><span class="o">::</span><span class="p">(</span><span class="n">chef</span><span class="o">-</span><span class="n">apply</span> <span class="n">recipe</span><span class="p">)</span>
+</span><span class='line'><span class="o">*</span> <span class="n">execute</span><span class="o">[</span><span class="n">defaults</span> <span class="n">write</span> <span class="n">com</span><span class="o">.</span><span class="n">apple</span><span class="o">.</span><span class="n">iPhoto</span> <span class="no">PKFaceDetectionEnabled</span> <span class="mi">0</span><span class="o">]</span> <span class="n">action</span> <span class="n">run</span>
+</span><span class='line'><span class="o">-</span> <span class="n">execute</span> <span class="n">defaults</span> <span class="n">write</span> <span class="n">com</span><span class="o">.</span><span class="n">apple</span><span class="o">.</span><span class="n">iPhoto</span> <span class="no">PKFaceDetectionEnabled</span> <span class="mi">0</span>
+</span><span class='line'><span class="n">jtimberman</span><span class="vi">@localhost</span><span class="o">%</span> <span class="n">defaults</span> <span class="n">read</span> <span class="n">com</span><span class="o">.</span><span class="n">apple</span><span class="o">.</span><span class="n">iPhoto</span> <span class="no">PKFaceDetectionEnabled</span>
+</span><span class='line'><span class="mi">0</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Those who have read the workstation management posts on this blog in the past may be aware that I have a <a href="https://supermarket.chef.io/cookbooks/mac_os_x">cookbook</a> that can manage OS X &ldquo;<code>defaults(1)</code>&rdquo; settings. I <a href="https://github.com/chef-osx/mac_os_x/issues/21">plan to make updates</a> to the resource in that cookbook that will leverage this method.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2577,263 +2740,6 @@ configuration setup already.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/10/10/preview-chef-client-local-mode/">Preview Chef Client Local Mode</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-10T23:39:00-06:00" pubdate data-updated="true">Oct 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Opscode Developer John Keiser
-<a href="https://twitter.com/jkeiser2/status/388460927026085888">mentioned</a>
-that a feature for Chef Zero he&rsquo;s been working on, &ldquo;local mode,&rdquo; is
-now in Chef&rsquo;s master branch. This means it should be in the next
-release (11.8). I took the liberty to check this <em>unreleased</em> feature
-out.</p>
-
-<p>Let&rsquo;s just say, it&rsquo;s super awesome and John has done some amazing work
-here.</p>
-
-<h2>PREVIEW</h2>
-
-<p>This is a preview of an unreleased feature in Chef. All standard
-disclaimers apply :).</p>
-
-<h2>Install</h2>
-
-<p>This is in the master branch of Chef, not released as a gem yet.
-You&rsquo;ll need to get the source and build a gem locally. This totally
-assumes you&rsquo;ve installed a sane ruby and bundler on your system.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone git://github.com/opscode/chef.git
-</span><span class='line'><span class="nb">cd </span>chef
-</span><span class='line'>bundle install
-</span><span class='line'>bundle <span class="nb">exec </span>rake gem
-</span><span class='line'>gem install  pkg/chef-11.8.0.alpha.0.gem
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>Note</strong> Alpha!</p>
-
-<h2>Setup</h2>
-
-<p>Next, point it at a local repository. I&rsquo;ll use a simple example.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone git://github.com/opscode/chef-repo.git
-</span><span class='line'><span class="nb">cd </span>chef-repo
-</span><span class='line'>knife cookbook create zero -o ./cookbooks
-</span><span class='line'>vi cookbooks/zero/recipes/default.rb
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I created a fairly trivial example recipe to show that this will
-support search, and data bag items:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">a</span> <span class="o">=</span> <span class="n">search</span><span class="p">(</span><span class="ss">:node</span><span class="p">,</span> <span class="s2">&quot;*:*&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">b</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;zero&quot;</span><span class="p">,</span> <span class="s2">&quot;fluff&quot;</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">file</span> <span class="s2">&quot;/tmp/zerofiles&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">content</span> <span class="n">a</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="n">to_s</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">file</span> <span class="s2">&quot;/tmp/fluff&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">content</span> <span class="n">b</span><span class="o">.</span><span class="n">to_s</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This simply searches for all nodes, and uses the content of the first
-node (the one we&rsquo;re running on presumably) for a file in /tmp. It also
-loads a data bag item (which I created) and uses it for the content of
-another file in /tmp.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>mkdir -p data_bags/zero
-</span><span class='line'>vi data_bags/zero/fluff.json
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The data bag item:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;fluff&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;clouds&quot;</span><span class="p">:</span> <span class="s2">&quot;Are fluffy&quot;</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Converge!</h2>
-
-<p>Now, converge the node:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef-client -z -o zero
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>-z</code>, or <code>--local-mode</code> argument is the magic that sets up Chef
-Zero, and loads all the contents of the repository. The <code>-o zero</code>
-tells Chef to use a one time run list of the &ldquo;zero&rdquo; recipe.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>2013-10-10T23:53:32-06:00<span class="o">]</span> WARN: No config file found or specified on <span class="nb">command </span>line, not loading.
-</span><span class='line'>Starting Chef Client, version 11.8.0.alpha.0
-</span><span class='line'><span class="o">[</span>2013-10-10T23:53:36-06:00<span class="o">]</span> WARN: Run List override has been provided.
-</span><span class='line'><span class="o">[</span>2013-10-10T23:53:36-06:00<span class="o">]</span> WARN: Original Run List: <span class="o">[</span>recipe<span class="o">[</span>zero<span class="o">]]</span>
-</span><span class='line'><span class="o">[</span>2013-10-10T23:53:36-06:00<span class="o">]</span> WARN: Overridden Run List: <span class="o">[</span>recipe<span class="o">[</span>zero<span class="o">]]</span>
-</span><span class='line'>resolving cookbooks <span class="k">for </span>run list: <span class="o">[</span><span class="s2">&quot;zero&quot;</span><span class="o">]</span>
-</span><span class='line'>Synchronizing Cookbooks:
-</span><span class='line'>  - zero
-</span><span class='line'>Compiling Cookbooks...
-</span><span class='line'>Converging 2 resources
-</span><span class='line'>Recipe: zero::default
-</span><span class='line'>  * file<span class="o">[</span>/tmp/zerofiles<span class="o">]</span> action create
-</span><span class='line'>    - create new file /tmp/zerofiles
-</span><span class='line'>    - update content in file /tmp/zerofiles from none to 0a038a
-</span><span class='line'>        --- /tmp/zerofiles      2013-10-10 23:53:36.368059768 -0600
-</span><span class='line'>        +++ /tmp/.zerofiles20131010-6903-10cvytu        2013-10-10 23:53:36.368059768 -0600
-</span><span class='line'>        @@ -1 +1,2 @@
-</span><span class='line'>        +node<span class="o">[</span>jenkins.int.housepub.org<span class="o">]</span>
-</span><span class='line'>  * file<span class="o">[</span>/tmp/fluff<span class="o">]</span> action create
-</span><span class='line'>    - create new file /tmp/fluff
-</span><span class='line'>    - update content in file /tmp/fluff from none to d46bab
-</span><span class='line'>        --- /tmp/fluff  2013-10-10 23:53:36.372059683 -0600
-</span><span class='line'>        +++ /tmp/.fluff20131010-6903-1l3i1h     2013-10-10 23:53:36.372059683 -0600
-</span><span class='line'>        @@ -1 +1,2 @@
-</span><span class='line'>        +data_bag_item<span class="o">[</span>fluff<span class="o">]</span>
-</span><span class='line'>Chef Client finished, 2 resources updated
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The diff output from each of the file resources shows that the content
-does in fact come from the search (a node object was returned) and a
-data bag item (a data bag item object was returned).</p>
-
-<h2>What&rsquo;s Next?</h2>
-
-<p>Since this is a feature of Chef, it will be documented and released,
-so look for that in the next version of Chef.</p>
-
-<p>I can see this used for testing purposes, especially for recipes that
-make use of combinations of data bags and search, such as Opscode&rsquo;s
-<a href="http://community.opscode.com/cookbooks/nagios">nagios cookbook</a>.</p>
-
-<h2>Questions</h2>
-
-<ul>
-<li>Does it work with Berkshelf?</li>
-</ul>
-
-
-<p>I don&rsquo;t know. Probably not (yet).</p>
-
-<ul>
-<li>Does it work with Test Kitchen?</li>
-</ul>
-
-
-<p>I don&rsquo;t know. Probalby not (yet). Provisioners in test-kitchen
-would need to be (re)written.</p>
-
-<ul>
-<li>Should I use this in production?</li>
-</ul>
-
-
-<p>This is an unreleased feature in the master branch. What do you think?
-:)</p>
-
-<ul>
-<li>When will this be released?</li>
-</ul>
-
-
-<p>I don&rsquo;t know the schedule for 11.8.0. Soon?</p>
-
-<ul>
-<li>Where do I find out more, or get involved?</li>
-</ul>
-
-
-<p>Join #chef-hacking in irc.freenode.net, the chef-dev mailing list, or
-attend the Chef Community Summit (November 12-13, 2013 in Seattle).</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -2868,6 +2774,10 @@ attend the Chef Community Summit (November 12-13, 2013 in Seattle).</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/15/quick-tip-chefdk-provision/">Quick Tip: ChefDK Provision</a>
       </li>
     
@@ -2881,10 +2791,6 @@ attend the Chef Community Summit (November 12-13, 2013 in Seattle).</p>
     
       <li class="post">
         <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/02/10/awesome-syntax-highlighting-in-keynote/">Awesome Syntax Highlighting in Keynote</a>
       </li>
     
   </ul>

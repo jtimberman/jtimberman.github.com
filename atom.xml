@@ -4,7 +4,7 @@
   <title><![CDATA[jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-05-15T17:02:25-06:00</updated>
+  <updated>2015-05-16T22:12:53-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,137 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Policyfile Run Lists]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/05/16/quick-tip-policyfile-run-lists/"/>
+    <updated>2015-05-16T21:52:17-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/05/16/quick-tip-policyfile-run-lists</id>
+    <content type="html"><![CDATA[<p>As I indicated on <a href="https://twitter.com/jtimberman/status/599779453456097280">Twitter earlier tonight</a>, I&rsquo;m working with the new Policyfile feature of <a href="https://github.com/chef/chef-dk/blob/master/POLICYFILE_README.md">ChefDK</a>. While converting my personal systems&#8217; repository to use Policyfile instead of roles, I found myself writing this Policyfile:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s1">&#39;home_server&#39;</span>
+</span><span class='line'><span class="n">default_source</span> <span class="ss">:community</span>
+</span><span class='line'><span class="n">run_list</span><span class="p">(</span>
+</span><span class='line'>         <span class="s1">&#39;build-essential&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;packages&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;users&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;sudo&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;runit&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;ntp&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;openssh&#39;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s1">&#39;postfix&#39;</span>
+</span><span class='line'>        <span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;build-essential&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;packages&#39;</span><span class="p">,</span> <span class="ss">git</span><span class="p">:</span> <span class="s1">&#39;https://github.com/mattray/packages-cookbook&#39;</span><span class="p">,</span> <span class="ss">branch</span><span class="p">:</span> <span class="s1">&#39;multipackage&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;users&#39;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s1">&#39;../housepub-chef-repo/cookbooks/users&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;sudo&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;runit&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;ntp&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;openssh&#39;</span>
+</span><span class='line'><span class="n">cookbook</span> <span class="s1">&#39;postfix&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>No big deal, but I found the repetition&hellip; redundant. Several of these cookbooks are fine floating on the latest version from Supermarket &ndash; everything but <code>packages</code> and <code>users</code>. So I thought, &ldquo;wouldn&rsquo;t it be great if entries in the run list were automatically added as dependencies?&rdquo;</p>
+
+<p>Then, I added <code>chef-client-runit</code> to the run list, but I didn&rsquo;t add it as a <code>cookbook</code> entry, performed the <code>chef update</code>, and reran my <code>chef provision</code> command, and wound up with <code>chef-client-runit</code> being converged.</p>
+
+<p>To illustrate this with a really simple example, I confirmed with <code>zsh</code>:</p>
+
+<pre><code>% cd ~/Development/sandbox/test
+% chef generate policyfile
+</code></pre>
+
+<p>Then edit the <code>Policyfile.rb</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">name</span> <span class="s2">&quot;example_application&quot;</span>
+</span><span class='line'><span class="n">default_source</span> <span class="ss">:community</span>
+</span><span class='line'><span class="n">run_list</span> <span class="s2">&quot;zsh&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that there is no <code>cookbook</code> line here.</p>
+
+<pre><code>% chef install
+Building policy example_application
+Expanded run list: recipe[zsh]
+Caching Cookbooks...
+Using      zsh 1.0.1
+
+Lockfile written to /Users/jtimberman/Development/sandbox/test/Policyfile.lock.json
+</code></pre>
+
+<p>And if we examine the <code>Policyfile.lock.json</code>, we see:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;revision_id&quot;</span><span class="p">:</span> <span class="s2">&quot;e8b5b48d35f4a8efcd037ef6c9cc8e34f901561ffef160bd0a57ca1b612a1179&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;example_application&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;run_list&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span class='line'>    <span class="s2">&quot;recipe[zsh::default]&quot;</span>
+</span><span class='line'>  <span class="p">],</span>
+</span><span class='line'>  <span class="nt">&quot;cookbook_locks&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;zsh&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.0.1&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;identifier&quot;</span><span class="p">:</span> <span class="s2">&quot;b512ef33af29b8d34ad7e4e9b6ad38d42dea4945&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;dotted_decimal_identifier&quot;</span><span class="p">:</span> <span class="s2">&quot;50967789358229944.59473511204894381.62483954551109&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;cache_key&quot;</span><span class="p">:</span> <span class="s2">&quot;zsh-1.0.1-supermarket.chef.io&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;origin&quot;</span><span class="p">:</span> <span class="s2">&quot;https://supermarket.chef.io/api/v1/cookbooks/zsh/versions/1.0.1/download&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;source_options&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nt">&quot;artifactserver&quot;</span><span class="p">:</span> <span class="s2">&quot;https://supermarket.chef.io/api/v1/cookbooks/zsh/versions/1.0.1/download&quot;</span><span class="p">,</span>
+</span><span class='line'>        <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.0.1&quot;</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span> <span class="err">&lt;SNIP&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yay! Shoutout to <a href="https://twitter.com/kallistec">Dan DeLeo</a> for preemptively implementing features I didn&rsquo;t even know I wanted yet :&ndash;).</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: ChefDK Provision]]></title>
@@ -3508,236 +3639,6 @@ authentication in a Ruby script is automatically set up.</p>
 <p>Naturally, since <code>knife.rb</code> is Ruby, I could use <code>Inifile.load</code> there,
 but I only started using that library recently, and I have my knife
 configuration setup already.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Preview Chef Client Local Mode]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2013/10/10/preview-chef-client-local-mode/"/>
-    <updated>2013-10-10T23:39:00-06:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2013/10/10/preview-chef-client-local-mode</id>
-    <content type="html"><![CDATA[<p>Opscode Developer John Keiser
-<a href="https://twitter.com/jkeiser2/status/388460927026085888">mentioned</a>
-that a feature for Chef Zero he&rsquo;s been working on, &ldquo;local mode,&rdquo; is
-now in Chef&rsquo;s master branch. This means it should be in the next
-release (11.8). I took the liberty to check this <em>unreleased</em> feature
-out.</p>
-
-<p>Let&rsquo;s just say, it&rsquo;s super awesome and John has done some amazing work
-here.</p>
-
-<h2>PREVIEW</h2>
-
-<p>This is a preview of an unreleased feature in Chef. All standard
-disclaimers apply :).</p>
-
-<h2>Install</h2>
-
-<p>This is in the master branch of Chef, not released as a gem yet.
-You&rsquo;ll need to get the source and build a gem locally. This totally
-assumes you&rsquo;ve installed a sane ruby and bundler on your system.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone git://github.com/opscode/chef.git
-</span><span class='line'><span class="nb">cd </span>chef
-</span><span class='line'>bundle install
-</span><span class='line'>bundle <span class="nb">exec </span>rake gem
-</span><span class='line'>gem install  pkg/chef-11.8.0.alpha.0.gem
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>Note</strong> Alpha!</p>
-
-<h2>Setup</h2>
-
-<p>Next, point it at a local repository. I&rsquo;ll use a simple example.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone git://github.com/opscode/chef-repo.git
-</span><span class='line'><span class="nb">cd </span>chef-repo
-</span><span class='line'>knife cookbook create zero -o ./cookbooks
-</span><span class='line'>vi cookbooks/zero/recipes/default.rb
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I created a fairly trivial example recipe to show that this will
-support search, and data bag items:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">a</span> <span class="o">=</span> <span class="n">search</span><span class="p">(</span><span class="ss">:node</span><span class="p">,</span> <span class="s2">&quot;*:*&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="n">b</span> <span class="o">=</span> <span class="n">data_bag_item</span><span class="p">(</span><span class="s2">&quot;zero&quot;</span><span class="p">,</span> <span class="s2">&quot;fluff&quot;</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">file</span> <span class="s2">&quot;/tmp/zerofiles&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">content</span> <span class="n">a</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="n">to_s</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">file</span> <span class="s2">&quot;/tmp/fluff&quot;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">content</span> <span class="n">b</span><span class="o">.</span><span class="n">to_s</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This simply searches for all nodes, and uses the content of the first
-node (the one we&rsquo;re running on presumably) for a file in /tmp. It also
-loads a data bag item (which I created) and uses it for the content of
-another file in /tmp.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>mkdir -p data_bags/zero
-</span><span class='line'>vi data_bags/zero/fluff.json
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The data bag item:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;fluff&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;clouds&quot;</span><span class="p">:</span> <span class="s2">&quot;Are fluffy&quot;</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Converge!</h2>
-
-<p>Now, converge the node:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>chef-client -z -o zero
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>-z</code>, or <code>--local-mode</code> argument is the magic that sets up Chef
-Zero, and loads all the contents of the repository. The <code>-o zero</code>
-tells Chef to use a one time run list of the &ldquo;zero&rdquo; recipe.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>2013-10-10T23:53:32-06:00<span class="o">]</span> WARN: No config file found or specified on <span class="nb">command </span>line, not loading.
-</span><span class='line'>Starting Chef Client, version 11.8.0.alpha.0
-</span><span class='line'><span class="o">[</span>2013-10-10T23:53:36-06:00<span class="o">]</span> WARN: Run List override has been provided.
-</span><span class='line'><span class="o">[</span>2013-10-10T23:53:36-06:00<span class="o">]</span> WARN: Original Run List: <span class="o">[</span>recipe<span class="o">[</span>zero<span class="o">]]</span>
-</span><span class='line'><span class="o">[</span>2013-10-10T23:53:36-06:00<span class="o">]</span> WARN: Overridden Run List: <span class="o">[</span>recipe<span class="o">[</span>zero<span class="o">]]</span>
-</span><span class='line'>resolving cookbooks <span class="k">for </span>run list: <span class="o">[</span><span class="s2">&quot;zero&quot;</span><span class="o">]</span>
-</span><span class='line'>Synchronizing Cookbooks:
-</span><span class='line'>  - zero
-</span><span class='line'>Compiling Cookbooks...
-</span><span class='line'>Converging 2 resources
-</span><span class='line'>Recipe: zero::default
-</span><span class='line'>  * file<span class="o">[</span>/tmp/zerofiles<span class="o">]</span> action create
-</span><span class='line'>    - create new file /tmp/zerofiles
-</span><span class='line'>    - update content in file /tmp/zerofiles from none to 0a038a
-</span><span class='line'>        --- /tmp/zerofiles      2013-10-10 23:53:36.368059768 -0600
-</span><span class='line'>        +++ /tmp/.zerofiles20131010-6903-10cvytu        2013-10-10 23:53:36.368059768 -0600
-</span><span class='line'>        @@ -1 +1,2 @@
-</span><span class='line'>        +node<span class="o">[</span>jenkins.int.housepub.org<span class="o">]</span>
-</span><span class='line'>  * file<span class="o">[</span>/tmp/fluff<span class="o">]</span> action create
-</span><span class='line'>    - create new file /tmp/fluff
-</span><span class='line'>    - update content in file /tmp/fluff from none to d46bab
-</span><span class='line'>        --- /tmp/fluff  2013-10-10 23:53:36.372059683 -0600
-</span><span class='line'>        +++ /tmp/.fluff20131010-6903-1l3i1h     2013-10-10 23:53:36.372059683 -0600
-</span><span class='line'>        @@ -1 +1,2 @@
-</span><span class='line'>        +data_bag_item<span class="o">[</span>fluff<span class="o">]</span>
-</span><span class='line'>Chef Client finished, 2 resources updated
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The diff output from each of the file resources shows that the content
-does in fact come from the search (a node object was returned) and a
-data bag item (a data bag item object was returned).</p>
-
-<h2>What&rsquo;s Next?</h2>
-
-<p>Since this is a feature of Chef, it will be documented and released,
-so look for that in the next version of Chef.</p>
-
-<p>I can see this used for testing purposes, especially for recipes that
-make use of combinations of data bags and search, such as Opscode&rsquo;s
-<a href="http://community.opscode.com/cookbooks/nagios">nagios cookbook</a>.</p>
-
-<h2>Questions</h2>
-
-<ul>
-<li>Does it work with Berkshelf?</li>
-</ul>
-
-
-<p>I don&rsquo;t know. Probably not (yet).</p>
-
-<ul>
-<li>Does it work with Test Kitchen?</li>
-</ul>
-
-
-<p>I don&rsquo;t know. Probalby not (yet). Provisioners in test-kitchen
-would need to be (re)written.</p>
-
-<ul>
-<li>Should I use this in production?</li>
-</ul>
-
-
-<p>This is an unreleased feature in the master branch. What do you think?
-:)</p>
-
-<ul>
-<li>When will this be released?</li>
-</ul>
-
-
-<p>I don&rsquo;t know the schedule for 11.8.0. Soon?</p>
-
-<ul>
-<li>Where do I find out more, or get involved?</li>
-</ul>
-
-
-<p>Join #chef-hacking in irc.freenode.net, the chef-dev mailing list, or
-attend the Chef Community Summit (November 12-13, 2013 in Seattle).</p>
 ]]></content>
   </entry>
   
