@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="As I indicated on Twitter earlier tonight, I&rsquo;m working with the new Policyfile feature of ChefDK. While converting my personal systems&#8217; &hellip;">
+  <meta name="description" content="I&rsquo;m currently updating my vagrant cookbook, and adding ChefSpec coverage. Each of the different platform recipes results in slightly different &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,141 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/">Quick Tip: Stubbing Library Helpers in ChefSpec</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-05-30T08:48:47-06:00" pubdate data-updated="true">May 30<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I&rsquo;m currently updating my <a href="https://supermarket.chef.io/cookbooks/vagrant">vagrant cookbook</a>, and adding <a href="https://sethvargo.github.io/chefspec">ChefSpec</a> coverage. Each of the different platform recipes results in slightly different resources to download the package file and install it. To support this, I have <a href="https://github.com/jtimberman/vagrant-cookbook/blob/master/libraries/helpers.rb">helper methods</a> that calculate the download URI, the package name, and the SHA256 checksum based on the version of Vagrant (<code>node['vagrant']['version']</code>), and the platform (<code>node['os']</code>, <code>node['platform_family']</code>).</p>
+
+<p>The outcomes I want to test are that for a given platform: the correct recipe is included, the correct file is downloaded, and the correct package resource installs the downloaded file. Those tests look like this (using Ubuntu/Debian example first):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">it</span> <span class="s1">&#39;includes the debian platform family recipe&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">include_recipe</span><span class="p">(</span><span class="s1">&#39;vagrant::debian&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">it</span> <span class="s1">&#39;downloads the package from the calculated URI&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">create_remote_file</span><span class="p">(</span><span class="s1">&#39;/var/tmp/vagrant.deb&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">with</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">source</span><span class="p">:</span> <span class="s1">&#39;https://dl.bintray.com/mitchellh/vagrant/vagrant_1.88.88_x86_64.deb&#39;</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">it</span> <span class="s1">&#39;installs the downloaded package&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">install_dpkg_package</span><span class="p">(</span><span class="s1">&#39;vagrant&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">with</span><span class="p">(</span>
+</span><span class='line'>    <span class="ss">source</span><span class="p">:</span> <span class="s1">&#39;/var/tmp/vagrant.deb&#39;</span>
+</span><span class='line'>  <span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I&rsquo;ve set the version attribute in the <code>chef_run</code> block for the ChefSpec run to <code>1.88.88</code> to ensure that it doesn&rsquo;t use the value set in the attributes file, and then I can test this specifically in the source for the calculated URI, even if the attribute changes &ndash; hopefully Vagrant doesn&rsquo;t have a 1.88.88 version some day ;).</p>
+
+<p>When I run <code>rspec spec</code>, I get exceptions, however.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="mi">1</span><span class="p">)</span> <span class="ss">vagrant</span><span class="p">:</span><span class="ss">:default</span> <span class="n">debian</span> <span class="n">includes</span> <span class="n">the</span> <span class="n">debian</span> <span class="n">platform</span> <span class="n">family</span> <span class="n">recipe</span>
+</span><span class='line'>   <span class="no">Failure</span><span class="o">/</span><span class="ss">Error</span><span class="p">:</span> <span class="k">end</span><span class="o">.</span><span class="n">converge</span><span class="p">(</span><span class="n">described_recipe</span><span class="p">)</span>
+</span><span class='line'>   <span class="ss">OpenURI</span><span class="p">:</span><span class="ss">:HTTPError</span><span class="p">:</span>
+</span><span class='line'>     <span class="mi">404</span> <span class="no">Not</span> <span class="no">Found</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is because in the <code>attributes/default.rb</code>, the checksum is retrieved using the <code>vagrant_sha256sum</code> method:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">default</span><span class="o">[</span><span class="s1">&#39;vagrant&#39;</span><span class="o">][</span><span class="s1">&#39;checksum&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">vagrant_sha256sum</span><span class="p">(</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;vagrant&#39;</span><span class="o">][</span><span class="s1">&#39;version&#39;</span><span class="o">]</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The exception is happening when Chef loads the attributes file, and because the version is not valid. The solution here is to stub out the return value from <code>vagrant_sha256sum</code>. This can be anything at all really, because that specific attribute is to make sure we don&rsquo;t have to re-download the package to <a href="http://docs.chef.io/resource_remote_file.html#attributes">compare its checksum</a> on later Chef runs. In this cookbook, the helper methods are not namespaced under a module, they&rsquo;re bare methods in <code>libraries.helpers.rb</code>. This <a href="https://github.com/sethvargo/chefspec/issues/562">poses some</a> <a href="https://github.com/sethvargo/chefspec/issues/549">challenges</a> <a href="https://github.com/sethvargo/chefspec/issues/273">when trying</a> <a href="https://github.com/sethvargo/chefspec/issues/138">to stub</a> <a href="https://github.com/sethvargo/chefspec/issues/253">them</a> in ChefSpec. I won&rsquo;t rehash all the ways I attempted to get this to work, and instead focus on the final solution that got the tests passing:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">before</span><span class="p">(</span><span class="ss">:each</span><span class="p">)</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">allow_any_instance_of</span><span class="p">(</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Node</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:vagrant_sha256sum</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When Chef loads cookbook attributes files, it is evaluating them in the context of a <code>Chef::Node</code>, so those library helper methods are sent to the <code>Chef::Node</code> object. Similarly, if this were inside a recipe, I would use <code>Chef::Recipe</code>, and if it were inside a resource (e.g., <code>package</code>), <code>Chef::Resource</code>.</p>
+
+<p>I put this <code>before</code> block at the <code>describe 'vagrant::default'</code> level, not within any <code>context</code> blocks, so it will be done for each of the various per-platform tests. The results in my <code>debian</code> context are now:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="sx">% rspec </span><span class="n">spec</span> <span class="o">--</span><span class="n">color</span> <span class="o">-</span><span class="n">fd</span>
+</span><span class='line'>
+</span><span class='line'><span class="ss">vagrant</span><span class="p">:</span><span class="ss">:default</span>
+</span><span class='line'>  <span class="n">debian</span>
+</span><span class='line'>    <span class="n">includes</span> <span class="n">the</span> <span class="n">debian</span> <span class="n">platform</span> <span class="n">family</span> <span class="n">recipe</span>
+</span><span class='line'>    <span class="n">downloads</span> <span class="n">the</span> <span class="n">package</span> <span class="n">from</span> <span class="n">the</span> <span class="n">calculated</span> <span class="no">URI</span>
+</span><span class='line'>    <span class="n">installs</span> <span class="n">the</span> <span class="n">downloaded</span> <span class="n">package</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Finished</span> <span class="k">in</span> <span class="mi">7</span><span class="o">.</span><span class="mo">04</span> <span class="n">seconds</span> <span class="p">(</span><span class="n">files</span> <span class="n">took</span> <span class="mi">7</span><span class="o">.</span><span class="mi">93</span> <span class="n">seconds</span> <span class="n">to</span> <span class="nb">load</span><span class="p">)</span>
+</span><span class='line'><span class="mi">3</span> <span class="n">examples</span><span class="p">,</span> <span class="mi">0</span> <span class="n">failures</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Six issues have been filed against ChefSpec about this. Hopefully this can result in fewer inquiries.</p>
+
+<p>Happy testing!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1511,84 +1646,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-12-31T16:01:23-07:00" pubdate data-updated="true">Dec 31<span>st</span>, 2014</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Recently, I&rsquo;ve started refactoring some <a href="https://supermarket.chef.io/cookbooks/daemontools">old</a> <a href="https://supermarket.chef.io/cookbooks/djbdns">cookbooks</a> <a href="https://supermarket.chef.io/cookbooks/ucspi-tcp">I wrote</a> ages ago. I&rsquo;m adding Serverspec coverage that can be run with <code>kitchen verify</code>. In this <a href="/blog/categories/quicktips">quicktip</a>, I&rsquo;ll describe how to create a <code>spec_helper</code> that can be used in all the specs. This is a convention used by <a href="http://pivotallabs.com/spec-helper/">many</a> in the Ruby community to add configuration for RSpec.</p>
-
-<p>For Chef, we can run integration tests after convergence using <a href="http://kitchen.ci">Test Kitchen</a> using Serverspec. To do that, we need to require Serverspec, and then set its backend. In some cookbooks, the author/developer may have written <code>spec_helper</code> files in the various <code>test/integration/SUITE/serverspec/</code> directories, but this will use a single shared file for them all. Let&rsquo;s get started.</p>
-
-<p>In the <code>.kitchen.yml</code>, add the <code>data_path</code> configuration directive in the provisioner.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">provisioner</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">chef_zero</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">data_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">test/shared</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then, create the <code>test/shared</code> directory in the cookbook, and create the <code>spec_helper.rb</code> in it.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>mkdir <span class="nb">test</span>/shared
-</span><span class='line'><span class="nv">$EDITOR</span> <span class="nb">test</span>/shared/spec_helper.rb
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Minimally, it should look like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;serverspec&#39;</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">set</span> <span class="ss">:backend</span><span class="p">,</span> <span class="ss">:exec</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then in your specs, for example <code>test/integration/default/serverspec/default_spec.rb</code>, require the <code>spec_helper</code>. On the instances under test, the file will be copied to <code>/tmp/kitchen/data/spec_helper.rb</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">require_relative</span> <span class="s1">&#39;../../../kitchen/data/spec_helper&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>That&rsquo;s it, now when running <code>kitchen test</code>, or <code>kitchen verify</code> on a converged instance, the helper will be used.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1621,6 +1678,10 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/">Quick Tip: Stubbing Library Helpers in ChefSpec</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
       </li>
     
@@ -1634,10 +1695,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
     
       <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
       </li>
     
   </ul>

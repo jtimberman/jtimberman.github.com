@@ -363,12 +363,18 @@
         <lastmod>2015-05-16T22:11:37-06:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://jtimberman.housepub.org/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/
+        </loc>
+        <lastmod>2015-05-30T09:55:05-06:00</lastmod>
+    </url>
+    <url>
         <loc>http://jtimberman.housepub.org/blog/archives/</loc>
-        <lastmod>2015-05-16T22:11:37-06:00</lastmod>
+        <lastmod>2015-05-30T09:55:05-06:00</lastmod>
     </url>
     <url>
         <loc>http://jtimberman.housepub.org/</loc>
-        <lastmod>2015-05-16T22:11:37-06:00</lastmod>
+        <lastmod>2015-05-30T09:55:05-06:00</lastmod>
     </url>
     <url>
         <loc>http://jtimberman.housepub.org/robots.txt</loc>

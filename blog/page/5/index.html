@@ -9,7 +9,9 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Update Chef 10.14 is released. I removed the &ldquo;--pre&rdquo; from the gem install commands but otherwise left this post, since it was written by &hellip;">
+  <meta name="description" content="I wanted to capture the minimal steps required to install a Chef
+version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
+Ubuntu 12.04. Similar &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +81,164 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/">Install Chef 10 Server on Ubuntu With Ruby 1.9</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-17T11:27:00-07:00" pubdate data-updated="true">Nov 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wanted to capture the minimal steps required to install a Chef
+version 10 Server using RubyGems under Ruby 1.9 (1.9.3-p0) on
+Ubuntu 12.04.</p>
+
+<p>Similar steps are also
+<a href="http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo">available on the Chef wiki</a>,
+too.</p>
+
+<p>This does not include any customization to the
+installation and takes everything as default. This will all change
+when
+<a href="http://wiki.opscode.com/display/chef/Chef+11+Server+Preview">Chef 11 is released</a>.</p>
+
+<p>These steps were performed on a default server install of Ubuntu
+12.04.</p>
+
+<p>Update apt sources.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get update</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Install required packages.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get install ruby1.9.1-full build-essential wget ssl-cert curl</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Update RubyGems.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Install Chef.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo gem install chef --no-ri --no-rdoc</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Configure chef-solo.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo mkdir -p /etc/chef
+</span><span class='line'>sudo vi /etc/chef/solo.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The config file should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">file_cache_path</span> <span class="s2">&quot;/tmp/chef-solo&quot;</span>
+</span><span class='line'><span class="n">cookbook_path</span> <span class="s2">&quot;/tmp/chef-solo/cookbooks&quot;</span>
+</span><span class='line'><span class="n">recipe_url</span> <span class="s2">&quot;http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Run chef-solo with the <code>chef-server::rubygems-install</code> recipe.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">sudo</span> <span class="n">chef</span><span class="o">-</span><span class="n">solo</span> <span class="o">-</span><span class="n">o</span> <span class="n">chef</span><span class="o">-</span><span class="ss">server</span><span class="p">:</span><span class="ss">:rubygems</span><span class="o">-</span><span class="n">install</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The WebUI is not enabled by default. This can be done by setting an
+attribute, see the <code>chef-server</code> cookbook for more information.</p>
+
+<p>Next, create a new API client that will be used to upload cookbooks.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>sudo knife configure -i
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Change the <code>chef_server_url</code> to use the FQDN or IP address of the Chef
+Server. Change the path for the validation key. The <code>.chef/knife.rb</code>
+file should look something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">log_level</span>                <span class="ss">:info</span>
+</span><span class='line'><span class="n">log_location</span>             <span class="no">STDOUT</span>
+</span><span class='line'><span class="n">node_name</span>                <span class="s1">&#39;jtimberman&#39;</span>
+</span><span class='line'><span class="n">client_key</span>               <span class="s1">&#39;/home/jtimberman/.chef/jtimberman.pem&#39;</span>
+</span><span class='line'><span class="n">validation_client_name</span>   <span class="s1">&#39;chef-validator&#39;</span>
+</span><span class='line'><span class="n">validation_key</span>           <span class="s1">&#39;/home/jtimberman/.chef/validation.pem&#39;</span>
+</span><span class='line'><span class="n">chef_server_url</span>          <span class="s1">&#39;http://10.1.1.100:4000&#39;</span>
+</span><span class='line'><span class="n">cache_type</span>               <span class="s1">&#39;BasicFile&#39;</span>
+</span><span class='line'><span class="n">cache_options</span><span class="p">(</span> <span class="ss">:path</span> <span class="o">=&gt;</span> <span class="s1">&#39;/home/jtimberman/.chef/checksums&#39;</span> <span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Copy the validation key (<code>/etc/chef/validation.pem</code>) to the <code>.chef</code> directory.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">sudo</span> <span class="n">cp</span> <span class="sr">/etc/</span><span class="n">chef</span><span class="o">/</span><span class="n">validation</span><span class="o">.</span><span class="n">pem</span> <span class="o">~</span><span class="sr">/.chef</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Verify that the API client and configuration file work.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span> <span class="n">client</span> <span class="n">list</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">validator</span>
+</span><span class='line'>  <span class="n">chef</span><span class="o">-</span><span class="n">webui</span>
+</span><span class='line'>  <span class="n">jtimberman</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The newly created API client should be listed. Mine is <code>jtimberman</code>.
+Now the Chef Server is ready to use.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2151,75 +2311,6 @@ I&rsquo;ll make another post, so stay tuned!</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/02/25/disable-airdrop-lion/">Disable AirDrop in Mac OS X Lion</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-02-25T23:20:00-07:00" pubdate data-updated="true">Feb 25<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Mac OS X Lion introduced a new nifty feature called AirDrop. This
-allows users on a local network to drag and drop files to each other
-with Finder.</p>
-
-<p>While it seems that this would be useful, there are security
-implications. After looking through
-<a href="https://www.google.com/?q=disable+airdrop#sclient=psy&amp;hl=en&amp;site=&amp;source=hp&amp;q=disable+airdrop&amp;pbx=1&amp;oq=disable+airdrop&amp;aq=f&amp;aqi=&amp;aql=&amp;gs_sm=3&amp;gs_upl=0l0l0l884l0l0l0l0l0l0l0l0ll0l0&amp;bav=on.2,or.r_gc.r_pw.,cf.osb&amp;fp=2c07cc10bcee84ff&amp;biw=1440&amp;bih=786">Google Search Results</a>
-on the topic, I found some un-helpful information in a <a href="http://forums.macrumors.com/showthread.php?t=1191359">random forum</a>
-post (unsurprising). A little more
-<a href="http://derflounder.wordpress.com/2011/10/07/disabling-airdrop-from-the-command-line/">review of the search results</a>
-resulted in finding the actual <code>defaults(1)</code> command to do so:</p>
-
-<pre><code>defaults write com.apple.NetworkBrowser DisableAirDrop -bool YES
-</code></pre>
-
-<p>Naturally, I put this in a Chef recipe and applied it on all my Macs
-post haste:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">mac_os_x_userdefaults</span> <span class="s2">&quot;Disable AirDrop&quot;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">domain</span> <span class="s2">&quot;com.apple.NetworkBrowser&quot;</span>
-</span><span class='line'>    <span class="n">key</span> <span class="s2">&quot;DisableAirDrop&quot;</span>
-</span><span class='line'>    <span class="n">value</span> <span class="kp">true</span>
-</span><span class='line'>    <span class="n">type</span> <span class="s2">&quot;bool&quot;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The resource above is available in my <a href="http://ckbk.it/mac_os_x">mac_os_x cookbook</a>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/6/">&larr; Older</a>
@@ -2254,6 +2345,10 @@ post haste:</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/">Quick Tip: Stubbing Library Helpers in ChefSpec</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
       </li>
     
@@ -2267,10 +2362,6 @@ post haste:</p>
     
       <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
       </li>
     
   </ul>

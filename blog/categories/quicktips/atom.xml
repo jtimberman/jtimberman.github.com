@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-05-16T22:12:53-06:00</updated>
+  <updated>2015-05-30T10:15:23-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,92 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Stubbing Library Helpers in ChefSpec]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/"/>
+    <updated>2015-05-30T08:48:47-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec</id>
+    <content type="html"><![CDATA[<p>I&rsquo;m currently updating my <a href="https://supermarket.chef.io/cookbooks/vagrant">vagrant cookbook</a>, and adding <a href="https://sethvargo.github.io/chefspec">ChefSpec</a> coverage. Each of the different platform recipes results in slightly different resources to download the package file and install it. To support this, I have <a href="https://github.com/jtimberman/vagrant-cookbook/blob/master/libraries/helpers.rb">helper methods</a> that calculate the download URI, the package name, and the SHA256 checksum based on the version of Vagrant (<code>node['vagrant']['version']</code>), and the platform (<code>node['os']</code>, <code>node['platform_family']</code>).</p>
+
+<p>The outcomes I want to test are that for a given platform: the correct recipe is included, the correct file is downloaded, and the correct package resource installs the downloaded file. Those tests look like this (using Ubuntu/Debian example first):</p>
+
+<p>```ruby
+it &lsquo;includes the debian platform family recipe&rsquo; do
+  expect(chef_run).to include_recipe(&lsquo;vagrant::debian&rsquo;)
+end</p>
+
+<p>it &lsquo;downloads the package from the calculated URI&rsquo; do
+  expect(chef_run).to create_remote_file(&lsquo;/var/tmp/vagrant.deb&rsquo;).with(</p>
+
+<pre><code>source: 'https://dl.bintray.com/mitchellh/vagrant/vagrant_1.88.88_x86_64.deb'
+</code></pre>
+
+<p>  )
+end</p>
+
+<p>it &lsquo;installs the downloaded package&rsquo; do
+  expect(chef_run).to install_dpkg_package(&lsquo;vagrant&rsquo;).with(</p>
+
+<pre><code>source: '/var/tmp/vagrant.deb'
+</code></pre>
+
+<p>  )
+end
+```</p>
+
+<p>I&rsquo;ve set the version attribute in the <code>chef_run</code> block for the ChefSpec run to <code>1.88.88</code> to ensure that it doesn&rsquo;t use the value set in the attributes file, and then I can test this specifically in the source for the calculated URI, even if the attribute changes &ndash; hopefully Vagrant doesn&rsquo;t have a 1.88.88 version some day ;).</p>
+
+<p>When I run <code>rspec spec</code>, I get exceptions, however.</p>
+
+<p>```
+1) vagrant::default debian includes the debian platform family recipe
+   Failure/Error: end.converge(described_recipe)
+   OpenURI::HTTPError:</p>
+
+<pre><code> 404 Not Found
+</code></pre>
+
+<p>```</p>
+
+<p>This is because in the <code>attributes/default.rb</code>, the checksum is retrieved using the <code>vagrant_sha256sum</code> method:</p>
+
+<p><code>ruby
+default['vagrant']['checksum'] = vagrant_sha256sum(node['vagrant']['version'])
+</code></p>
+
+<p>The exception is happening when Chef loads the attributes file, and because the version is not valid. The solution here is to stub out the return value from <code>vagrant_sha256sum</code>. This can be anything at all really, because that specific attribute is to make sure we don&rsquo;t have to re-download the package to <a href="http://docs.chef.io/resource_remote_file.html#attributes">compare its checksum</a> on later Chef runs. In this cookbook, the helper methods are not namespaced under a module, they&rsquo;re bare methods in <code>libraries.helpers.rb</code>. This <a href="https://github.com/sethvargo/chefspec/issues/562">poses some</a> <a href="https://github.com/sethvargo/chefspec/issues/549">challenges</a> <a href="https://github.com/sethvargo/chefspec/issues/273">when trying</a> <a href="https://github.com/sethvargo/chefspec/issues/138">to stub</a> <a href="https://github.com/sethvargo/chefspec/issues/253">them</a> in ChefSpec. I won&rsquo;t rehash all the ways I attempted to get this to work, and instead focus on the final solution that got the tests passing:</p>
+
+<p><code>ruby
+before(:each) do
+  allow_any_instance_of(Chef::Node).to receive(:vagrant_sha256sum).and_return('')
+end
+</code></p>
+
+<p>When Chef loads cookbook attributes files, it is evaluating them in the context of a <code>Chef::Node</code>, so those library helper methods are sent to the <code>Chef::Node</code> object. Similarly, if this were inside a recipe, I would use <code>Chef::Recipe</code>, and if it were inside a resource (e.g., <code>package</code>), <code>Chef::Resource</code>.</p>
+
+<p>I put this <code>before</code> block at the <code>describe 'vagrant::default'</code> level, not within any <code>context</code> blocks, so it will be done for each of the various per-platform tests. The results in my <code>debian</code> context are now:</p>
+
+<p>```
+% rspec spec &mdash;color -fd</p>
+
+<p>vagrant::default
+  debian</p>
+
+<pre><code>includes the debian platform family recipe
+downloads the package from the calculated URI
+installs the downloaded package
+</code></pre>
+
+<p>Finished in 7.04 seconds (files took 7.93 seconds to load)
+3 examples, 0 failures
+```</p>
+
+<p>Six issues have been filed against ChefSpec about this. Hopefully this can result in fewer inquiries.</p>
+
+<p>Happy testing!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Policyfile Run Lists]]></title>
@@ -515,122 +601,6 @@ Recipe: notif::default
 <p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
 
 <p>Also, define the resources that you need to notify when you&rsquo;re doing this in your provider&rsquo;s actions. A common example is within a provider that writes configuration for a service, and needs to tell that service to restart.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Testing Conditionals in ChefSpec]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/"/>
-    <updated>2015-01-12T14:07:06-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec</id>
-    <content type="html"><![CDATA[<p>This tip is brought to you by the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew</a> cookbook.</p>
-
-<p><a href="http://sethvargo.github.io/chefspec/">ChefSpec</a> is a great way to create tests for Chef recipes to catch regressions. Sometimes recipes end up having branching conditional logic that can have very different outcomes based on external factors &ndash; attributes, existing system state, or cross-platform support.</p>
-
-<p>The homebrew cookbook only supports OS X, so we don&rsquo;t have cross-platform support to test there. However, its default recipe has four conditionals to test. You can read the entire <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/spec/recipes/default_spec.rb">default_spec.rb</a> for full context, I&rsquo;m going to focus on just one aspect here:</p>
-
-<ul>
-<li>Installing homebrew should only happen if the <code>brew</code> binary does not exist.</li>
-</ul>
-
-
-<p>This is a common use case in Chef recipes. The best way to go about converging your node to the desired state involves running some arbitrary command. In this case, it&rsquo;s the installation of Homebrew itself. Normally for installations we want to use an idempotent, convergent resource like <code>package</code>. However, since homebrew is to be our package management system, we have to do something else. As it turns out the homebrew project provides an installation script and that script will install a binary, <code>/usr/local/bin/brew</code>. We will assume that if Chef converged on a node after running the script, and the <code>brew</code> binary exists, then we don&rsquo;t need to attempt reinstallation. There&rsquo;s more robust ways to go about it (e.g., running <code>brew</code> gives some desired output), but this works for example purposes today.</p>
-
-<p>From <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/recipes/default.rb">the recipe</a>, here&rsquo;s the resource:</p>
-
-<p><code>ruby
-execute 'install homebrew' do
-  command homebrew_go
-  user node['homebrew']['owner'] || homebrew_owner
-  not_if { ::File.exist? '/usr/local/bin/brew' }
-end
-</code></p>
-
-<p><code>command</code> is a script, called <code>homebrew_go</code>, which is a local variable set to a path in <code>Chef::Config[:file_cache_path]</code>. It is retrieved in the recipe with <code>remote_file</code>. The resource used to have <code>execute homebrew_go</code>, but when ChefSpec runs, it does so in a random temporary directory, which we cannot predict the name.</p>
-
-<p>The astute observer will note that the <code>user</code> parameter has another conditional (designated by the <code>||</code>). That&rsquo;s actually the subject of another post. In this post, I&rsquo;m concerned only with testing the guard, <code>not_if</code>.</p>
-
-<p>The <code>not_if</code> is a Ruby block, which means the Ruby code is evaluated inline during the Chef run. How we go about testing that is the subject of this post.</p>
-
-<p>First, we need to mock the return result of sending the <code>#exist?</code> method to the <code>File</code> class. There are two reasons. First, we want to control the conditional so we can write a test for each outcome. Second, someone running the test (like me) might have already installed homebrew on their local system (which I have), and so <code>/usr/local/bin/brew</code> will exist. To do this, in our context, we have a <code>before</code> block that stubs the return to false:</p>
-
-<p><code>ruby
-before(:each) do
-  allow_any_instance_of(Chef::Resource).to receive(:homebrew_owner).and_return('vagrant')
-  allow_any_instance_of(Chef::Recipe).to receive(:homebrew_owner).and_return('vagrant')
-  allow(File).to receive(:exist?).and_return(false)
-  stub_command('which git').and_return(true)
-end
-</code></p>
-
-<p>There&rsquo;s some other mocked values here. I&rsquo;ll talk about the <code>vagrant</code> user for <code>homebrew_owner</code> in a moment, though again, that&rsquo;s the subject of another post.</p>
-
-<p>The actual spec will test that the installation script will actually get executed when we run chef, and as the <code>vagrant</code> user.</p>
-
-<p>```ruby
-it &lsquo;runs homebrew installation as the default user&rsquo; do
-  expect(chef_run).to run_execute(&lsquo;install homebrew&rsquo;).with(</p>
-
-<pre><code>:user =&gt; 'vagrant'
-</code></pre>
-
-<p>  )
-end
-```</p>
-
-<p>When rspec runs, we see this is the case:</p>
-
-<p>```
-homebrew::default
-  default user</p>
-
-<pre><code>runs homebrew installation as the default user
-</code></pre>
-
-<p>```</p>
-
-<p>If I didn&rsquo;t mock the user, it would be <code>jtimberman</code>, as that is the user that is running Chef via rspec/ChefSpec. The test would fail. If you&rsquo;re looking at the full file, there&rsquo;s some other details we&rsquo;re going to look at shortly. If I didn&rsquo;t mock the return for <code>File.exist?</code>, the execute wouldn&rsquo;t run at all.</p>
-
-<p>To test what happens when <code>/usr/local/bin/brew</code> exists, I set up a new context in rspec, and create a new <code>before</code> block.</p>
-
-<p>```ruby
-context &lsquo;/usr/local/bin/brew exists&rsquo; do
-  before(:each) do</p>
-
-<pre><code>allow(File).to receive(:exist?).and_return(true)
-stub_command('which git').and_return(true)
-</code></pre>
-
-<p>  end</p>
-
-<p>  it &lsquo;does not run homebrew installation&rsquo; do</p>
-
-<pre><code>expect(chef_run).to_not run_execute('install homebrew')
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>We don&rsquo;t need the <code>vagrant</code> mocks earlier, but we do need to stub <code>File.exist?</code>. This test would pass on my system without it, but not on, e.g., a Linux system that doesn&rsquo;t have homebrew.</p>
-
-<p>Then running rspec, we see:</p>
-
-<p>```
-homebrew::default
-  /usr/local/bin/brew exists</p>
-
-<pre><code>does not run homebrew installation
-</code></pre>
-
-<p>  default user</p>
-
-<pre><code>runs homebrew installation as the default user
-</code></pre>
-
-<p>```</p>
-
-<p>In a coming post, I will walk through the conditionals related to the <code>homebrew_owner</code>.</p>
 ]]></content>
   </entry>
   

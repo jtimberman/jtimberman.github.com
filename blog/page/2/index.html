@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="OS X is an interesting operating system. It is a Unix, but is primarily used for workstations. As such, many system settings can, and should, be done &hellip;">
+  <meta name="description" content="Recently, I&rsquo;ve started refactoring some old cookbooks I wrote ages ago. I&rsquo;m adding Serverspec coverage that can be run with kitchen &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,84 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/12/31/quick-tip-serverspec-spec-helper-in-test-kitchen/">Quick Tip: Serverspec Spec_helper in Test Kitchen</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-31T16:01:23-07:00" pubdate data-updated="true">Dec 31<span>st</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Recently, I&rsquo;ve started refactoring some <a href="https://supermarket.chef.io/cookbooks/daemontools">old</a> <a href="https://supermarket.chef.io/cookbooks/djbdns">cookbooks</a> <a href="https://supermarket.chef.io/cookbooks/ucspi-tcp">I wrote</a> ages ago. I&rsquo;m adding Serverspec coverage that can be run with <code>kitchen verify</code>. In this <a href="/blog/categories/quicktips">quicktip</a>, I&rsquo;ll describe how to create a <code>spec_helper</code> that can be used in all the specs. This is a convention used by <a href="http://pivotallabs.com/spec-helper/">many</a> in the Ruby community to add configuration for RSpec.</p>
+
+<p>For Chef, we can run integration tests after convergence using <a href="http://kitchen.ci">Test Kitchen</a> using Serverspec. To do that, we need to require Serverspec, and then set its backend. In some cookbooks, the author/developer may have written <code>spec_helper</code> files in the various <code>test/integration/SUITE/serverspec/</code> directories, but this will use a single shared file for them all. Let&rsquo;s get started.</p>
+
+<p>In the <code>.kitchen.yml</code>, add the <code>data_path</code> configuration directive in the provisioner.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">provisioner</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">chef_zero</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">data_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">test/shared</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, create the <code>test/shared</code> directory in the cookbook, and create the <code>spec_helper.rb</code> in it.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>mkdir <span class="nb">test</span>/shared
+</span><span class='line'><span class="nv">$EDITOR</span> <span class="nb">test</span>/shared/spec_helper.rb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Minimally, it should look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;serverspec&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">set</span> <span class="ss">:backend</span><span class="p">,</span> <span class="ss">:exec</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then in your specs, for example <code>test/integration/default/serverspec/default_spec.rb</code>, require the <code>spec_helper</code>. On the instances under test, the file will be copied to <code>/tmp/kitchen/data/spec_helper.rb</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">require_relative</span> <span class="s1">&#39;../../../kitchen/data/spec_helper&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&rsquo;s it, now when running <code>kitchen test</code>, or <code>kitchen verify</code> on a converged instance, the helper will be used.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2561,185 +2639,6 @@ helpful to those goals.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/10/19/managing-multiple-aws-account-credentials/">Managing Multiple AWS Account Credentials</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-19T17:55:00-06:00" pubdate data-updated="true">Oct 19<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><strong>UPDATE</strong>: All non-default profiles must have their profile name
-  start with &ldquo;profile.&rdquo; Below, this is &ldquo;profile nondefault.&rdquo; The ruby
-  code is updated to reflect this.</p>
-
-<p>In this post, I will describe my local setup for using the
-<a href="http://aws.amazon.com/cli/">AWS CLI</a>, the
-<a href="http://aws.amazon.com/sdkforruby/">AWS Ruby SDK</a>, and of course the
-<a href="http://rubygems.org/gems/knife-ec2">Knife EC2 plugin</a>.</p>
-
-<p>The general practice I&rsquo;ve used is to set the appropriate shell
-environment variables that are used by default by these tools (and the
-&ldquo;legacy&rdquo; ec2-api-tools, the java-based CLI). Over time and between
-tools, there have been several environment variables set:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>AWS_ACCESS_KEY_ID
-</span><span class='line'>AWS_SECRET_ACCESS_KEY
-</span><span class='line'>AWS_DEFAULT_REGION
-</span><span class='line'>AWS_SSH_KEY
-</span><span class='line'>AMAZON_ACCESS_KEY_ID
-</span><span class='line'>AMAZON_SECRET_ACCESS_KEY
-</span><span class='line'>AWS_ACCESS_KEY
-</span><span class='line'>AWS_SECRET_KEY
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>There is now a config file (ini-flavored) that can be used to set
-credentials, <code>~/.aws/config</code>. Each ini section in this file is a
-different account&rsquo;s credentials. For example:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>default<span class="o">]</span>
-</span><span class='line'><span class="nv">aws_access_key_id</span><span class="o">=</span>MY_DEFAULT_KEY
-</span><span class='line'><span class="nv">aws_secret_access_key</span><span class="o">=</span>MY_DEFAULT_SECRET
-</span><span class='line'><span class="nv">region</span><span class="o">=</span>us-east-1
-</span><span class='line'><span class="o">[</span>profile nondefault<span class="o">]</span>
-</span><span class='line'><span class="nv">aws_access_key_id</span><span class="o">=</span>NOT_MY_DEFAULT_KEY
-</span><span class='line'><span class="nv">aws_secret_access_key</span><span class="o">=</span>NOT_MY_DEFAULT_SECRET
-</span><span class='line'><span class="nv">region</span><span class="o">=</span>us-east-1
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I have two accounts listed here. Obviously, the actual keys are not
-listed :). I source a shell script that sets the environment variables
-with these values. Before, I maintained a separate script for each
-account. Now, I install the <code>inifile</code>
-<a href="http://rubygems.org/gems/inifile">RubyGem</a> and use a one-liner for
-each of the keys.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;default&#39;][&#39;aws_access_key_id&#39;]&quot;</span><span class="sb">`</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;default&#39;][&#39;aws_secret_access_key&#39;]&quot;</span><span class="sb">`</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SSH_KEY</span><span class="o">=</span><span class="s1">&#39;jtimberman&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will load the specified file, <code>~/.aws/config</code> with the
-<code>IniFile.load</code> method, retrieving the <code>default</code> section&rsquo;s
-<code>aws_access_key_id</code> value. Then repeat the same for the
-<code>aws_secret_access_key</code>.</p>
-
-<p>To use the nondefault profile:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;profile nondefault&#39;][&#39;aws_access_key_id&#39;]&quot;</span><span class="sb">`</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="sb">`</span>ruby -rinifile -e <span class="s2">&quot;puts IniFile.load(File.join(File.expand_path(&#39;~&#39;), &#39;.aws&#39;, &#39;config&#39;))[&#39;profile nondefault&#39;][&#39;aws_secret_access_key&#39;]&quot;</span><span class="sb">`</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note that this uses <code>['profile nondefault']</code>.</p>
-
-<p>Since different tools historically have used slightly different
-environment variables, I export those too:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">export </span><span class="nv">AMAZON_ACCESS_KEY_ID</span><span class="o">=</span><span class="nv">$AWS_ACCESS_KEY_ID</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AMAZON_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="nv">$AWS_SECRET_ACCESS_KEY</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AWS_ACCESS_KEY</span><span class="o">=</span><span class="nv">$AWS_ACCESS_KEY_ID</span>
-</span><span class='line'><span class="nb">export </span><span class="nv">AWS_SECRET_KEY</span><span class="o">=</span><span class="nv">$AWS_SECRET_ACCESS_KEY</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>I create a separate config script for each account.</p>
-
-<p>The AWS CLI tool will automatically use the <code>~/.aws/config</code>, and can
-load different profiles with the <code>--profile</code> option. The <code>aws-sdk</code>
-Ruby library will use the environment variables, however. So
-authentication in a Ruby script is automatically set up.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;aws-sdk&#39;</span>
-</span><span class='line'><span class="n">iam</span> <span class="o">=</span> <span class="ss">AWS</span><span class="p">:</span><span class="ss">:IAM</span><span class="o">.</span><span class="n">new</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Without this, it would be:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;aws-sdk&#39;</span>
-</span><span class='line'><span class="n">iam</span> <span class="o">=</span> <span class="ss">AWS</span><span class="p">:</span><span class="ss">:IAM</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:access_key_id</span> <span class="o">=&gt;</span> <span class="s1">&#39;YOUR_ACCESS_KEY_ID&#39;</span><span class="p">,</span>
-</span><span class='line'>                   <span class="ss">:secret_access_key</span> <span class="o">=&gt;</span> <span class="s1">&#39;YOUR_SECRET_ACCESS_KEY&#39;</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Which is a little ornerous.</p>
-
-<p>To use this with <code>knife-ec2</code>, I have the following in my
-<code>.chef/knife.rb</code>:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_access_key_id</span><span class="o">]</span>      <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;AWS_ACCESS_KEY_ID&#39;</span><span class="o">]</span>
-</span><span class='line'><span class="n">knife</span><span class="o">[</span><span class="ss">:aws_secret_access_key</span><span class="o">]</span>  <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;AWS_SECRET_ACCESS_KEY&#39;</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Naturally, since <code>knife.rb</code> is Ruby, I could use <code>Inifile.load</code> there,
-but I only started using that library recently, and I have my knife
-configuration setup already.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/3/">&larr; Older</a>
@@ -2774,6 +2673,10 @@ configuration setup already.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/">Quick Tip: Stubbing Library Helpers in ChefSpec</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
       </li>
     
@@ -2787,10 +2690,6 @@ configuration setup already.</p>
     
       <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
       </li>
     
   </ul>

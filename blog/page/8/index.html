@@ -9,9 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="Update: This post is old and outdated.
-Update: New cookbook, Lion and more!
-This post describes how I use Chef and&nbsp;Opscode Hosted Chef&nbsp;to &hellip;">
+  <meta name="description" content="Anyone who runs a Chef Server or uses Hosted Chef has a wealth of search indexes available to them for data stored on the server. However, there isn &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,6 +79,52 @@ This post describes how I use Chef and&nbsp;Opscode Hosted Chef&nbsp;to &hellip;
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/04/11/display-chef-server-search-indexes/">Display Chef Server Search Indexes</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-04-11T00:00:00-06:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Anyone who runs a Chef Server or uses Hosted Chef has a wealth of search indexes available to them for data stored on the server. However, there isn&#8217;t a direct subcommand for displaying the search indexes. The following are automatically created on the server or Platform organization at creation and we know about them already:</p>
+<ul>
+<li>node</li>
+<li>role</li>
+<li>client</li>
+</ul>
+<p>Also, all data bags are created as a search index for the items they contain. All of these indexes are available through the API, and can be retrieved with Knife.</p>
+<p><script src="https://gist.github.com/915019.js"></script></p>
+<div>This uses knife&#8217;s &#8220;exec&#8221; sub-command. The subcommand takes a script argument, which is a Ruby script. It is executed in the context of the knife configuration, so if you have a .chef/knife.rb, it will be able to connect to a Chef Server. Let&#8217;s look at the contents of this script, it&#8217;s pretty simple.</div>
+<p><script src="https://gist.github.com/915020.js"></script></p>
+<p>The &#8216;p&#8217; simply prints output of the argument. Then I&#8217;m calling the &#8220;get&#8221; method on the &#8220;api&#8221; object. This is a preconfigured object that knows how to talk to the Chef Server API through the aforementioned configuration. This takes an argument, which I pass the search API endpoint. The results that come back from the API are a Ruby hash, so I print out just the keys by calling the &#8220;keys&#8221; method. As we can see, I have a number of data bags in my environment, including DNS entries, users and Samba (shares and permissions for the curious).</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -286,6 +330,10 @@ This post describes how I use Chef and&nbsp;Opscode Hosted Chef&nbsp;to &hellip;
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/">Quick Tip: Stubbing Library Helpers in ChefSpec</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/16/quick-tip-policyfile-run-lists/">Quick Tip: Policyfile Run Lists</a>
       </li>
     
@@ -299,10 +347,6 @@ This post describes how I use Chef and&nbsp;Opscode Hosted Chef&nbsp;to &hellip;
     
       <li class="post">
         <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/03/20/chef-gem-compile-time-compatibility/">Chef Gem Compile Time Compatibility</a>
       </li>
     
   </ul>
