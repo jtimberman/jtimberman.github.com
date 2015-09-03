@@ -9,7 +9,7 @@
   <meta name="author" content="Joshua Timberman">
 
   
-  <meta name="description" content="I&rsquo;m currently updating my vagrant cookbook, and adding ChefSpec coverage. Each of the different platform recipes results in slightly different &hellip;">
+  <meta name="description" content="This quick tip brought to you by the letters &ldquo;p,&rdquo; &ldquo;r,&rdquo; and &ldquo;y.&rdquo; You can start up a pry session in the context of &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,6 +79,160 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/09/01/quick-tip-alternative-chef-shell-with-pry/">Quick Tip: Alternative Chef Shell With Pry</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-09-01T08:19:17-06:00" pubdate data-updated="true">Sep 1<span>st</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This quick tip brought to you by the letters &ldquo;p,&rdquo; &ldquo;r,&rdquo; and &ldquo;y.&rdquo;</p>
+
+<p>You can start up a pry session in the context of a Chef recipe easily by using <code>chef-apply</code>. The <code>pry</code> gem is bundled with the Chef omnibus package, so it&rsquo;s immediately available.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>chef-apply -e 'require "pry"; binding.pry'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will result in a prompt like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is a recipe! Use <code>pry</code>&rsquo;s <code>ls</code> command:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; ls
+</span><span class='line'>Chef::EncryptedDataBagItem::CheckEncrypted#methods: encrypted?
+</span><span class='line'>Chef::DSL::DataQuery#methods: data_bag  data_bag_item  search
+</span><span class='line'>Chef::DSL::PlatformIntrospection#methods: platform?  platform_family?  value_for_platform  value_for_platform_family
+</span><span class='line'>Chef::DSL::IncludeRecipe#methods: include_recipe  load_recipe  require_recipe
+</span><span class='line'>*** SNIP ***
+</span><span class='line'>
+</span><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; cd node
+</span><span class='line'>2.1.6 (node[localhost.example.com]):1 &gt; ls
+</span><span class='line'>*** SNIP ***
+</span><span class='line'>2.1.6 (node[localhost.example.com]):1 &gt; exit
+</span><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Write a resource:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; file "/tmp/hello_world" do
+</span><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 *   content "I'm in pry!"
+</span><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 * end</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will return the <code>file[/tmp/hello_world]</code> resource. It doesn&rsquo;t run Chef, but we can do that in one of two ways: exit pry, or send the create action to the resource.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; resources("file[/tmp/hello_world]").run_action :create
+</span><span class='line'>Recipe: (chef-apply cookbook)::(chef-apply recipe)
+</span><span class='line'>  * file[/tmp/hello_world] action create
+</span><span class='line'>    - create new file /tmp/hello_world
+</span><span class='line'>    - update content in file /tmp/hello_world from none to 3a5417
+</span><span class='line'>    --- /tmp/hello_world  2015-09-01 08:35:18.000000000 -0600
+</span><span class='line'>    +++ /tmp/.hello_world20150901-42665-11bwurx   2015-09-01 08:35:18.000000000 -0600
+</span><span class='line'>    @@ -1 +1,2 @@</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If we write multiple resources, we&rsquo;d have to send that action to every one of them. Exiting pry will work, but then we are, of course, no longer in the pry session. This is not ideal, but hey, it&rsquo;s not like we&rsquo;re in <code>chef-shell</code>.</p>
+
+<p>The <code>chef-apply</code> program runs in &ldquo;solo mode.&rdquo;</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config.solo
+</span><span class='line'>=&gt; true</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, it may be useful to debug things through the Chef Server API. We will want to do two things. First, load a config file like <code>.chef/knife.rb</code>. We can verify the Chef Server we want is configured by checking <code>Chef::Config[:chef_server_url]</code>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config[:chef_server_url]
+</span><span class='line'>=&gt; "https://localhost:443"
+</span><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config.from_file('.chef/knife.rb')
+</span><span class='line'>=&gt; "client"
+</span><span class='line'>2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config[:chef_server_url]
+</span><span class='line'>=&gt; "https://api.opscode.com/organizations/joshtest"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Cool. Now let&rsquo;s borrow <code>chef-shell</code>&rsquo;s helper methods for interacting with the API.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;chef/shell/ext&#39;</span>
+</span><span class='line'><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Shell</span><span class="o">::</span><span class="no">Extensions</span><span class="o">.</span><span class="n">extend_context_object</span><span class="p">(</span><span class="nb">self</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And now we can use, for example, <code>api.get</code> or <code>nodes.all</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="mi">2</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">6</span> <span class="p">(</span><span class="c1">#&lt;Chef::Recipe&gt;):0 &gt; api.get(&#39;/users&#39;)</span>
+</span><span class='line'><span class="o">=&gt;</span> <span class="o">[</span><span class="p">{</span><span class="s2">&quot;user&quot;</span><span class="o">=&gt;</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="o">=&gt;</span><span class="s2">&quot;joshtest&quot;</span><span class="p">}},</span> <span class="p">{</span><span class="s2">&quot;user&quot;</span><span class="o">=&gt;</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="o">=&gt;</span><span class="s2">&quot;jtimberman&quot;</span><span class="p">}}</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Of course, we can get a lot of this functionality by starting up <code>chef-shell</code> and loading <code>pry</code>, but I think this was more fun :&ndash;).</p>
+
+<p>Learn more about <a href="http://pryrepl.org/">pry</a>.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1487,165 +1641,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/01/12/quick-tip-testing-conditionals-in-chefspec/">Quick Tip: Testing Conditionals in ChefSpec</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2015-01-12T14:07:06-07:00" pubdate data-updated="true">Jan 12<span>th</span>, 2015</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This tip is brought to you by the <a href="https://supermarket.chef.io/cookbooks/homebrew">homebrew</a> cookbook.</p>
-
-<p><a href="http://sethvargo.github.io/chefspec/">ChefSpec</a> is a great way to create tests for Chef recipes to catch regressions. Sometimes recipes end up having branching conditional logic that can have very different outcomes based on external factors &ndash; attributes, existing system state, or cross-platform support.</p>
-
-<p>The homebrew cookbook only supports OS X, so we don&rsquo;t have cross-platform support to test there. However, its default recipe has four conditionals to test. You can read the entire <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/spec/recipes/default_spec.rb">default_spec.rb</a> for full context, I&rsquo;m going to focus on just one aspect here:</p>
-
-<ul>
-<li>Installing homebrew should only happen if the <code>brew</code> binary does not exist.</li>
-</ul>
-
-
-<p>This is a common use case in Chef recipes. The best way to go about converging your node to the desired state involves running some arbitrary command. In this case, it&rsquo;s the installation of Homebrew itself. Normally for installations we want to use an idempotent, convergent resource like <code>package</code>. However, since homebrew is to be our package management system, we have to do something else. As it turns out the homebrew project provides an installation script and that script will install a binary, <code>/usr/local/bin/brew</code>. We will assume that if Chef converged on a node after running the script, and the <code>brew</code> binary exists, then we don&rsquo;t need to attempt reinstallation. There&rsquo;s more robust ways to go about it (e.g., running <code>brew</code> gives some desired output), but this works for example purposes today.</p>
-
-<p>From <a href="https://github.com/opscode-cookbooks/homebrew/blob/master/recipes/default.rb">the recipe</a>, here&rsquo;s the resource:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">execute</span> <span class="s1">&#39;install homebrew&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">command</span> <span class="n">homebrew_go</span>
-</span><span class='line'>  <span class="n">user</span> <span class="n">node</span><span class="o">[</span><span class="s1">&#39;homebrew&#39;</span><span class="o">][</span><span class="s1">&#39;owner&#39;</span><span class="o">]</span> <span class="o">||</span> <span class="n">homebrew_owner</span>
-</span><span class='line'>  <span class="n">not_if</span> <span class="p">{</span> <span class="o">::</span><span class="no">File</span><span class="o">.</span><span class="n">exist?</span> <span class="s1">&#39;/usr/local/bin/brew&#39;</span> <span class="p">}</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>command</code> is a script, called <code>homebrew_go</code>, which is a local variable set to a path in <code>Chef::Config[:file_cache_path]</code>. It is retrieved in the recipe with <code>remote_file</code>. The resource used to have <code>execute homebrew_go</code>, but when ChefSpec runs, it does so in a random temporary directory, which we cannot predict the name.</p>
-
-<p>The astute observer will note that the <code>user</code> parameter has another conditional (designated by the <code>||</code>). That&rsquo;s actually the subject of another post. In this post, I&rsquo;m concerned only with testing the guard, <code>not_if</code>.</p>
-
-<p>The <code>not_if</code> is a Ruby block, which means the Ruby code is evaluated inline during the Chef run. How we go about testing that is the subject of this post.</p>
-
-<p>First, we need to mock the return result of sending the <code>#exist?</code> method to the <code>File</code> class. There are two reasons. First, we want to control the conditional so we can write a test for each outcome. Second, someone running the test (like me) might have already installed homebrew on their local system (which I have), and so <code>/usr/local/bin/brew</code> will exist. To do this, in our context, we have a <code>before</code> block that stubs the return to false:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">before</span><span class="p">(</span><span class="ss">:each</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">allow_any_instance_of</span><span class="p">(</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Resource</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:homebrew_owner</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="s1">&#39;vagrant&#39;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">allow_any_instance_of</span><span class="p">(</span><span class="ss">Chef</span><span class="p">:</span><span class="ss">:Recipe</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:homebrew_owner</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="s1">&#39;vagrant&#39;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">allow</span><span class="p">(</span><span class="no">File</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:exist?</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">false</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">stub_command</span><span class="p">(</span><span class="s1">&#39;which git&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>There&rsquo;s some other mocked values here. I&rsquo;ll talk about the <code>vagrant</code> user for <code>homebrew_owner</code> in a moment, though again, that&rsquo;s the subject of another post.</p>
-
-<p>The actual spec will test that the installation script will actually get executed when we run chef, and as the <code>vagrant</code> user.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">it</span> <span class="s1">&#39;runs homebrew installation as the default user&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">run_execute</span><span class="p">(</span><span class="s1">&#39;install homebrew&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">with</span><span class="p">(</span>
-</span><span class='line'>    <span class="ss">:user</span> <span class="o">=&gt;</span> <span class="s1">&#39;vagrant&#39;</span>
-</span><span class='line'>  <span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>When rspec runs, we see this is the case:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">homebrew</span><span class="p">:</span><span class="ss">:default</span>
-</span><span class='line'>  <span class="n">default</span> <span class="n">user</span>
-</span><span class='line'>    <span class="n">runs</span> <span class="n">homebrew</span> <span class="n">installation</span> <span class="n">as</span> <span class="n">the</span> <span class="n">default</span> <span class="n">user</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>If I didn&rsquo;t mock the user, it would be <code>jtimberman</code>, as that is the user that is running Chef via rspec/ChefSpec. The test would fail. If you&rsquo;re looking at the full file, there&rsquo;s some other details we&rsquo;re going to look at shortly. If I didn&rsquo;t mock the return for <code>File.exist?</code>, the execute wouldn&rsquo;t run at all.</p>
-
-<p>To test what happens when <code>/usr/local/bin/brew</code> exists, I set up a new context in rspec, and create a new <code>before</code> block.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">context</span> <span class="s1">&#39;/usr/local/bin/brew exists&#39;</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">before</span><span class="p">(</span><span class="ss">:each</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">allow</span><span class="p">(</span><span class="no">File</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">receive</span><span class="p">(</span><span class="ss">:exist?</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">stub_command</span><span class="p">(</span><span class="s1">&#39;which git&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">and_return</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;does not run homebrew installation&#39;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">expect</span><span class="p">(</span><span class="n">chef_run</span><span class="p">)</span><span class="o">.</span><span class="n">to_not</span> <span class="n">run_execute</span><span class="p">(</span><span class="s1">&#39;install homebrew&#39;</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>We don&rsquo;t need the <code>vagrant</code> mocks earlier, but we do need to stub <code>File.exist?</code>. This test would pass on my system without it, but not on, e.g., a Linux system that doesn&rsquo;t have homebrew.</p>
-
-<p>Then running rspec, we see:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">homebrew</span><span class="p">:</span><span class="ss">:default</span>
-</span><span class='line'>  <span class="sr">/usr/</span><span class="n">local</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">brew</span> <span class="n">exists</span>
-</span><span class='line'>    <span class="n">does</span> <span class="ow">not</span> <span class="n">run</span> <span class="n">homebrew</span> <span class="n">installation</span>
-</span><span class='line'>  <span class="n">default</span> <span class="n">user</span>
-</span><span class='line'>    <span class="n">runs</span> <span class="n">homebrew</span> <span class="n">installation</span> <span class="n">as</span> <span class="n">the</span> <span class="n">default</span> <span class="n">user</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>In a coming post, I will walk through the conditionals related to the <code>homebrew_owner</code>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -1678,6 +1673,10 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/09/01/quick-tip-alternative-chef-shell-with-pry/">Quick Tip: Alternative Chef Shell With Pry</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/05/30/quick-tip-stubbing-library-helpers-in-chefspec/">Quick Tip: Stubbing Library Helpers in ChefSpec</a>
       </li>
     
@@ -1691,10 +1690,6 @@ WARN: chef_gem[chef-vault] or set `compile_time true` on the resource if compile
     
       <li class="post">
         <a href="/blog/2015/04/03/chef-audit-mode-introduction/">Chef Audit Mode Introduction</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/03/25/missing-transitive-dependencies/">Missing Transitive Dependencies</a>
       </li>
     
   </ul>

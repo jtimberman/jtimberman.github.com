@@ -4,7 +4,7 @@
   <title><![CDATA[Category: quicktips | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/quicktips/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-05-30T10:15:23-06:00</updated>
+  <updated>2015-09-03T08:21:19-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,106 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Alternative Chef Shell with Pry]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/09/01/quick-tip-alternative-chef-shell-with-pry/"/>
+    <updated>2015-09-01T08:19:17-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/09/01/quick-tip-alternative-chef-shell-with-pry</id>
+    <content type="html"><![CDATA[<p>This quick tip brought to you by the letters &ldquo;p,&rdquo; &ldquo;r,&rdquo; and &ldquo;y.&rdquo;</p>
+
+<p>You can start up a pry session in the context of a Chef recipe easily by using <code>chef-apply</code>. The <code>pry</code> gem is bundled with the Chef omnibus package, so it&rsquo;s immediately available.</p>
+
+<p><code>
+chef-apply -e 'require "pry"; binding.pry'
+</code></p>
+
+<p>This will result in a prompt like this:</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt;
+</code></p>
+
+<p>This is a recipe! Use <code>pry</code>&rsquo;s <code>ls</code> command:</p>
+
+<p>```
+2.1.6 (#&lt;Chef::Recipe>):0 > ls
+Chef::EncryptedDataBagItem::CheckEncrypted#methods: encrypted?
+Chef::DSL::DataQuery#methods: data_bag  data_bag_item  search
+Chef::DSL::PlatformIntrospection#methods: platform?  platform_family?  value_for_platform  value_for_platform_family
+Chef::DSL::IncludeRecipe#methods: include_recipe  load_recipe  require_recipe
+<strong><em> SNIP </em></strong></p>
+
+<p>2.1.6 (#&lt;Chef::Recipe>):0 > cd node
+2.1.6 (node[localhost.example.com]):1 > ls
+<strong><em> SNIP </em></strong>
+2.1.6 (node[localhost.example.com]):1 > exit
+2.1.6 (#&lt;Chef::Recipe>):0 >
+```</p>
+
+<p>Write a resource:</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; file "/tmp/hello_world" do
+2.1.6 (#&lt;Chef::Recipe&gt;):0 *   content "I'm in pry!"
+2.1.6 (#&lt;Chef::Recipe&gt;):0 * end
+</code></p>
+
+<p>This will return the <code>file[/tmp/hello_world]</code> resource. It doesn&rsquo;t run Chef, but we can do that in one of two ways: exit pry, or send the create action to the resource.</p>
+
+<p>```
+2.1.6 (#&lt;Chef::Recipe>):0 > resources(&ldquo;file[/tmp/hello_world]&rdquo;).run_action :create
+Recipe: (chef-apply cookbook)::(chef-apply recipe)
+  * file[/tmp/hello_world] action create</p>
+
+<pre><code>- create new file /tmp/hello_world
+- update content in file /tmp/hello_world from none to 3a5417
+--- /tmp/hello_world    2015-09-01 08:35:18.000000000 -0600
++++ /tmp/.hello_world20150901-42665-11bwurx 2015-09-01 08:35:18.000000000 -0600
+@@ -1 +1,2 @@
+</code></pre>
+
+<p>```</p>
+
+<p>If we write multiple resources, we&rsquo;d have to send that action to every one of them. Exiting pry will work, but then we are, of course, no longer in the pry session. This is not ideal, but hey, it&rsquo;s not like we&rsquo;re in <code>chef-shell</code>.</p>
+
+<p>The <code>chef-apply</code> program runs in &ldquo;solo mode.&rdquo;</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config.solo
+=&gt; true
+</code></p>
+
+<p>However, it may be useful to debug things through the Chef Server API. We will want to do two things. First, load a config file like <code>.chef/knife.rb</code>. We can verify the Chef Server we want is configured by checking <code>Chef::Config[:chef_server_url]</code>.</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config[:chef_server_url]
+=&gt; "https://localhost:443"
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config.from_file('.chef/knife.rb')
+=&gt; "client"
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config[:chef_server_url]
+=&gt; "https://api.opscode.com/organizations/joshtest"
+</code></p>
+
+<p>Cool. Now let&rsquo;s borrow <code>chef-shell</code>&rsquo;s helper methods for interacting with the API.</p>
+
+<p><code>ruby
+require 'chef/shell/ext'
+Chef::Shell::Extensions.extend_context_object(self)
+</code></p>
+
+<p>And now we can use, for example, <code>api.get</code> or <code>nodes.all</code>.</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; api.get('/users')
+=&gt; [{"user"=&gt;{"username"=&gt;"joshtest"}}, {"user"=&gt;{"username"=&gt;"jtimberman"}}]
+</code></p>
+
+<p>Of course, we can get a lot of this functionality by starting up <code>chef-shell</code> and loading <code>pry</code>, but I think this was more fun :&ndash;).</p>
+
+<p>Learn more about <a href="http://pryrepl.org/">pry</a>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Stubbing Library Helpers in ChefSpec]]></title>
@@ -428,179 +528,6 @@ knife group add actor provisioners chefconf-provisioner</p>
 ```</p>
 
 <p>Hopefully this helps you out with your use of Chef Provisioning, and a non-zero Chef server. If you have further questions, find me at ChefConf!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Quick Tip: Define Resources to Notifiy in LWRPs]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps/"/>
-    <updated>2015-01-17T22:37:06-07:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2015/01/17/quick-tip-define-resources-to-notifiy-in-lwrps</id>
-    <content type="html"><![CDATA[<p>In this quick tip, I&rsquo;ll explain why you may need to create resources to notify in a provider, even if the resource exists in a recipe, when using <code>use_inline_resources</code> in Chef&rsquo;s <a href="http://docs.chef.io/lwrp.html">LWRP DSL</a>.</p>
-
-<p>I&rsquo;ll use an example cookbook, <code>notif</code>, to illustrate. First, I&rsquo;ve created <code>cookbooks/notif/resources/default.rb</code>, with the following content.</p>
-
-<p><code>ruby
-actions :write
-default_action :write
-</code></p>
-
-<p>Then, I have written <code>cookbooks/notif/providers/default.rb</code> like this:</p>
-
-<p>```ruby
-use_inline_resources</p>
-
-<p>action :write do
-  log &lsquo;notifer&rsquo; do</p>
-
-<pre><code>notifies :create, 'file[notified]'
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>Then the default recipe, where I&rsquo;ll use the resource automatically generated from the resource directory, <code>notif</code>.</p>
-
-<p>```ruby
-file &lsquo;notified&rsquo; do
-  content &lsquo;something&rsquo;
-  action :nothing
-end</p>
-
-<p>notif &lsquo;doer&rsquo;
-```</p>
-
-<p>When I run Chef, I&rsquo;ll get an error like this:</p>
-
-<p>```
- Recipe: notif::default
-   * file[notified] action nothing (skipped due to action :nothing)
-   * notif[doer] action write</p>
-
-<pre><code> ================================================================================
- Error executing action `write` on resource 'notif[doer]'
- ================================================================================
-
- Chef::Exceptions::ResourceNotFound
- ----------------------------------
- resource log[notifer] is configured to notify resource file[notified] with action create, but file[notified] cannot be found in the resource collection. log[notifer] is defined in /tmp/kitchen/cookbooks/notif/providers/default.rb:4:in `block in class_from_file'
-
- Resource Declaration:
- ---------------------
- # In /tmp/kitchen/cookbooks/notif/recipes/default.rb
-
-  12: notif 'doer'
-
- Compiled Resource:
-</code></pre>
-
-<hr />
-
-<pre><code> # Declared in /tmp/kitchen/cookbooks/notif/recipes/default.rb:12:in `from_file'
-
- notif("doer") do
-   action :write
-   retries 0
-   retry_delay 2
-   default_guard_interpreter :default
-   declared_type :notif
-
-   recipe_name "default"
- end
-</code></pre>
-
-<p>```</p>
-
-<p>To fix this, I define the <code>file</code> resource in the provider:</p>
-
-<p>```ruby
-use_inline_resources</p>
-
-<p>action :write do
-  log &lsquo;notifer&rsquo; do</p>
-
-<pre><code>notifies :create, 'file[notified]'
-</code></pre>
-
-<p>  end</p>
-
-<p>  file &lsquo;notified&rsquo; do</p>
-
-<pre><code>content new_resource.name
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>Then when I run Chef, it will converge and notify the file resource to be configured.</p>
-
-<p>```
-Recipe: notif::default
-  * file[notified] action nothing (skipped due to action :nothing)
-  * notif[doer] action write</p>
-
-<pre><code>* log[notifer] action write
-
-* file[notified] action create
-  - create new file notified
-  - update content in file notified from none to 935e8e
-  --- notified       2015-01-18 05:47:49.186399317 +0000
-  +++ ./.notified20150118-15795-om5fiw       2015-01-18 05:47:49.186399317 +0000
-  @@ -1 +1,2 @@
-  +doer
-* file[notified] action create (up to date)
-</code></pre>
-
-<p>Running handlers:
-Running handlers complete
-Chef Client finished, &frac34; resources updated in 1.298990565 seconds
-```</p>
-
-<h2>Why does this happen?</h2>
-
-<p>The reason for this is because <code>use_inline_resources</code> tells Chef that in this provider, we&rsquo;re using inline resources that will be added to their own run context, with their own resource collection. We don&rsquo;t have access to the resource collection from the recipe. Even though the <code>file[notified]</code> resource exists from the recipe, it doesn&rsquo;t actually get inherited in the provider&rsquo;s run context, raising the error we saw before.</p>
-
-<p>We can turn off <code>use_inline_resources</code> by removing it, and the custom resource will be configured:</p>
-
-<p>```ruby
-action :write do
-  log &lsquo;notifer&rsquo; do</p>
-
-<pre><code>notifies :create, 'file[notified]'
-</code></pre>
-
-<p>  end
-end
-```</p>
-
-<p>Then run Chef:</p>
-
-<p>```
-Recipe: notif::default
-  * file[notified] action nothing (skipped due to action :nothing)
-  * notif[doer] action write (up to date)
-  * log[notifer] action write
-  * file[notified] action create</p>
-
-<pre><code>- update content in file notified from 935e8e to 3fc9b6
---- notified 2015-01-18 05:47:49.186399317 +0000
-+++ ./.notified20150118-16159-r18q7z 2015-01-18 05:50:57.832140405 +0000
-@@ -1,2 +1,2 @@
--doer
-+something
-</code></pre>
-
-<p>```</p>
-
-<p>Notice that the <code>file[notified]</code> resource wasn&rsquo;t updated at the start of the run, when it was encountered in the recipe, but it was when notified by the log resource in the provider action, changing the content.</p>
-
-<h2>Use inline compile mode!</h2>
-
-<p>The <code>use_inline_resources</code> method in the lightweight provider DSL is strongly recommended. It makes it easier to send notifications from the custom resource itself to other resources in the recipe&rsquo;s resource collection. Read more about the <a href="http://docs.chef.io/lwrp.html#inline-compile-mode">inline compile mode</a> in the Chef docs.</p>
-
-<p>Also, define the resources that you need to notify when you&rsquo;re doing this in your provider&rsquo;s actions. A common example is within a provider that writes configuration for a service, and needs to tell that service to restart.</p>
 ]]></content>
   </entry>
   

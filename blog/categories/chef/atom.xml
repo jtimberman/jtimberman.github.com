@@ -4,7 +4,7 @@
   <title><![CDATA[Category: chef | jtimberman's Code Blog]]></title>
   <link href="http://jtimberman.housepub.org/blog/categories/chef/atom.xml" rel="self"/>
   <link href="http://jtimberman.housepub.org/"/>
-  <updated>2015-05-30T10:15:23-06:00</updated>
+  <updated>2015-09-03T08:21:19-06:00</updated>
   <id>http://jtimberman.housepub.org/</id>
   <author>
     <name><![CDATA[Joshua Timberman]]></name>
@@ -12,6 +12,106 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Tip: Alternative Chef Shell with Pry]]></title>
+    <link href="http://jtimberman.housepub.org/blog/2015/09/01/quick-tip-alternative-chef-shell-with-pry/"/>
+    <updated>2015-09-01T08:19:17-06:00</updated>
+    <id>http://jtimberman.housepub.org/blog/2015/09/01/quick-tip-alternative-chef-shell-with-pry</id>
+    <content type="html"><![CDATA[<p>This quick tip brought to you by the letters &ldquo;p,&rdquo; &ldquo;r,&rdquo; and &ldquo;y.&rdquo;</p>
+
+<p>You can start up a pry session in the context of a Chef recipe easily by using <code>chef-apply</code>. The <code>pry</code> gem is bundled with the Chef omnibus package, so it&rsquo;s immediately available.</p>
+
+<p><code>
+chef-apply -e 'require "pry"; binding.pry'
+</code></p>
+
+<p>This will result in a prompt like this:</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt;
+</code></p>
+
+<p>This is a recipe! Use <code>pry</code>&rsquo;s <code>ls</code> command:</p>
+
+<p>```
+2.1.6 (#&lt;Chef::Recipe>):0 > ls
+Chef::EncryptedDataBagItem::CheckEncrypted#methods: encrypted?
+Chef::DSL::DataQuery#methods: data_bag  data_bag_item  search
+Chef::DSL::PlatformIntrospection#methods: platform?  platform_family?  value_for_platform  value_for_platform_family
+Chef::DSL::IncludeRecipe#methods: include_recipe  load_recipe  require_recipe
+<strong><em> SNIP </em></strong></p>
+
+<p>2.1.6 (#&lt;Chef::Recipe>):0 > cd node
+2.1.6 (node[localhost.example.com]):1 > ls
+<strong><em> SNIP </em></strong>
+2.1.6 (node[localhost.example.com]):1 > exit
+2.1.6 (#&lt;Chef::Recipe>):0 >
+```</p>
+
+<p>Write a resource:</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; file "/tmp/hello_world" do
+2.1.6 (#&lt;Chef::Recipe&gt;):0 *   content "I'm in pry!"
+2.1.6 (#&lt;Chef::Recipe&gt;):0 * end
+</code></p>
+
+<p>This will return the <code>file[/tmp/hello_world]</code> resource. It doesn&rsquo;t run Chef, but we can do that in one of two ways: exit pry, or send the create action to the resource.</p>
+
+<p>```
+2.1.6 (#&lt;Chef::Recipe>):0 > resources(&ldquo;file[/tmp/hello_world]&rdquo;).run_action :create
+Recipe: (chef-apply cookbook)::(chef-apply recipe)
+  * file[/tmp/hello_world] action create</p>
+
+<pre><code>- create new file /tmp/hello_world
+- update content in file /tmp/hello_world from none to 3a5417
+--- /tmp/hello_world    2015-09-01 08:35:18.000000000 -0600
++++ /tmp/.hello_world20150901-42665-11bwurx 2015-09-01 08:35:18.000000000 -0600
+@@ -1 +1,2 @@
+</code></pre>
+
+<p>```</p>
+
+<p>If we write multiple resources, we&rsquo;d have to send that action to every one of them. Exiting pry will work, but then we are, of course, no longer in the pry session. This is not ideal, but hey, it&rsquo;s not like we&rsquo;re in <code>chef-shell</code>.</p>
+
+<p>The <code>chef-apply</code> program runs in &ldquo;solo mode.&rdquo;</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config.solo
+=&gt; true
+</code></p>
+
+<p>However, it may be useful to debug things through the Chef Server API. We will want to do two things. First, load a config file like <code>.chef/knife.rb</code>. We can verify the Chef Server we want is configured by checking <code>Chef::Config[:chef_server_url]</code>.</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config[:chef_server_url]
+=&gt; "https://localhost:443"
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config.from_file('.chef/knife.rb')
+=&gt; "client"
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; Chef::Config[:chef_server_url]
+=&gt; "https://api.opscode.com/organizations/joshtest"
+</code></p>
+
+<p>Cool. Now let&rsquo;s borrow <code>chef-shell</code>&rsquo;s helper methods for interacting with the API.</p>
+
+<p><code>ruby
+require 'chef/shell/ext'
+Chef::Shell::Extensions.extend_context_object(self)
+</code></p>
+
+<p>And now we can use, for example, <code>api.get</code> or <code>nodes.all</code>.</p>
+
+<p><code>
+2.1.6 (#&lt;Chef::Recipe&gt;):0 &gt; api.get('/users')
+=&gt; [{"user"=&gt;{"username"=&gt;"joshtest"}}, {"user"=&gt;{"username"=&gt;"jtimberman"}}]
+</code></p>
+
+<p>Of course, we can get a lot of this functionality by starting up <code>chef-shell</code> and loading <code>pry</code>, but I think this was more fun :&ndash;).</p>
+
+<p>Learn more about <a href="http://pryrepl.org/">pry</a>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Tip: Stubbing Library Helpers in ChefSpec]]></title>
@@ -518,48 +618,6 @@ Failures:
 <p>This example is simple enough that this isn&rsquo;t necessary, but if we were implementing audit mode checks for our entire security policy, that could be dozens or even hundreds of controls.</p>
 
 <p>As of this writing, audit mode is still under development, and is considered an experimental feature. There will be further information, guides, and documentation about it coming to the Chef blog and docs site, and I&rsquo;ll have a post coming soon with something I&rsquo;m working on, so stay tuned!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Missing Transitive Dependencies]]></title>
-    <link href="http://jtimberman.housepub.org/blog/2015/03/25/missing-transitive-dependencies/"/>
-    <updated>2015-03-25T12:54:08-06:00</updated>
-    <id>http://jtimberman.housepub.org/blog/2015/03/25/missing-transitive-dependencies</id>
-    <content type="html"><![CDATA[<p>One of my home projects while I&rsquo;m on vacation this week is rebuilding my server with Fedora 21 (<a href="https://getfedora.org/en/server/">Server</a>). In order to do this, I needed to <a href="https://github.com/hw-cookbooks/runit/commit/c3d46bcf2c330e90aff8f1bb1e1701d57078cca8">add Fedora support</a> to the <a href="https://supermarket.chef.io/cookbooks/runit">runit</a> cookbook, since I use runit for a number of services on my system. That&rsquo;s really neither here nor there, as the topic of this blog post isn&rsquo;t specific to Fedora, nor runit.</p>
-
-<p>The topic is actually about an issue with transitive dependencies and how Chef dependency resolution works.</p>
-
-<p>Here&rsquo;s the scenario:</p>
-
-<ol>
-<li>I run chef on my node</li>
-<li>The runit cookbook is synchronized</li>
-<li>An older version of the runit cookbook is downloaded</li>
-<li>The new changes I expected were not made</li>
-<li>WTFs ensue</li>
-</ol>
-
-
-<p>So what happened?</p>
-
-<p>The runit cookbook itself is updated to use Ian Meyer&rsquo;s Package Cloud repository &ndash; at least, the version I want to use is, which is on GitHub. When I submitted the PR for adding this repository for RHEL platforms, Ian had not yet added Fedora packages. That&rsquo;s okay because Fedora is not listed as supported in the cookbook. However, I wanted to use it, and figured folks in the community using Fedora Server might benefit too.</p>
-
-<p>I digress. Ian pushed a Fedora package earlier today, so I added &ldquo;fedora&rdquo; to the various platform family conditionals, in the cookbook and opened the PR linked earlier. All was well in test kitchen. So I change my local repository&rsquo;s Berksfile:</p>
-
-<p><code>ruby
-cookbook 'runit', github: 'hw-cookbooks/runit', ref: 'jtimberman/fedora-21'
-</code></p>
-
-<p>Then a quick <code>berks update runit</code> and <code>berks upload runit</code>, and I was in business.</p>
-
-<p>Or so I thought. Enter scenario listed above. The problem is, that when I did the <code>berks upload</code>, it only uploaded <code>runit</code>. However in the latest <code>runit</code> cookbook from that branch, it also adds a dependency on Computology&rsquo;s <a href="https://supermarket.chef.io/cookbooks/packagecloud">packagecloud</a> cookbook, since it uses that to add the repository. When the <code>runit</code> cookbook is specified on the <code>berks upload</code> command, it doesn&rsquo;t upload the transitive dependencies when the location is a git URI. This appears to be by design.</p>
-
-<p>What happens in Chef is that the server solves the graph, seeing that the node needs the runit cookbook. But the latest version of the runit cookbook depends on packagecloud, which hasn&rsquo;t yet been uploaded. So the dependency solver looks for the latest version of the runit cookbook that meets the constraint (none), and doesn&rsquo;t have the packagecloud cookbook. Thus, I end up with runit version 1.5.18 on my node, but it fails to converge because it doesn&rsquo;t have the changes required for Fedora, which are in 1.5.20.</p>
-
-<p>The simple solution here is to upload the packagecloud cookbook. This can be done with <code>berks upload packagecloud</code>, as it does exist in the Berksfile.lock and has been cached in the berkshelf. Alternatively, <code>berks upload</code> will also upload the cookbook, as that operates on all cookbooks in  the Berksfile.lock.</p>
-
-<p>I hope this helps anyone who&rsquo;s faced this issue with transitive dependencies when working on a cookbook &ldquo;in development.&rdquo;</p>
 ]]></content>
   </entry>
   
